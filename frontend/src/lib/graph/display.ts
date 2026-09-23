@@ -36,6 +36,13 @@ export function accentColor(node: NodeResponse): string {
 	return node.color ?? DEFAULT_ACCENT[displayKind(node)];
 }
 
+/** Focus-tier marker colors, shared by the Organized section bars and canvas cards. */
+export const TIER_COLOR: Record<NodeResponse['focus'], string> = {
+	primary: 'var(--accent)',
+	secondary: 'var(--ink-2)',
+	background: 'var(--line)'
+};
+
 export type Requirement = { node: NodeResponse; met: boolean };
 
 /** Nodes this one `requires`, each flagged met (`done`) or unmet. */

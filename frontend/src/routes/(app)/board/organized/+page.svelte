@@ -1,6 +1,6 @@
 <script lang="ts">
 	import NodeCard from '$lib/components/NodeCard.svelte';
-	import { childrenOf } from '$lib/graph/display';
+	import { TIER_COLOR, childrenOf } from '$lib/graph/display';
 	import { openNode } from '$lib/navigation';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -19,19 +19,19 @@
 		{
 			id: 'primary',
 			title: 'Primary',
-			bar: 'var(--accent)',
+			bar: TIER_COLOR.primary,
 			nodes: visible.filter((node) => !node.container_progress && node.focus === 'primary')
 		},
 		{
 			id: 'secondary',
 			title: 'Secondary',
-			bar: 'var(--ink-2)',
+			bar: TIER_COLOR.secondary,
 			nodes: visible.filter((node) => !node.container_progress && node.focus === 'secondary')
 		},
 		{
 			id: 'background',
 			title: 'Background',
-			bar: 'var(--line)',
+			bar: TIER_COLOR.background,
 			nodes: visible.filter((node) => !node.container_progress && node.focus === 'background')
 		},
 		{

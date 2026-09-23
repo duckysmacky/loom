@@ -2,7 +2,7 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { accentColor, displayKind, progressPair } from '$lib/graph/display';
+	import { TIER_COLOR, accentColor, displayKind, progressPair } from '$lib/graph/display';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -24,6 +24,7 @@
 	class:dimmed={data.dimmed}
 	class:selected
 	style:width="{CANVAS_NODE_WIDTH}px"
+	style:border-top-color={TIER_COLOR[node.focus]}
 >
 	<div class="head">
 		<span class="accent" style:background={accentColor(node)}></span>
@@ -37,6 +38,12 @@
 			<span>{progress[0]}/{progress[1]}</span>
 		</div>
 	{/if}
+	<div
+		class="tier"
+		style:color={node.focus === 'background' ? 'var(--ink-2)' : TIER_COLOR[node.focus]}
+	>
+		{node.focus}
+	</div>
 </div>
 <Handle type="source" position={Position.Right} />
 
@@ -44,9 +51,18 @@
 	.canvas-node {
 		background: var(--surface);
 		border: var(--border-width) solid var(--frame);
+		/* The top edge carries the focus tier color. */
+		border-top-width: 5px;
 		padding: 10px 12px;
 		color: var(--ink);
 		font-family: var(--font-display);
+	}
+
+	.tier {
+		margin-top: 8px;
+		font: 600 9px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
 	}
 
 	.dashed {
