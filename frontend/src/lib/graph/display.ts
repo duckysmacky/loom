@@ -97,6 +97,19 @@ export function shortDate(iso: string, now = new Date()): string {
 	return date.getFullYear() === now.getFullYear() ? dayMonth : `${dayMonth} ${date.getFullYear()}`;
 }
 
+/** ISO timestamp → `yyyy-mm-dd` in local time, for `<input type="date">`. */
+export function toDateInput(iso: string | null): string {
+	if (!iso) return '';
+	const date = new Date(iso);
+	const pad = (value: number) => String(value).padStart(2, '0');
+	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
+}
+
+/** `yyyy-mm-dd` from a date input → ISO timestamp at local midnight; empty → null. */
+export function fromDateInput(value: string): string | null {
+	return value ? new Date(`${value}T00:00:00`).toISOString() : null;
+}
+
 /** "15 of 30" for tracked progress, "1 of 2 done" for containers, else null. */
 export function progressText(node: NodeResponse): string | null {
 	if (node.progress_current !== null && node.progress_total !== null) {

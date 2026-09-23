@@ -816,3 +816,42 @@ async fn creating_straight_into_active_or_done_stamps_timestamps(pool: PgPool) {
     .await;
     assert_eq!(queued["started_at"], Value::Null);
 }
+
+#[sqlx::test]
+async fn explicit_started_and_completed_dates_override_auto_stamping(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "explicitdates@example.com").await;
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "t", "status": "active"}),
+    )
+    .await;
+    let uri = format!("/api/nodes/{}", node["id"].as_str().unwrap());
+
+    // Backdating an auto-stamped started_at, and setting completed_at on a
+    // node that isn't done - the explicit value wins in both cases.
+    let (status, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({
+                "started_at": "2026-01-05T00:00:00Z",
+                "completed_at": "2026-02-10T00:00:00Z"
+            }),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["started_at"], "2026-01-05T00:00:00Z");
+    assert_eq!(body["completed_at"], "2026-02-10T00:00:00Z");
+
+    let (_, cleared) = send(
+        &app,
+        req("PATCH", &uri, json!({"started_at": null}), Some(&token)),
+    )
+    .await;
+    assert_eq!(cleared["started_at"], Value::Null);
+}

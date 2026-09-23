@@ -6,7 +6,14 @@
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { ACCENT_PALETTE, accentColor, relativeDays, shortDate } from '$lib/graph/display';
+	import {
+		ACCENT_PALETTE,
+		accentColor,
+		fromDateInput,
+		relativeDays,
+		shortDate,
+		toDateInput
+	} from '$lib/graph/display';
 	import { closeNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -229,11 +236,36 @@
 						<dd>{pokeCount ?? '–'}</dd>
 						<dt class="label">Created</dt>
 						<dd>{shortDate(node.created_at)}</dd>
-						<dt class="label">Started</dt>
-						<dd>{node.started_at ? shortDate(node.started_at) : '–'}</dd>
-						<dt class="label">Completed</dt>
-						<dd>{node.completed_at ? shortDate(node.completed_at) : '–'}</dd>
 					</dl>
+
+					<!-- Stamped automatically on status changes; editable when the
+					     real dates differ (e.g. something started before it was logged). -->
+					<div class="dates">
+						<label class="control">
+							<span class="label">Started</span>
+							<input
+								class="field"
+								type="date"
+								value={toDateInput(node.started_at)}
+								onchange={(event) =>
+									update(node, { started_at: fromDateInput(event.currentTarget.value) })}
+							/>
+						</label>
+						<label class="control">
+							<span class="label">Completed</span>
+							<input
+								class="field"
+								type="date"
+								value={toDateInput(node.completed_at)}
+								disabled={node.status !== 'done'}
+								title={node.status === 'done'
+									? undefined
+									: 'Only done nodes have a completion date'}
+								onchange={(event) =>
+									update(node, { completed_at: fromDateInput(event.currentTarget.value) })}
+							/>
+						</label>
+					</div>
 
 					<div class="actions">
 						<span class="label">Actions</span>
@@ -432,6 +464,18 @@
 	.of {
 		font: 600 13px/1 var(--font-display);
 		color: var(--ink-2);
+	}
+
+	.dates {
+		display: flex;
+		flex-direction: column;
+		gap: 12px;
+	}
+
+	.dates .field {
+		padding: 7px 10px;
+		font-size: 13px;
+		min-width: 0;
 	}
 
 	.stats {

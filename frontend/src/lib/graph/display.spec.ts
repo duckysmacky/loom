@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	accentColor,
+	fromDateInput,
 	childrenOf,
 	isBacklog,
 	isDashed,
@@ -8,7 +9,8 @@ import {
 	progressText,
 	relativeDays,
 	requirementsOf,
-	shortDate
+	shortDate,
+	toDateInput
 } from './display';
 import { makeEdge, makeNode } from './fixtures';
 
@@ -74,6 +76,13 @@ describe('display helpers', () => {
 		const now = new Date('2026-09-10T12:00:00');
 		expect(shortDate('2026-09-02T12:00:00', now)).toBe('2 Sep');
 		expect(shortDate('2025-07-02T12:00:00', now)).toBe('2 Jul 2025');
+	});
+
+	it('round-trips dates through date inputs in local time', () => {
+		expect(toDateInput(null)).toBe('');
+		expect(fromDateInput('')).toBeNull();
+		expect(toDateInput(fromDateInput('2026-09-02'))).toBe('2026-09-02');
+		expect(toDateInput(new Date('2026-09-02T23:30:00').toISOString())).toBe('2026-09-02');
 	});
 
 	it('takes the first prose line of the notes as the excerpt', () => {
