@@ -6,7 +6,7 @@ use super::extract::{ApiJson, ApiPath, ApiQuery};
 use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
 use crate::models::node::{
-    AttachTopicRequest, CreateNodeRequest, NodeListQuery, NodeResponse, UpdateNodeRequest,
+    AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, NodeResponse, UpdateNodeRequest,
 };
 use crate::repo::node_topics::{AttachOutcome, DetachOutcome};
 use crate::repo::{node_topics, nodes};
@@ -34,6 +34,12 @@ pub async fn create(
         validate_color(color)?;
     }
     request.progress_unit = clean_progress_unit(request.progress_unit.take())?;
+    let sets_progress = request.progress_current.is_some()
+        || request.progress_total.is_some()
+        || request.progress_unit.is_some();
+    if sets_progress && request.kind != NodeKind::Study {
+        return Err(ONLY_STUDY_PROGRESS);
+    }
 
     let node = nodes::create_node(user_id, &state.pool, &request)
         .await
@@ -69,6 +75,23 @@ pub async fn update(
     }
     if let Some(unit) = request.progress_unit.take() {
         request.progress_unit = Some(clean_progress_unit(unit)?);
+    }
+    let sets_progress = matches!(request.progress_current, Some(Some(_)))
+        || matches!(request.progress_total, Some(Some(_)))
+        || matches!(request.progress_unit, Some(Some(_)));
+    if sets_progress {
+        let resulting_kind = match request.kind {
+            Some(kind) => kind,
+            None => {
+                nodes::get_node(user_id, &state.pool, node_id)
+                    .await?
+                    .ok_or(ApiError::NotFound)?
+                    .kind
+            }
+        };
+        if resulting_kind != NodeKind::Study {
+            return Err(ONLY_STUDY_PROGRESS);
+        }
     }
 
     let node = nodes::update_node(user_id, &state.pool, node_id, &request)
@@ -115,6 +138,9 @@ pub async fn detach_topic(
 }
 
 const MAX_PROGRESS_UNIT_LEN: usize = 40;
+
+/// Kinds are strict: only study nodes carry a tracked progress counter.
+const ONLY_STUDY_PROGRESS: ApiError = ApiError::InvalidInput("only study nodes track progress");
 
 /// Trims the progress label; blank means "no label" (stored as NULL).
 fn clean_progress_unit(unit: Option<String>) -> Result<Option<String>, ApiError> {

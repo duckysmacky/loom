@@ -7,7 +7,8 @@ use crate::middleware::auth_user::AuthUser;
 use crate::models::checklist::{
     ChecklistItemResponse, CreateChecklistItemRequest, UpdateChecklistItemRequest,
 };
-use crate::repo::checklist;
+use crate::models::node::NodeKind;
+use crate::repo::{checklist, nodes};
 use crate::state::AppState;
 
 fn clean_title(title: &str) -> Result<&str, ApiError> {
@@ -36,6 +37,12 @@ pub async fn create(
     ApiJson(request): ApiJson<CreateChecklistItemRequest>,
 ) -> Result<(StatusCode, Json<ChecklistItemResponse>), ApiError> {
     let title = clean_title(&request.title)?;
+    let node = nodes::get_node(user_id, &state.pool, node_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    if node.kind != NodeKind::Project {
+        return Err(ApiError::InvalidInput("only projects have a checklist"));
+    }
     let item = checklist::create_item(user_id, &state.pool, node_id, title)
         .await?
         .ok_or(ApiError::NotFound)?;

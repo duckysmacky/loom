@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::models::checklist::ChecklistItemResponse;
@@ -132,4 +132,24 @@ pub async fn progress_for_node(
         done: row.done,
         total: row.total,
     }))
+}
+
+/// Drops every checklist item on a node (used when it stops being a project).
+pub async fn delete_all_for_node(
+    user_id: Uuid,
+    connection: &mut PgConnection,
+    node_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        DELETE FROM checklist_items c
+        USING nodes n
+        WHERE c.node_id = $2 AND n.id = c.node_id AND n.user_id = $1
+        "#,
+        user_id,
+        node_id,
+    )
+    .execute(connection)
+    .await?;
+    Ok(())
 }

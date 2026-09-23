@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM checklist_items c\n        USING nodes n\n        WHERE c.node_id = $2 AND n.id = c.node_id AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "682507024cee59773e5c183c79efbb161b4793057260f6338bbe315f2494ea4e"
+}

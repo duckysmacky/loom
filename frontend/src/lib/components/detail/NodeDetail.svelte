@@ -5,12 +5,14 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
+	import Modal from '$lib/components/ui/Modal.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
 		ACCENT_PALETTE,
 		accentColor,
 		fromDateInput,
 		incrementedProgress,
+		kindChangeLosses,
 		relativeDays,
 		shortDate,
 		toDateInput
@@ -90,9 +92,22 @@
 		}
 	}
 
-	const showProgress = $derived(
-		node ? node.kind === 'study' || node.progress_total !== null : false
-	);
+	// Kinds are strict: only studies track progress, only projects have a checklist.
+	const showProgress = $derived(node?.kind === 'study');
+
+	// A kind change that would drop data waits for confirmation first.
+	let pendingKind = $state<NodeResponse['kind'] | null>(null);
+	const pendingLosses = $derived(node && pendingKind ? kindChangeLosses(node, pendingKind) : []);
+
+	function requestKindChange(current: NodeResponse, kind: NodeResponse['kind']) {
+		if (kindChangeLosses(current, kind).length) pendingKind = kind;
+		else update(current, { kind });
+	}
+
+	function confirmKindChange(current: NodeResponse) {
+		if (pendingKind) update(current, { kind: pendingKind });
+		pendingKind = null;
+	}
 </script>
 
 <svelte:window
@@ -191,7 +206,9 @@
 					{/if}
 
 					<DetailNotes {node} />
-					<DetailChecklist {node} />
+					{#if node.kind === 'project'}
+						<DetailChecklist {node} />
+					{/if}
 					<DetailConnections {node} />
 				</div>
 
@@ -211,17 +228,20 @@
 					</label>
 					<label class="control">
 						<span class="label">Kind</span>
-						<select
-							class="field"
-							value={node.kind}
-							onchange={(event) =>
-								update(node, { kind: event.currentTarget.value as NodeResponse['kind'] })}
-						>
-							<option value="idea">Idea</option>
-							<option value="project">Project</option>
-							<option value="study">Study</option>
-							<option value="path">Path</option>
-						</select>
+						<!-- The key re-renders the select, so a cancelled change snaps back. -->
+						{#key pendingKind}
+							<select
+								class="field"
+								value={pendingKind ?? node.kind}
+								onchange={(event) =>
+									requestKindChange(node, event.currentTarget.value as NodeResponse['kind'])}
+							>
+								<option value="idea">Idea</option>
+								<option value="project">Project</option>
+								<option value="study">Study</option>
+								<option value="path">Path</option>
+							</select>
+						{/key}
 					</label>
 					<div class="control">
 						<span class="label">Focus tier</span>
@@ -331,6 +351,27 @@
 {/if}
 
 <PromoteDialog node={promoting} onclose={() => (promoting = null)} />
+
+<Modal
+	open={pendingKind !== null}
+	onclose={() => (pendingKind = null)}
+	label="Confirm kind change"
+	width={440}
+>
+	<div class="confirm">
+		<div class="label">Change kind to {pendingKind}?</div>
+		<p>Each kind keeps different data. Switching will remove:</p>
+		<ul>
+			{#each pendingLosses as loss (loss)}
+				<li>{loss}</li>
+			{/each}
+		</ul>
+		<div class="confirm-actions">
+			<Button variant="quiet" onclick={() => (pendingKind = null)}>Cancel</Button>
+			<Button variant="primary" onclick={() => node && confirmKindChange(node)}>Change kind</Button>
+		</div>
+	</div>
+</Modal>
 
 <style>
 	.scrim {
@@ -508,6 +549,32 @@
 		padding: 7px 10px;
 		font-size: 13px;
 		min-width: 0;
+	}
+
+	.confirm {
+		padding: 20px 22px;
+		display: flex;
+		flex-direction: column;
+		gap: 10px;
+		font: 500 13.5px/1.5 var(--font-display);
+	}
+
+	.confirm p,
+	.confirm ul {
+		margin: 0;
+	}
+
+	.confirm li {
+		color: var(--warn);
+		font-weight: 700;
+	}
+
+	.confirm-actions {
+		display: flex;
+		justify-content: flex-end;
+		gap: 8px;
+		padding-top: 12px;
+		border-top: var(--border-width-hair) solid var(--line);
 	}
 
 	.stats {

@@ -126,18 +126,41 @@ export function fromDateInput(value: string): string | null {
 }
 
 /**
- * The progress a node shows, by precedence: its own tracked counter (e.g. a
- * study's videos), then its checklist, then its part_of children.
+ * The progress a node shows - each kind has exactly one source: a study's
+ * tracked counter, a project's checklist, a path's contained nodes. Ideas
+ * have none.
  */
 export function progressOf(
 	node: NodeResponse
 ): { done: number; total: number; unit: 'tracked' | 'tasks' | 'children' } | null {
-	if (node.progress_current !== null && node.progress_total !== null) {
+	if (node.kind === 'study' && node.progress_current !== null && node.progress_total !== null) {
 		return { done: node.progress_current, total: node.progress_total, unit: 'tracked' };
 	}
-	if (node.checklist_progress) return { ...node.checklist_progress, unit: 'tasks' };
-	if (node.container_progress) return { ...node.container_progress, unit: 'children' };
+	if (node.kind === 'project' && node.checklist_progress) {
+		return { ...node.checklist_progress, unit: 'tasks' };
+	}
+	if (node.kind === 'path' && node.container_progress) {
+		return { ...node.container_progress, unit: 'children' };
+	}
 	return null;
+}
+
+/**
+ * What a node would lose by switching to `kind` - kinds are strict, so the
+ * server drops data the new kind can't have. Empty when nothing is lost.
+ */
+export function kindChangeLosses(node: NodeResponse, kind: NodeResponse['kind']): string[] {
+	const losses: string[] = [];
+	if (kind !== 'study' && node.progress_total !== null) {
+		losses.push(`the progress counter (${node.progress_current ?? 0} / ${node.progress_total})`);
+	}
+	if (kind !== 'project' && node.checklist_progress) {
+		losses.push(`${node.checklist_progress.total} checklist item(s)`);
+	}
+	if (kind !== 'path' && node.container_progress) {
+		losses.push(`${node.container_progress.total} contained node(s), which leave the path`);
+	}
+	return losses;
 }
 
 /** "15 / 30 videos" (unit label optional), "3 / 5 tasks", "1 / 2 done", or null. */
@@ -165,11 +188,13 @@ export function progressPair(node: NodeResponse): [number, number] | null {
 	return progress ? [progress.done, progress.total] : null;
 }
 
-/** First non-heading line of the markdown notes, stripped of markup. */
-export function notesExcerpt(notes: string | null): string {
-	const line = (notes ?? '')
+/** The first `lines` prose lines of the markdown notes (headings skipped), stripped of markup. */
+export function notesExcerpt(notes: string | null, lines = 1): string {
+	return (notes ?? '')
 		.split('\n')
 		.map((text) => text.trim())
-		.find((text) => text && !text.startsWith('#'));
-	return (line ?? '').replace(/[*_`>[\]]|^[-+] /g, '').trim();
+		.filter((text) => text && !text.startsWith('#'))
+		.slice(0, lines)
+		.map((text) => text.replace(/[*_`>[\]]|^[-+] /g, '').trim())
+		.join(' ');
 }

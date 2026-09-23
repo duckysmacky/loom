@@ -88,8 +88,9 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 
 	<div class="title">{node.title}</div>
 
-	{#if feature && node.notes}
-		<p class="excerpt">{notesExcerpt(node.notes)}</p>
+	<!-- Paths show their contents instead of a description. -->
+	{#if node.notes && node.kind !== 'path'}
+		<p class="excerpt">{notesExcerpt(node.notes, 3)}</p>
 	{/if}
 
 	{#if unmet.length}
@@ -195,9 +196,19 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 
 	.excerpt {
 		margin: 7px 0 0;
-		font: 500 13.5px/1.55 var(--font-display);
+		font: 500 12.5px/1.5 var(--font-display);
 		color: var(--ink-3);
 		max-width: 620px;
+		display: -webkit-box;
+		-webkit-box-orient: vertical;
+		-webkit-line-clamp: 3;
+		line-clamp: 3;
+		overflow: hidden;
+	}
+
+	.feature .excerpt {
+		font-size: 13.5px;
+		line-height: 1.55;
 	}
 
 	.requires {

@@ -267,6 +267,8 @@ pub async fn update_node(
     let progress_unit_set = request.progress_unit.is_some();
     let progress_unit = request.progress_unit.clone().flatten();
 
+    let mut tx = pool.begin().await?;
+
     let row = sqlx::query!(
         r#"
         UPDATE nodes SET
@@ -274,8 +276,16 @@ pub async fn update_node(
             status = COALESCE($4, status),
             focus = COALESCE($5, focus),
             title = COALESCE($6, title),
-            progress_current = CASE WHEN $7 THEN $8 ELSE progress_current END,
-            progress_total = CASE WHEN $9 THEN $10 ELSE progress_total END,
+            -- Tracked progress belongs to study nodes only: any other resulting
+            -- kind drops it (a kind change clears data the new kind can't have).
+            progress_current = CASE
+                WHEN COALESCE($3, kind) <> 'study' THEN NULL
+                WHEN $7 THEN $8 ELSE progress_current
+            END,
+            progress_total = CASE
+                WHEN COALESCE($3, kind) <> 'study' THEN NULL
+                WHEN $9 THEN $10 ELSE progress_total
+            END,
             color = CASE WHEN $11 THEN $12 ELSE color END,
             notes = CASE WHEN $13 THEN $14 ELSE notes END,
             -- An explicit client value always wins ($15/$17). Otherwise,
@@ -297,7 +307,10 @@ pub async fn update_node(
             END,
             canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,
             canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,
-            progress_unit = CASE WHEN $23 THEN $24 ELSE progress_unit END,
+            progress_unit = CASE
+                WHEN COALESCE($3, kind) <> 'study' THEN NULL
+                WHEN $23 THEN $24 ELSE progress_unit
+            END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
         RETURNING
@@ -330,12 +343,19 @@ pub async fn update_node(
         progress_unit_set,
         progress_unit,
     )
-    .fetch_optional(pool)
+    .fetch_optional(&mut *tx)
     .await?;
 
     let Some(row) = row else {
         return Ok(None);
     };
+    // Checklists belong to projects only - same kind-change rule as the
+    // progress columns above, in the same transaction.
+    if row.kind != NodeKind::Project {
+        checklist::delete_all_for_node(user_id, &mut tx, row.id).await?;
+    }
+    tx.commit().await?;
+
     let topic_ids = node_topics::topic_ids_for_node(user_id, pool, row.id).await?;
     let derived = edges::derived_state(user_id, pool, row.id).await?;
     let last_poked_at = pokes::last_poked_at(user_id, pool, row.id).await?;

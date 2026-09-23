@@ -3,6 +3,7 @@ import {
 	accentColor,
 	fromDateInput,
 	incrementedProgress,
+	kindChangeLosses,
 	childrenOf,
 	isBacklog,
 	borderStyle,
@@ -66,17 +67,26 @@ describe('display helpers', () => {
 		expect(childrenOf('path', [makeEdge('child', 'path', 'part_of')], byId)).toEqual([child]);
 	});
 
-	it('prefers tracked progress, then the checklist, then part_of children', () => {
+	it('takes progress from the one source each kind has', () => {
 		const children = { container_progress: { done: 1, total: 2 } };
 		const checklist = { checklist_progress: { done: 3, total: 5 } };
 		const tracked = { progress_current: 15, progress_total: 30 };
-		expect(progressText(makeNode({ ...children, ...checklist, ...tracked }))).toBe('15 / 30');
-		expect(progressText(makeNode({ ...checklist, ...tracked, progress_unit: 'videos' }))).toBe(
+		const everything = { ...children, ...checklist, ...tracked };
+		expect(progressText(makeNode({ kind: 'study', ...everything }))).toBe('15 / 30');
+		expect(progressText(makeNode({ kind: 'study', ...tracked, progress_unit: 'videos' }))).toBe(
 			'15 / 30 videos'
 		);
-		expect(progressText(makeNode({ ...children, ...checklist }))).toBe('3 / 5 tasks');
-		expect(progressText(makeNode(children))).toBe('1 / 2 done');
-		expect(progressText(makeNode())).toBeNull();
+		expect(progressText(makeNode({ kind: 'project', ...everything }))).toBe('3 / 5 tasks');
+		expect(progressText(makeNode({ kind: 'path', ...everything }))).toBe('1 / 2 done');
+		expect(progressText(makeNode({ kind: 'idea', ...everything }))).toBeNull();
+	});
+
+	it('lists what a kind change would drop', () => {
+		const study = makeNode({ kind: 'study', progress_current: 2, progress_total: 9 });
+		expect(kindChangeLosses(study, 'study')).toEqual([]);
+		expect(kindChangeLosses(study, 'project')).toEqual(['the progress counter (2 / 9)']);
+		const project = makeNode({ kind: 'project', checklist_progress: { done: 0, total: 3 } });
+		expect(kindChangeLosses(project, 'idea')).toEqual(['3 checklist item(s)']);
 	});
 
 	it('bumps tracked progress by one, never past the total', () => {
@@ -109,5 +119,6 @@ describe('display helpers', () => {
 			'A from-scratch renderer.'
 		);
 		expect(notesExcerpt(null)).toBe('');
+		expect(notesExcerpt('# Plan\nOne.\n\n- two\nthree', 2)).toBe('One. two');
 	});
 });

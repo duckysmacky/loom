@@ -72,7 +72,7 @@ async fn create_get_update_delete_happy_path(pool: PgPool) {
     let node = create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "Loom backend"}),
+        json!({"kind": "study", "title": "Loom backend"}),
     )
     .await;
     assert_eq!(node["status"], "idea");
@@ -289,7 +289,7 @@ async fn mismatched_progress_pair_returns_400(pool: PgPool) {
         req(
             "POST",
             "/api/nodes",
-            json!({"kind": "idea", "title": "bad", "progress_current": 5}),
+            json!({"kind": "study", "title": "bad", "progress_current": 5}),
             Some(&token),
         ),
     )
@@ -897,4 +897,117 @@ async fn progress_unit_is_trimmed_optional_and_clearable(pool: PgPool) {
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test]
+async fn only_study_nodes_accept_tracked_progress(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "studyonly@example.com").await;
+
+    let (status, body) = send(
+        &app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "project", "title": "p", "progress_current": 1, "progress_total": 2}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["error"], "only study nodes track progress");
+
+    let project = create_node(&app, &token, json!({"kind": "project", "title": "p"})).await;
+    let uri = format!("/api/nodes/{}", project["id"].as_str().unwrap());
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"progress_unit": "videos"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    // Changing kind to study in the same request is fine.
+    let (status, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"kind": "study", "progress_current": 1, "progress_total": 4}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["progress_total"], 4);
+}
+
+#[sqlx::test]
+async fn kind_change_clears_data_the_new_kind_cannot_have(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "kindswitch@example.com").await;
+
+    let study = create_node(
+        &app,
+        &token,
+        json!({
+            "kind": "study", "title": "s",
+            "progress_current": 2, "progress_total": 9, "progress_unit": "videos"
+        }),
+    )
+    .await;
+    let study_uri = format!("/api/nodes/{}", study["id"].as_str().unwrap());
+    let (_, became_project) = send(
+        &app,
+        req(
+            "PATCH",
+            &study_uri,
+            json!({"kind": "project"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(became_project["progress_current"], Value::Null);
+    assert_eq!(became_project["progress_total"], Value::Null);
+    assert_eq!(became_project["progress_unit"], Value::Null);
+
+    // Now a project: give it a checklist, then switch away.
+    let checklist_uri = format!("/api/nodes/{}/checklist", study["id"].as_str().unwrap());
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            &checklist_uri,
+            json!({"title": "task"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (_, became_idea) = send(
+        &app,
+        req("PATCH", &study_uri, json!({"kind": "idea"}), Some(&token)),
+    )
+    .await;
+    assert_eq!(became_idea["checklist_progress"], Value::Null);
+    let (_, items) = send(&app, req("GET", &checklist_uri, Value::Null, Some(&token))).await;
+    assert_eq!(items, json!([]));
+
+    // And checklists can't be added to a non-project.
+    let (status, body) = send(
+        &app,
+        req(
+            "POST",
+            &checklist_uri,
+            json!({"title": "task"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["error"], "only projects have a checklist");
 }
