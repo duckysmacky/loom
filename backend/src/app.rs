@@ -54,6 +54,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/{id}/topics/{topic_id}",
             delete(handlers::nodes::detach_topic),
+        )
+        .route(
+            "/{id}/pokes",
+            get(handlers::pokes::list).post(handlers::pokes::create),
         );
 
     let topic_routes = Router::new()

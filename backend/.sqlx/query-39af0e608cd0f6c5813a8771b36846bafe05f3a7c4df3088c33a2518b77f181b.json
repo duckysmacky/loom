@@ -1,0 +1,40 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "SELECT id, poked_at FROM pokes WHERE node_id = $1 ORDER BY poked_at DESC",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "pokes",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "poked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "pokes",
+            "name": "poked_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "39af0e608cd0f6c5813a8771b36846bafe05f3a7c4df3088c33a2518b77f181b"
+}

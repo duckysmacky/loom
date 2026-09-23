@@ -69,6 +69,7 @@ pub struct NodeResponse {
     pub topic_ids: Vec<Uuid>,
     pub blocked: bool,
     pub container_progress: Option<ContainerProgress>,
+    pub last_poked_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, TS)]

@@ -1,0 +1,24 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT MAX(p.poked_at) FROM pokes p\n        JOIN nodes n ON n.id = p.node_id\n        WHERE n.id = $2 AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "max",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "a252fbf3360190366fdc1252a408f1a361cb25840a30e5f8e38e5b262e76b393"
+}

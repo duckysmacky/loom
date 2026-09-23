@@ -1,6 +1,7 @@
 pub mod auth;
 pub mod edge;
 pub mod node;
+pub mod poke;
 pub mod topic;
 pub mod user;
 

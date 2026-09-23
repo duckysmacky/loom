@@ -6,7 +6,7 @@ use crate::models::node::{
     ContainerProgress, CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse,
     NodeStatus, UpdateNodeRequest,
 };
-use crate::repo::{edges, node_topics};
+use crate::repo::{edges, node_topics, pokes};
 
 /// Query target for every node-returning query - flat fields only, since
 /// `query!`/`query_as!` map one SQL column to one struct field.
@@ -31,6 +31,7 @@ struct NodeRow {
     blocked: bool,
     container_total: i64,
     container_done: i64,
+    last_poked_at: Option<DateTime<Utc>>,
 }
 
 impl From<NodeRow> for NodeResponse {
@@ -56,6 +57,7 @@ impl From<NodeRow> for NodeResponse {
             topic_ids: row.topic_ids,
             blocked: row.blocked,
             container_progress,
+            last_poked_at: row.last_poked_at,
         }
     }
 }
@@ -80,7 +82,8 @@ pub async fn create_node(
             ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
             false AS "blocked!",
             0::bigint AS "container_total!",
-            0::bigint AS "container_done!"
+            0::bigint AS "container_done!",
+            NULL::timestamptz AS last_poked_at
         "#,
         user_id,
         request.kind as NodeKind,
@@ -121,7 +124,8 @@ pub async fn list_nodes(
                 AS "container_total!",
             (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
              WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
-                AS "container_done!"
+                AS "container_done!",
+            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id
         WHERE n.user_id = $1
@@ -165,7 +169,8 @@ pub async fn get_node(
                 AS "container_total!",
             (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
              WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
-                AS "container_done!"
+                AS "container_done!",
+            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id
         WHERE n.user_id = $1 AND n.id = $2
@@ -246,6 +251,7 @@ pub async fn update_node(
     };
     let topic_ids = node_topics::topic_ids_for_node(user_id, pool, row.id).await?;
     let derived = edges::derived_state(user_id, pool, row.id).await?;
+    let last_poked_at = pokes::last_poked_at(user_id, pool, row.id).await?;
 
     Ok(Some(NodeResponse {
         id: row.id,
@@ -264,6 +270,7 @@ pub async fn update_node(
         topic_ids,
         blocked: derived.blocked,
         container_progress: derived.container_progress,
+        last_poked_at,
     }))
 }
 
