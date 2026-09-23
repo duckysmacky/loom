@@ -87,6 +87,5 @@
   "85": "send",
   "86": "fixtures.ts",
   "87": "$lib/stores/filters.svelte",
-  "88": "+page.svelte",
-  "89": "dompurify"
+  "88": "+page.svelte"
 }
