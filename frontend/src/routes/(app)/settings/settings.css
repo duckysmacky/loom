@@ -1,0 +1,42 @@
+/* Shared layout for the settings tabs: a stack of bordered sections with a
+   title, a one-line explanation, and label/control rows. */
+.settings-section {
+	background: var(--surface);
+	border: var(--border-width) solid var(--line);
+	padding: 18px 20px;
+	display: flex;
+	flex-direction: column;
+	gap: 14px;
+}
+
+.settings-section h2 {
+	margin: 0;
+	font: 700 15px/1.2 var(--font-display);
+}
+
+.settings-section .explain {
+	margin: -8px 0 0;
+	font: 500 12.5px/1.5 var(--font-display);
+	color: var(--ink-2);
+}
+
+.settings-row {
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	flex-wrap: wrap;
+	padding-top: 12px;
+	border-top: var(--border-width-hair) solid var(--line);
+}
+
+.settings-row .row-label {
+	font: 700 13px/1.3 var(--font-display);
+}
+
+.settings-row .row-help {
+	display: block;
+	margin-top: 3px;
+	font: 500 11.5px/1.4 var(--font-display);
+	color: var(--ink-2);
+}

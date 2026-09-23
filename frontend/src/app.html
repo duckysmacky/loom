@@ -4,6 +4,21 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<script>
+			// Apply the saved theme/density before first paint (no light flash in
+			// dark mode). Mirrors applyAppearance() in $lib/stores/prefs.svelte.ts.
+			try {
+				const prefs = JSON.parse(localStorage.getItem('loom.prefs') || '{}');
+				const theme = prefs.theme || 'system';
+				const dark =
+					theme === 'dark' ||
+					(theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
+				document.documentElement.dataset.theme = dark ? 'dark' : 'light';
+				document.documentElement.dataset.density = prefs.density || 'comfortable';
+			} catch {
+				// Storage blocked: fall back to the light defaults.
+			}
+		</script>
 		%sveltekit.head%
 	</head>
 	<body data-sveltekit-preload-data="hover">

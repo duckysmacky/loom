@@ -41,6 +41,15 @@ export async function signup(email: string, password: string) {
 	startSession(await authApi.signup({ email, password }));
 }
 
+/** Changes the password; the server signs out every other session. */
+export async function changePassword(currentPassword: string, newPassword: string) {
+	const { access_token } = await authApi.changePassword({
+		current_password: currentPassword,
+		new_password: newPassword
+	});
+	setAccessToken(access_token);
+}
+
 export async function logout() {
 	await authApi.logout().catch(() => {});
 	setAccessToken(null);

@@ -7,10 +7,12 @@
 	import '@fontsource/space-mono/700.css';
 	import '$lib/styles/global.css';
 	import favicon from '$lib/assets/favicon.svg';
+	import { applyAppearance } from '$lib/stores/prefs.svelte';
 	import { bootstrapSession, session } from '$lib/stores/session.svelte';
 
 	let { children } = $props();
 
+	applyAppearance();
 	bootstrapSession();
 </script>
 

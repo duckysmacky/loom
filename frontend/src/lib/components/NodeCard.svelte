@@ -13,6 +13,7 @@
 		requirementsOf
 	} from '$lib/graph/display';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { prefs } from '$lib/stores/prefs.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -21,7 +22,7 @@
 	let {
 		node,
 		feature = false,
-		showPoke = true,
+		showPoke = prefs.pokeFromCards,
 		children
 	}: {
 		node: NodeResponse;

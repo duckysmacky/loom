@@ -5,15 +5,11 @@
 	import { nodesApi } from '$lib/api/endpoints';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { prefs } from '$lib/stores/prefs.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
 	import { overlays } from '$lib/stores/ui.svelte';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeKind } from '$lib/types/NodeKind';
-
-	let {
-		defaultKind = 'idea',
-		defaultFocus = 'secondary'
-	}: { defaultKind?: NodeKind; defaultFocus?: NodeFocus } = $props();
 
 	let title = $state('');
 	let kind = $state<NodeKind>('idea');
@@ -22,12 +18,13 @@
 	let topicIds = $state<string[]>([]);
 	let saving = $state(false);
 
-	// Fresh form with the configured defaults every time it opens.
+	// Fresh form with the configured defaults (Settings > Functionality)
+	// every time it opens.
 	$effect(() => {
 		if (!overlays.captureOpen) return;
 		title = '';
-		kind = defaultKind;
-		focus = defaultFocus;
+		kind = prefs.captureKind;
+		focus = prefs.captureFocus;
 		startNow = false;
 		topicIds = [];
 	});

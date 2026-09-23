@@ -2,6 +2,7 @@ import { queryString, request } from './client';
 import type { AuthResponse } from '$lib/types/AuthResponse';
 import type { AuthUserView } from '$lib/types/AuthUserView';
 import type { CanvasResponse } from '$lib/types/CanvasResponse';
+import type { ChangePasswordRequest } from '$lib/types/ChangePasswordRequest';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
 import type { CreateNodeRequest } from '$lib/types/CreateNodeRequest';
 import type { CreateTopicRequest } from '$lib/types/CreateTopicRequest';
@@ -11,6 +12,7 @@ import type { LoginRequest } from '$lib/types/LoginRequest';
 import type { NodeListQuery } from '$lib/types/NodeListQuery';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { PokeResponse } from '$lib/types/PokeResponse';
+import type { RefreshResponse } from '$lib/types/RefreshResponse';
 import type { SignupRequest } from '$lib/types/SignupRequest';
 import type { TopicResponse } from '$lib/types/TopicResponse';
 import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
@@ -20,7 +22,9 @@ export const authApi = {
 	signup: (body: SignupRequest) => request<AuthResponse>('POST', '/auth/signup', body),
 	login: (body: LoginRequest) => request<AuthResponse>('POST', '/auth/login', body),
 	logout: () => request<void>('POST', '/auth/logout'),
-	me: () => request<AuthUserView>('GET', '/auth/me')
+	me: () => request<AuthUserView>('GET', '/auth/me'),
+	changePassword: (body: ChangePasswordRequest) =>
+		request<RefreshResponse>('POST', '/auth/password', body)
 };
 
 export const nodesApi = {
