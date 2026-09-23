@@ -45,7 +45,9 @@ pub enum NodeFocus {
 #[derive(Debug, Clone, Copy, Serialize, TS)]
 #[ts(export)]
 pub struct ContainerProgress {
+    #[ts(type = "number")]
     pub done: i64,
+    #[ts(type = "number")]
     pub total: i64,
 }
 

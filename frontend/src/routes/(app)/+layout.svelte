@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
+	import Toaster from '$lib/components/Toaster.svelte';
+	import { graph } from '$lib/stores/graph.svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import TopBar from './TopBar.svelte';
@@ -9,6 +11,7 @@
 
 	$effect(() => {
 		if (!session.user) goto('/login', { replaceState: true });
+		else if (!graph.loaded) graph.load();
 	});
 
 	const pageTitles: [string, string][] = [
@@ -32,6 +35,7 @@
 			<main class="content">{@render children()}</main>
 		</div>
 	</div>
+	<Toaster />
 {/if}
 
 <style>

@@ -1,9 +1,65 @@
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::dashboard::{DashboardCounts, KindCounts, StatusCounts};
-use crate::models::node::{NodeFocus, NodeKind, NodeResponse, NodeStatus};
-use crate::repo::nodes::NodeRow;
+use crate::models::dashboard::{DashboardCounts, DashboardResponse, KindCounts, StatusCounts};
+use crate::models::node::{NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus};
+use crate::repo::nodes::{self, NodeRow};
+
+const RECENT_BACKLOG_LIMIT: usize = 5;
+
+/// Assembles the whole dashboard. Everything except the counts and the
+/// stale list is carved out of one full node listing - a single-user graph
+/// is small, and it keeps the `blocked`/`container_progress` derivation in
+/// the one query that already computes it.
+pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResponse, sqlx::Error> {
+    let mut counts = get_counts(user_id, pool).await?;
+    let stale = get_stale(user_id, pool).await?;
+    let all_nodes = nodes::list_nodes(user_id, pool, &NodeListQuery::default()).await?;
+
+    let in_play =
+        |node: &&NodeResponse| !matches!(node.status, NodeStatus::Done | NodeStatus::Archived);
+
+    counts.blocked = all_nodes
+        .iter()
+        .filter(in_play)
+        .filter(|node| node.blocked)
+        .count() as i64;
+
+    let mut primary: Vec<NodeResponse> = all_nodes
+        .iter()
+        .filter(in_play)
+        .filter(|node| node.focus == NodeFocus::Primary)
+        .cloned()
+        .collect();
+    // Stable sort - within a rank the listing's newest-first order holds.
+    primary.sort_by_key(|node| match (node.status, node.blocked) {
+        (NodeStatus::Active, false) => 0,
+        (_, true) => 1,
+        _ => 2,
+    });
+
+    let recent_backlog = all_nodes
+        .iter()
+        .filter(|node| node.kind == NodeKind::Idea && node.status == NodeStatus::Idea)
+        .take(RECENT_BACKLOG_LIMIT)
+        .cloned()
+        .collect();
+
+    let containers = all_nodes
+        .iter()
+        .filter(in_play)
+        .filter(|node| node.container_progress.is_some())
+        .cloned()
+        .collect();
+
+    Ok(DashboardResponse {
+        counts,
+        stale,
+        primary,
+        recent_backlog,
+        containers,
+    })
+}
 
 pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts, sqlx::Error> {
     struct Row {
@@ -39,9 +95,13 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         course: 0,
     };
     let mut total = 0i64;
+    let mut backlog = 0i64;
 
     for row in rows {
         total += row.count;
+        if row.kind == NodeKind::Idea && row.status == NodeStatus::Idea {
+            backlog += row.count;
+        }
         match row.status {
             NodeStatus::Idea => by_status.idea += row.count,
             NodeStatus::Queued => by_status.queued += row.count,
@@ -61,6 +121,9 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         total,
         by_status,
         by_kind,
+        // Needs the derived `blocked` flag - filled in by `get_dashboard`.
+        blocked: 0,
+        backlog,
     })
 }
 
@@ -100,53 +163,6 @@ pub async fn get_stale(user_id: Uuid, pool: &PgPool) -> Result<Vec<NodeResponse>
               ) < now() - interval '14 days'
         GROUP BY n.id
         ORDER BY COALESCE((SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id), n.created_at) ASC
-        "#,
-        user_id,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows.into_iter().map(NodeResponse::from).collect())
-}
-
-/// Same shape again, WHERE swapped for focus=primary/status=active/
-/// unblocked. The blocked check is folded into WHERE as NOT EXISTS
-/// (cleaner than computing `blocked` in the SELECT list and filtering
-/// after), and since WHERE already guarantees every returned row is
-/// unblocked, `blocked` is hardcoded false in the SELECT list rather than
-/// recomputing the same EXISTS subquery a second time.
-pub async fn get_unblocked_primary(
-    user_id: Uuid,
-    pool: &PgPool,
-) -> Result<Vec<NodeResponse>, sqlx::Error> {
-    let rows = sqlx::query_as!(
-        NodeRow,
-        r#"
-        SELECT
-            n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
-            n.title, n.progress_current, n.progress_total,
-            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
-            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
-                AS "topic_ids!: Vec<Uuid>",
-            false AS "blocked!",
-            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
-                AS "container_total!",
-            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
-             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
-                AS "container_done!",
-            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
-        FROM nodes n
-        LEFT JOIN node_topics nt ON nt.node_id = n.id
-        WHERE n.user_id = $1
-          AND n.focus = 'primary'
-          AND n.status = 'active'
-          AND NOT EXISTS (
-                SELECT 1 FROM edges e
-                JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
-              )
-        GROUP BY n.id
-        ORDER BY n.created_at DESC
         "#,
         user_id,
     )

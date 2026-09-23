@@ -141,6 +141,8 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     assert_eq!(counts["by_kind"]["idea"], 2);
     assert_eq!(counts["by_kind"]["project"], 1);
     assert_eq!(counts["by_kind"]["course"], 1);
+    assert_eq!(counts["backlog"], 2);
+    assert_eq!(counts["blocked"], 0);
 }
 
 #[sqlx::test]
@@ -209,18 +211,39 @@ async fn stale_list_reflects_14_day_threshold(pool: PgPool) {
     assert!(!stale_titles.contains(&"stale-but-done".to_string()));
 }
 
+async fn add_edge(app: &axum::Router, token: &str, from: &str, to: &str, kind: &str) {
+    let (status, _) = send(
+        app,
+        req(
+            "POST",
+            "/api/edges",
+            json!({"from_node_id": from, "to_node_id": to, "kind": kind}),
+            Some(token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+}
+
+fn titles(list: &Value) -> Vec<String> {
+    list.as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["title"].as_str().unwrap().to_owned())
+        .collect()
+}
+
 #[sqlx::test]
-async fn unblocked_primary_list_is_exact(pool: PgPool) {
+async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) {
     let app = app(pool.clone());
     let token = signup(&app, "primary@example.com").await;
 
     create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "good", "status": "active", "focus": "primary"}),
+        json!({"kind": "project", "title": "queued", "status": "queued", "focus": "primary"}),
     )
     .await;
-
     let blocked = create_node(
         &app,
         &token,
@@ -228,18 +251,19 @@ async fn unblocked_primary_list_is_exact(pool: PgPool) {
     )
     .await;
     let blocker = create_node(&app, &token, json!({"kind": "idea", "title": "blocker"})).await;
-    let (status, _) = send(
+    add_edge(&app, &token, &blocked, &blocker, "requires").await;
+    create_node(
         &app,
-        req(
-            "POST",
-            "/api/edges",
-            json!({"from_node_id": blocked, "to_node_id": blocker, "kind": "requires"}),
-            Some(&token),
-        ),
+        &token,
+        json!({"kind": "project", "title": "good", "status": "active", "focus": "primary"}),
     )
     .await;
-    assert_eq!(status, StatusCode::CREATED);
-
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "finished", "status": "done", "focus": "primary"}),
+    )
+    .await;
     create_node(
         &app,
         &token,
@@ -252,14 +276,99 @@ async fn unblocked_primary_list_is_exact(pool: PgPool) {
         req("GET", "/api/dashboard", Value::Null, Some(&token)),
     )
     .await;
-    let titles: Vec<String> = dashboard["unblocked_primary"]
-        .as_array()
-        .unwrap()
-        .iter()
-        .map(|n| n["title"].as_str().unwrap().to_owned())
-        .collect();
 
-    assert_eq!(titles, vec!["good".to_string()]);
+    assert_eq!(
+        titles(&dashboard["primary"]),
+        vec![
+            "good".to_string(),
+            "blocked".to_string(),
+            "queued".to_string()
+        ]
+    );
+    assert_eq!(dashboard["primary"][1]["blocked"], true);
+    assert_eq!(dashboard["counts"]["blocked"], 1);
+}
+
+#[sqlx::test]
+async fn backlog_count_and_recent_backlog_cover_only_unpromoted_ideas(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "backlog@example.com").await;
+
+    for index in 0..7 {
+        create_node(
+            &app,
+            &token,
+            json!({"kind": "idea", "title": format!("idea-{index}")}),
+        )
+        .await;
+    }
+    // A queued idea and a project at status=idea are not backlog.
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "idea", "title": "queued-idea", "status": "queued"}),
+    )
+    .await;
+    create_node(&app, &token, json!({"kind": "project", "title": "project"})).await;
+
+    let (_, dashboard) = send(
+        &app,
+        req("GET", "/api/dashboard", Value::Null, Some(&token)),
+    )
+    .await;
+
+    assert_eq!(dashboard["counts"]["backlog"], 7);
+    assert_eq!(
+        titles(&dashboard["recent_backlog"]),
+        vec!["idea-6", "idea-5", "idea-4", "idea-3", "idea-2"]
+    );
+}
+
+#[sqlx::test]
+async fn containers_list_open_paths_with_progress(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "containers@example.com").await;
+
+    let path = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "path", "status": "active"}),
+    )
+    .await;
+    let done_child = create_node(
+        &app,
+        &token,
+        json!({"kind": "course", "title": "child-done", "status": "done"}),
+    )
+    .await;
+    let open_child = create_node(
+        &app,
+        &token,
+        json!({"kind": "course", "title": "child-open"}),
+    )
+    .await;
+    add_edge(&app, &token, &done_child, &path, "part_of").await;
+    add_edge(&app, &token, &open_child, &path, "part_of").await;
+
+    let archived_path = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "archived-path", "status": "archived"}),
+    )
+    .await;
+    add_edge(&app, &token, &open_child, &archived_path, "part_of").await;
+
+    let (_, dashboard) = send(
+        &app,
+        req("GET", "/api/dashboard", Value::Null, Some(&token)),
+    )
+    .await;
+
+    assert_eq!(titles(&dashboard["containers"]), vec!["path".to_string()]);
+    assert_eq!(
+        dashboard["containers"][0]["container_progress"],
+        json!({"done": 1, "total": 2})
+    );
 }
 
 #[sqlx::test]
@@ -276,10 +385,9 @@ async fn dashboard_is_isolated_per_user(pool: PgPool) {
     .await;
     assert_eq!(dashboard_b["counts"]["total"], 0);
     assert_eq!(dashboard_b["stale"].as_array().unwrap().len(), 0);
-    assert_eq!(
-        dashboard_b["unblocked_primary"].as_array().unwrap().len(),
-        0
-    );
+    for list in ["primary", "recent_backlog", "containers"] {
+        assert_eq!(dashboard_b[list].as_array().unwrap().len(), 0, "{list}");
+    }
 }
 
 #[sqlx::test]

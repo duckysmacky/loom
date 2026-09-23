@@ -3,6 +3,7 @@ import { refreshAccessToken, setAccessToken, setSessionExpiredHandler } from '$l
 import { authApi } from '$lib/api/endpoints';
 import type { AuthResponse } from '$lib/types/AuthResponse';
 import type { AuthUserView } from '$lib/types/AuthUserView';
+import { graph } from './graph.svelte';
 
 /** Signed-in user; `ready` flips once the boot-time refresh attempt settles. */
 export const session = $state({
@@ -12,6 +13,7 @@ export const session = $state({
 
 setSessionExpiredHandler(() => {
 	session.user = null;
+	graph.reset();
 	goto('/login');
 });
 
@@ -43,5 +45,6 @@ export async function logout() {
 	await authApi.logout().catch(() => {});
 	setAccessToken(null);
 	session.user = null;
+	graph.reset();
 	await goto('/login');
 }
