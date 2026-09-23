@@ -1,11 +1,64 @@
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::node::{
-    CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus,
-    UpdateNodeRequest,
+    ContainerProgress, CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse,
+    NodeStatus, UpdateNodeRequest,
 };
-use crate::repo::node_topics;
+use crate::repo::{edges, node_topics};
+
+/// Query target for every node-returning query - flat fields only, since
+/// `query!`/`query_as!` map one SQL column to one struct field.
+/// `container_progress`'s nested shape has no single-column representation,
+/// so it's carried as two flat counts here and folded into
+/// `NodeResponse::container_progress` by `From<NodeRow>`.
+struct NodeRow {
+    id: Uuid,
+    kind: NodeKind,
+    status: NodeStatus,
+    focus: NodeFocus,
+    title: String,
+    progress_current: Option<i32>,
+    progress_total: Option<i32>,
+    color: Option<String>,
+    notes: Option<String>,
+    created_at: DateTime<Utc>,
+    updated_at: DateTime<Utc>,
+    started_at: Option<DateTime<Utc>>,
+    completed_at: Option<DateTime<Utc>>,
+    topic_ids: Vec<Uuid>,
+    blocked: bool,
+    container_total: i64,
+    container_done: i64,
+}
+
+impl From<NodeRow> for NodeResponse {
+    fn from(row: NodeRow) -> Self {
+        let container_progress = (row.container_total > 0).then_some(ContainerProgress {
+            done: row.container_done,
+            total: row.container_total,
+        });
+        NodeResponse {
+            id: row.id,
+            kind: row.kind,
+            status: row.status,
+            focus: row.focus,
+            title: row.title,
+            progress_current: row.progress_current,
+            progress_total: row.progress_total,
+            color: row.color,
+            notes: row.notes,
+            created_at: row.created_at,
+            updated_at: row.updated_at,
+            started_at: row.started_at,
+            completed_at: row.completed_at,
+            topic_ids: row.topic_ids,
+            blocked: row.blocked,
+            container_progress,
+        }
+    }
+}
 
 pub async fn create_node(
     user_id: Uuid,
@@ -15,8 +68,8 @@ pub async fn create_node(
     let status = request.status.unwrap_or(NodeStatus::Idea);
     let focus = request.focus.unwrap_or(NodeFocus::Secondary);
 
-    sqlx::query_as!(
-        NodeResponse,
+    let row = sqlx::query_as!(
+        NodeRow,
         r#"
         INSERT INTO nodes (user_id, kind, status, focus, title, progress_current, progress_total, color, notes)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
@@ -24,7 +77,10 @@ pub async fn create_node(
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
             title, progress_current, progress_total, color, notes,
             created_at, updated_at, started_at, completed_at,
-            ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>"
+            ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
+            false AS "blocked!",
+            0::bigint AS "container_total!",
+            0::bigint AS "container_done!"
         "#,
         user_id,
         request.kind as NodeKind,
@@ -37,7 +93,9 @@ pub async fn create_node(
         request.notes,
     )
     .fetch_one(pool)
-    .await
+    .await?;
+
+    Ok(row.into())
 }
 
 pub async fn list_nodes(
@@ -45,15 +103,25 @@ pub async fn list_nodes(
     pool: &PgPool,
     filters: &NodeListQuery,
 ) -> Result<Vec<NodeResponse>, sqlx::Error> {
-    sqlx::query_as!(
-        NodeResponse,
+    let rows = sqlx::query_as!(
+        NodeRow,
         r#"
         SELECT
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
-                AS "topic_ids!: Vec<Uuid>"
+                AS "topic_ids!: Vec<Uuid>",
+            EXISTS (
+                SELECT 1 FROM edges e
+                JOIN nodes req ON req.id = e.to_node_id
+                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
+            ) AS "blocked!",
+            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
+                AS "container_total!",
+            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
+             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
+                AS "container_done!"
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id
         WHERE n.user_id = $1
@@ -69,7 +137,9 @@ pub async fn list_nodes(
         filters.kind as Option<NodeKind>,
     )
     .fetch_all(pool)
-    .await
+    .await?;
+
+    Ok(rows.into_iter().map(NodeResponse::from).collect())
 }
 
 pub async fn get_node(
@@ -77,15 +147,25 @@ pub async fn get_node(
     pool: &PgPool,
     node_id: Uuid,
 ) -> Result<Option<NodeResponse>, sqlx::Error> {
-    sqlx::query_as!(
-        NodeResponse,
+    let row = sqlx::query_as!(
+        NodeRow,
         r#"
         SELECT
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
-                AS "topic_ids!: Vec<Uuid>"
+                AS "topic_ids!: Vec<Uuid>",
+            EXISTS (
+                SELECT 1 FROM edges e
+                JOIN nodes req ON req.id = e.to_node_id
+                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
+            ) AS "blocked!",
+            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
+                AS "container_total!",
+            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
+             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
+                AS "container_done!"
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id
         WHERE n.user_id = $1 AND n.id = $2
@@ -95,7 +175,9 @@ pub async fn get_node(
         node_id,
     )
     .fetch_optional(pool)
-    .await
+    .await?;
+
+    Ok(row.map(NodeResponse::from))
 }
 
 pub async fn update_node(
@@ -163,6 +245,7 @@ pub async fn update_node(
         return Ok(None);
     };
     let topic_ids = node_topics::topic_ids_for_node(user_id, pool, row.id).await?;
+    let derived = edges::derived_state(user_id, pool, row.id).await?;
 
     Ok(Some(NodeResponse {
         id: row.id,
@@ -179,6 +262,8 @@ pub async fn update_node(
         started_at: row.started_at,
         completed_at: row.completed_at,
         topic_ids,
+        blocked: derived.blocked,
+        container_progress: derived.container_progress,
     }))
 }
 

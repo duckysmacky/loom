@@ -1,4 +1,5 @@
 pub mod auth;
+pub mod edge;
 pub mod node;
 pub mod topic;
 pub mod user;

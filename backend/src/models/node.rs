@@ -35,13 +35,23 @@ pub enum NodeFocus {
     Background,
 }
 
-/// A `nodes` row plus its attached topic ids - doubles as both the
-/// `query_as!` mapping target and the JSON response shape. Unlike `User`
-/// (which hides `password_hash`), no node column is sensitive or unused by
-/// the frontend, so there's no separate row/response split. `user_id` is
+/// Derived child-completion ratio for a `part_of` container node - `done`/
+/// `total` count of children pointing at it via a `part_of` edge. Distinct
+/// from `progress_current`/`progress_total`, which are real user-editable
+/// columns (e.g. a course's "15 of 30 videos").
+#[derive(Debug, Clone, Copy, Serialize, TS)]
+pub struct ContainerProgress {
+    pub done: i64,
+    pub total: i64,
+}
+
+/// A `nodes` row plus attached topic ids and derived graph state - the
+/// JSON response shape for every node-returning endpoint. `user_id` is
 /// deliberately not a field: ownership lives in the query's WHERE clause,
-/// it never needs to round-trip to the client.
-#[derive(Debug, Clone, Serialize, sqlx::FromRow, TS)]
+/// it never needs to round-trip to the client. Query targets don't map to
+/// this directly once `container_progress` is involved (no single-column
+/// SQL representation for a nested shape) - see `repo::nodes::NodeRow`.
+#[derive(Debug, Clone, Serialize, TS)]
 pub struct NodeResponse {
     pub id: Uuid,
     pub kind: NodeKind,
@@ -57,6 +67,8 @@ pub struct NodeResponse {
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
     pub topic_ids: Vec<Uuid>,
+    pub blocked: bool,
+    pub container_progress: Option<ContainerProgress>,
 }
 
 #[derive(Debug, Deserialize, TS)]

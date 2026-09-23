@@ -68,6 +68,13 @@ pub fn build_router(state: AppState) -> Router {
                 .delete(handlers::topics::delete),
         );
 
+    let edge_routes = Router::new()
+        .route(
+            "/",
+            get(handlers::edges::list).post(handlers::edges::create),
+        )
+        .route("/{id}", delete(handlers::edges::delete));
+
     Router::new()
         .nest(
             "/api",
@@ -75,7 +82,8 @@ pub fn build_router(state: AppState) -> Router {
                 .route("/health", get(health))
                 .nest("/auth", auth_routes)
                 .nest("/nodes", node_routes)
-                .nest("/topics", topic_routes),
+                .nest("/topics", topic_routes)
+                .nest("/edges", edge_routes),
         )
         .with_state(state)
         .layer(TraceLayer::new_for_http())

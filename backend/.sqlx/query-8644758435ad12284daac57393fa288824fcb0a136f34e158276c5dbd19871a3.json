@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\"\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND ($2::node_status IS NULL OR n.status = $2)\n          AND ($3::node_focus IS NULL OR n.focus = $3)\n          AND ($4::node_kind IS NULL OR n.kind = $4)\n        GROUP BY n.id\n        ORDER BY n.created_at DESC\n        ",
+  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\"\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND ($2::node_status IS NULL OR n.status = $2)\n          AND ($3::node_focus IS NULL OR n.focus = $3)\n          AND ($4::node_kind IS NULL OR n.kind = $4)\n        GROUP BY n.id\n        ORDER BY n.created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -187,6 +187,24 @@
         "name": "topic_ids!: Vec<Uuid>",
         "type_info": "UuidArray",
         "origin": "Expression"
+      },
+      {
+        "ordinal": 14,
+        "name": "blocked!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 15,
+        "name": "container_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 16,
+        "name": "container_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
       }
     ],
     "parameters": {
@@ -247,8 +265,11 @@
       false,
       true,
       true,
+      null,
+      null,
+      null,
       null
     ]
   },
-  "hash": "b217b2ab037b780413f7217dc6fede961d6a517cc7b060f02aef8d135162c045"
+  "hash": "8644758435ad12284daac57393fa288824fcb0a136f34e158276c5dbd19871a3"
 }

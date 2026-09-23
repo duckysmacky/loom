@@ -1,3 +1,4 @@
+pub mod edges;
 pub mod node_topics;
 pub mod nodes;
 pub mod refresh_tokens;
