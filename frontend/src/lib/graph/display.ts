@@ -152,6 +152,13 @@ export function progressText(node: NodeResponse): string | null {
 	return `${progress.done} / ${progress.total}${suffix}`;
 }
 
+/** The tracked counter after a quick "+1", or null when there's nothing to bump. */
+export function incrementedProgress(node: NodeResponse): number | null {
+	const { progress_current: current, progress_total: total } = node;
+	if (current === null || total === null || current >= total) return null;
+	return current + 1;
+}
+
 /** [done, total] of whichever progress the node shows. */
 export function progressPair(node: NodeResponse): [number, number] | null {
 	const progress = progressOf(node);

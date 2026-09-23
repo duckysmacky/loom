@@ -6,6 +6,7 @@
 	import {
 		accentColor,
 		borderStyle,
+		incrementedProgress,
 		notesExcerpt,
 		progressPair,
 		progressText,
@@ -41,6 +42,16 @@
 	const pokeable = $derived(
 		showPoke && (node.status === 'active' || node.status === 'queued' || node.status === 'paused')
 	);
+
+	const nextProgress = $derived(incrementedProgress(node));
+
+	function increment(event: MouseEvent) {
+		// The card itself opens the detail view - keep the click here.
+		event.stopPropagation();
+		if (nextProgress !== null) {
+			graph.mutate(() => nodesApi.update(node.id, { progress_current: nextProgress }));
+		}
+	}
 
 	async function poke(event: MouseEvent) {
 		event.stopPropagation();
@@ -87,6 +98,15 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 		<div class="progress">
 			<ProgressBar value={progress[0]} total={progress[1]} />
 			<span>{progressText(node)}</span>
+			{#if node.progress_total !== null}
+				<button
+					type="button"
+					class="bump"
+					disabled={nextProgress === null}
+					title="Add one to the progress"
+					onclick={increment}>+1</button
+				>
+			{/if}
 		</div>
 	{/if}
 
@@ -193,6 +213,19 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 		gap: 10px;
 		font: 700 11.5px/1 var(--font-display);
 		color: var(--ink-3);
+	}
+
+	.bump {
+		flex: none;
+		border: var(--border-width-hair) solid var(--line);
+		background: var(--surface);
+		padding: 4px 7px;
+		font: 700 10.5px/1 var(--font-mono);
+		color: var(--accent);
+	}
+
+	.bump:not(:disabled):hover {
+		border-color: var(--accent);
 	}
 
 	.actions {

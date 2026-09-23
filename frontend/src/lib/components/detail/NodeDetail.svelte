@@ -10,6 +10,7 @@
 		ACCENT_PALETTE,
 		accentColor,
 		fromDateInput,
+		incrementedProgress,
 		relativeDays,
 		shortDate,
 		toDateInput
@@ -169,6 +170,12 @@
 								/>
 								<Button type="submit" variant="poke">Save</Button>
 								{#if node.progress_total !== null}
+									<Button
+										variant="poke"
+										disabled={incrementedProgress(node) === null}
+										onclick={() => update(node, { progress_current: incrementedProgress(node) })}
+										>+1</Button
+									>
 									<Button
 										variant="quiet"
 										onclick={() =>

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
 	accentColor,
 	fromDateInput,
+	incrementedProgress,
 	childrenOf,
 	isBacklog,
 	borderStyle,
@@ -76,6 +77,12 @@ describe('display helpers', () => {
 		expect(progressText(makeNode({ ...children, ...checklist }))).toBe('3 / 5 tasks');
 		expect(progressText(makeNode(children))).toBe('1 / 2 done');
 		expect(progressText(makeNode())).toBeNull();
+	});
+
+	it('bumps tracked progress by one, never past the total', () => {
+		expect(incrementedProgress(makeNode({ progress_current: 3, progress_total: 5 }))).toBe(4);
+		expect(incrementedProgress(makeNode({ progress_current: 5, progress_total: 5 }))).toBeNull();
+		expect(incrementedProgress(makeNode())).toBeNull();
 	});
 
 	it('formats relative days', () => {
