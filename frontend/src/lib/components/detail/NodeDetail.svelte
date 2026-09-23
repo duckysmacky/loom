@@ -93,25 +93,23 @@
 {#if nodeId}
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 	<div class="scrim" onclick={closeNode}></div>
-	<aside class="detail" aria-label="Node detail">
+	<div class="detail" role="dialog" aria-modal="true" aria-label="Node detail">
 		{#if !node}
 			<div class="missing">
 				<p>{graph.loaded ? 'This node no longer exists.' : 'Loading…'}</p>
 				<Button variant="quiet" onclick={closeNode}>Close</Button>
 			</div>
 		{:else}
-			{@const kind = node.kind}
 			{@const blocked = node.blocked && node.status !== 'done'}
 			<div class="stripe" style:background={blocked ? 'var(--warn)' : accentColor(node)}></div>
 
 			<header>
 				<div class="meta-row">
-					<span class="label">{kind}</span>
+					<span class="label">{node.kind}</span>
 					<Badge status={node.status} blocked={node.blocked} />
-					{#if blocked}<span class="computed">computed · not editable</span>{/if}
+					{#if blocked}<span class="computed">blocked is computed · not editable</span>{/if}
 					<button type="button" class="close" aria-label="Close" onclick={closeNode}>✕</button>
 				</div>
-
 				<input
 					class="title"
 					aria-label="Title"
@@ -119,8 +117,52 @@
 					onblur={() => saveTitle(node)}
 					onkeydown={(event) => event.key === 'Enter' && event.currentTarget.blur()}
 				/>
+			</header>
 
-				<div class="controls">
+			<div class="columns">
+				<div class="main">
+					{#if showProgress}
+						<section>
+							<div class="label">Progress</div>
+							<form
+								class="progress"
+								onsubmit={(event) => {
+									event.preventDefault();
+									saveProgress(node);
+								}}
+							>
+								<input
+									class="field"
+									type="number"
+									min="0"
+									aria-label="Done so far"
+									bind:value={progressCurrent}
+								/>
+								<span class="of">of</span>
+								<input
+									class="field"
+									type="number"
+									min="1"
+									aria-label="Total"
+									bind:value={progressTotal}
+								/>
+								<Button type="submit" variant="poke">Save</Button>
+								{#if node.progress_total !== null}
+									<Button
+										variant="quiet"
+										onclick={() => update(node, { progress_current: null, progress_total: null })}
+										>Clear</Button
+									>
+								{/if}
+							</form>
+						</section>
+					{/if}
+
+					<DetailNotes {node} />
+					<DetailConnections {node} />
+				</div>
+
+				<aside class="side">
 					<label class="control">
 						<span class="label">Status</span>
 						<select
@@ -148,9 +190,6 @@
 							<option value="path">Path</option>
 						</select>
 					</label>
-				</div>
-
-				<div class="controls">
 					<div class="control">
 						<span class="label">Focus tier</span>
 						<SegmentedControl
@@ -180,110 +219,57 @@
 							{/each}
 						</div>
 					</div>
-				</div>
-			</header>
 
-			<div class="body">
-				{#if showProgress}
-					<section>
-						<div class="label">Progress</div>
-						<form
-							class="progress"
-							onsubmit={(event) => {
-								event.preventDefault();
-								saveProgress(node);
-							}}
+					<DetailTopics {node} />
+
+					<dl class="stats">
+						<dt class="label">Last touched</dt>
+						<dd>{node.last_poked_at ? relativeDays(node.last_poked_at) : 'never'}</dd>
+						<dt class="label">Pokes</dt>
+						<dd>{pokeCount ?? '–'}</dd>
+						<dt class="label">Created</dt>
+						<dd>{shortDate(node.created_at)}</dd>
+						<dt class="label">Started</dt>
+						<dd>{node.started_at ? shortDate(node.started_at) : '–'}</dd>
+						<dt class="label">Completed</dt>
+						<dd>{node.completed_at ? shortDate(node.completed_at) : '–'}</dd>
+					</dl>
+
+					<div class="actions">
+						<span class="label">Actions</span>
+						{#if blocked}
+							<span class="not-actionable">Not actionable yet</span>
+						{:else if node.kind === 'idea' && node.status === 'idea'}
+							<Button variant="poke" onclick={() => (promoting = node)}>Promote</Button>
+						{:else if ['active', 'queued', 'paused'].includes(node.status)}
+							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
+						{/if}
+						<Button
+							variant="accent"
+							onclick={() => goto(`/board/canvas?focus=${node.id}&node=${node.id}`)}
 						>
-							<input
-								class="field"
-								type="number"
-								min="0"
-								aria-label="Done so far"
-								bind:value={progressCurrent}
-							/>
-							<span class="of">of</span>
-							<input
-								class="field"
-								type="number"
-								min="1"
-								aria-label="Total"
-								bind:value={progressTotal}
-							/>
-							<Button type="submit" variant="poke">Save</Button>
-							{#if node.progress_total !== null}
-								<Button
-									variant="quiet"
-									onclick={() => update(node, { progress_current: null, progress_total: null })}
-									>Clear</Button
-								>
-							{/if}
-						</form>
-					</section>
-				{/if}
-
-				<DetailNotes {node} />
-				<DetailConnections {node} />
-				<DetailTopics {node} />
-
-				<div class="stats">
-					<div class="stat">
-						<div class="label">Last touched</div>
-						<div class="value">
-							{node.last_poked_at ? relativeDays(node.last_poked_at) : 'never'}
-						</div>
+							Open in canvas
+						</Button>
+						{#if node.status === 'archived'}
+							<Button variant="quiet" onclick={() => update(node, { status: 'queued' })}>
+								Restore
+							</Button>
+						{:else}
+							<Button variant="quiet" onclick={() => update(node, { status: 'archived' })}>
+								Archive
+							</Button>
+						{/if}
+						{#if confirmingDelete}
+							<Button variant="primary" onclick={() => remove(node)}>Delete for good</Button>
+							<Button variant="quiet" onclick={() => (confirmingDelete = false)}>Keep</Button>
+						{:else}
+							<Button variant="quiet" onclick={() => (confirmingDelete = true)}>Delete</Button>
+						{/if}
 					</div>
-					<div class="stat">
-						<div class="label">Pokes</div>
-						<div class="value">{pokeCount ?? '–'}</div>
-					</div>
-					<div class="stat">
-						<div class="label">Created</div>
-						<div class="value">{shortDate(node.created_at)}</div>
-					</div>
-					<div class="stat">
-						<div class="label">Started</div>
-						<div class="value">{node.started_at ? shortDate(node.started_at) : '–'}</div>
-					</div>
-					<div class="stat">
-						<div class="label">Completed</div>
-						<div class="value">{node.completed_at ? shortDate(node.completed_at) : '–'}</div>
-					</div>
-				</div>
+				</aside>
 			</div>
-
-			<footer>
-				{#if blocked}
-					<span class="not-actionable">Not actionable yet</span>
-				{:else if node.kind === 'idea' && node.status === 'idea'}
-					<Button variant="poke" onclick={() => (promoting = node)}>Promote</Button>
-				{:else if ['active', 'queued', 'paused'].includes(node.status)}
-					<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
-				{/if}
-				<span class="spacer"></span>
-				{#if confirmingDelete}
-					<Button variant="quiet" onclick={() => (confirmingDelete = false)}>Keep</Button>
-					<Button variant="primary" onclick={() => remove(node)}>Delete for good</Button>
-				{:else}
-					<Button variant="quiet" onclick={() => (confirmingDelete = true)}>Delete</Button>
-					{#if node.status === 'archived'}
-						<Button variant="quiet" onclick={() => update(node, { status: 'queued' })}>
-							Restore
-						</Button>
-					{:else}
-						<Button variant="quiet" onclick={() => update(node, { status: 'archived' })}>
-							Archive
-						</Button>
-					{/if}
-					<Button
-						variant="accent"
-						onclick={() => goto(`/board/canvas?focus=${node.id}&node=${node.id}`)}
-					>
-						Open in canvas
-					</Button>
-				{/if}
-			</footer>
 		{/if}
-	</aside>
+	</div>
 {/if}
 
 <PromoteDialog node={promoting} onclose={() => (promoting = null)} />
@@ -296,27 +282,28 @@
 		background: var(--scrim);
 	}
 
+	/* Centered card editor (Trello-style), not a side panel: the eye stays
+	   in the middle of the screen. */
 	.detail {
 		position: fixed;
-		top: 0;
-		right: 0;
-		bottom: 0;
 		z-index: 41;
-		width: min(490px, 100vw);
+		top: 5vh;
+		left: 50%;
+		transform: translateX(-50%);
+		width: min(920px, calc(100vw - 32px));
+		max-height: 90vh;
+		overflow-y: auto;
 		background: var(--surface);
-		border-left: var(--border-width) solid var(--line);
-		display: flex;
-		flex-direction: column;
+		border: var(--border-width) solid var(--frame);
 		color: var(--ink);
 	}
 
 	.stripe {
-		height: 4px;
-		flex: none;
+		height: 5px;
 	}
 
 	.missing {
-		padding: 22px;
+		padding: 24px;
 		display: flex;
 		flex-direction: column;
 		align-items: flex-start;
@@ -325,11 +312,11 @@
 	}
 
 	header {
-		padding: 18px 22px 16px;
+		padding: 20px 28px 18px;
 		border-bottom: var(--border-width-hair) solid var(--line);
 		display: flex;
 		flex-direction: column;
-		gap: 14px;
+		gap: 12px;
 	}
 
 	.meta-row {
@@ -340,7 +327,7 @@
 	}
 
 	.computed {
-		font: 600 10.5px/1 var(--font-display);
+		font: 600 11px/1 var(--font-display);
 		color: var(--ink-2);
 	}
 
@@ -348,7 +335,7 @@
 		margin-left: auto;
 		border: none;
 		background: none;
-		font: 600 15px/1 var(--font-display);
+		font: 600 17px/1 var(--font-display);
 		color: var(--ink-2);
 		padding: 2px;
 	}
@@ -356,9 +343,9 @@
 	.title {
 		border: var(--border-width-hair) solid transparent;
 		background: none;
-		padding: 2px 4px;
-		margin: -3px -5px 0;
-		font: 700 22px/1.2 var(--font-display);
+		padding: 3px 5px;
+		margin: 0 -6px;
+		font: 700 26px/1.2 var(--font-display);
 		color: var(--ink);
 	}
 
@@ -368,35 +355,58 @@
 		outline: none;
 	}
 
-	.controls {
+	.columns {
+		display: grid;
+		grid-template-columns: minmax(0, 1fr) 270px;
+	}
+
+	.main {
+		padding: 22px 28px 28px;
 		display: flex;
-		align-items: flex-start;
+		flex-direction: column;
+		gap: 26px;
+		font-size: 14px;
+	}
+
+	.side {
+		padding: 22px 22px 28px;
+		border-left: var(--border-width-hair) solid var(--line);
+		background: var(--surface-2);
+		display: flex;
+		flex-direction: column;
 		gap: 18px;
-		flex-wrap: wrap;
 	}
 
 	.control {
 		display: flex;
 		flex-direction: column;
-		gap: 7px;
+		gap: 8px;
 	}
 
 	.control .field {
-		padding: 6px 28px 6px 9px;
-		font-size: 12.5px;
-		width: auto;
+		padding: 8px 28px 8px 10px;
+		font-size: 13.5px;
+		background-color: var(--surface);
+	}
+
+	.control :global(.segmented) {
+		display: flex;
+	}
+
+	.control :global(.segmented button) {
+		flex: 1;
+		padding: 8px 4px;
 	}
 
 	.swatches {
 		display: flex;
 		gap: 5px;
 		flex-wrap: wrap;
-		max-width: 230px;
 	}
 
 	.swatch {
-		width: 18px;
-		height: 18px;
+		width: 20px;
+		height: 20px;
 		border: var(--border-width) solid transparent;
 		padding: 0;
 	}
@@ -404,16 +414,7 @@
 	.swatch.chosen {
 		border-color: var(--ink);
 		outline: 1px solid var(--surface);
-		outline-offset: -3px;
-	}
-
-	.body {
-		flex: 1;
-		overflow-y: auto;
-		padding: 18px 22px;
-		display: flex;
-		flex-direction: column;
-		gap: 20px;
+		outline-offset: -4px;
 	}
 
 	.progress {
@@ -424,48 +425,61 @@
 	}
 
 	.progress .field {
-		width: 76px;
-		padding: 6px 8px;
+		width: 84px;
+		padding: 8px 10px;
 	}
 
 	.of {
-		font: 600 12px/1 var(--font-display);
+		font: 600 13px/1 var(--font-display);
 		color: var(--ink-2);
 	}
 
 	.stats {
+		margin: 0;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-		gap: 8px;
+		grid-template-columns: auto 1fr;
+		gap: 9px 12px;
+		align-items: baseline;
 	}
 
-	.stat {
-		border: var(--border-width-hair) solid var(--line);
-		padding: 11px 13px;
+	.stats dd {
+		margin: 0;
+		text-align: right;
+		font: 700 13.5px/1 var(--font-display);
 	}
 
-	.value {
-		margin-top: 7px;
-		font: 700 14px/1 var(--font-display);
-	}
-
-	footer {
-		border-top: var(--border-width-hair) solid var(--line);
-		padding: 14px 22px;
+	.actions {
 		display: flex;
-		align-items: center;
-		gap: 8px;
-		flex-wrap: wrap;
+		flex-direction: column;
+		gap: 7px;
 	}
 
-	.spacer {
-		flex: 1;
+	.actions :global(.button) {
+		width: 100%;
+		justify-content: flex-start;
 	}
 
 	.not-actionable {
-		font: 700 12px/1 var(--font-display);
+		font: 700 12.5px/1 var(--font-display);
 		color: var(--ink-2);
 		border: var(--border-width-hair) solid var(--line);
-		padding: 9px 12px;
+		padding: 10px 12px;
+	}
+
+	@media (max-width: 760px) {
+		.detail {
+			top: 0;
+			max-height: 100vh;
+			width: 100vw;
+		}
+
+		.columns {
+			grid-template-columns: minmax(0, 1fr);
+		}
+
+		.side {
+			border-left: none;
+			border-top: var(--border-width-hair) solid var(--line);
+		}
 	}
 </style>

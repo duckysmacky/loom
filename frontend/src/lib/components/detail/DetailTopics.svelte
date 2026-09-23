@@ -85,16 +85,12 @@
 	.add {
 		margin-top: 10px;
 		display: grid;
-		grid-template-columns: 1fr 1fr;
 		gap: 6px;
 	}
 
 	.add .field {
-		padding: 7px 9px;
-		font-size: 12px;
-	}
-
-	form:only-child {
-		grid-column: 1 / -1;
+		padding: 8px 10px;
+		font-size: 13px;
+		background-color: var(--surface);
 	}
 </style>
