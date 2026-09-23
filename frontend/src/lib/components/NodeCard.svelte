@@ -5,7 +5,7 @@
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
 		accentColor,
-		isDashed,
+		borderStyle,
 		notesExcerpt,
 		progressPair,
 		progressText,
@@ -33,6 +33,7 @@
 	} = $props();
 
 	const kind = $derived(node.kind);
+	const border = $derived(borderStyle(node));
 	const unmet = $derived(
 		requirementsOf(node.id, graph.edges, graph.nodeById).filter((requirement) => !requirement.met)
 	);
@@ -48,13 +49,11 @@
 	}
 </script>
 
-<!-- NodeCard: 2px border, squared, no shadow. Border turns warn when blocked -
-the only card-level status tell besides the badge. Dashed for idea/path. -->
+<!-- NodeCard: 2px border, squared, no shadow. The border carries state - see
+borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 <div
-	class="card"
+	class="card line-{border.line} tone-{border.tone}"
 	class:feature
-	class:blocked={node.blocked && node.status !== 'done'}
-	class:dashed={isDashed(node)}
 	role="button"
 	tabindex="0"
 	onclick={() => openNode(node.id)}
@@ -117,12 +116,20 @@ the only card-level status tell besides the badge. Dashed for idea/path. -->
 		border-color: var(--accent);
 	}
 
-	.card.dashed {
+	.card.line-dashed {
 		border-style: dashed;
 	}
 
-	.card.blocked {
+	.card.line-dotted {
+		border-style: dotted;
+	}
+
+	.card.tone-warn {
 		border-color: var(--warn);
+	}
+
+	.card.tone-ok {
+		border-color: var(--ok);
 	}
 
 	.feature {

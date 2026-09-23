@@ -4,7 +4,7 @@ import {
 	fromDateInput,
 	childrenOf,
 	isBacklog,
-	isDashed,
+	borderStyle,
 	notesExcerpt,
 	progressText,
 	relativeDays,
@@ -21,11 +21,18 @@ describe('display helpers', () => {
 		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(false);
 	});
 
-	it('dashes nodes that are not being worked on', () => {
-		expect(isDashed(makeNode({ status: 'queued' }))).toBe(true);
-		expect(isDashed(makeNode({ status: 'paused' }))).toBe(true);
-		expect(isDashed(makeNode({ status: 'active' }))).toBe(false);
-		expect(isDashed(makeNode({ status: 'done' }))).toBe(false);
+	it('picks the border line from kind and status', () => {
+		expect(borderStyle(makeNode({ kind: 'idea', status: 'queued' })).line).toBe('dotted');
+		expect(borderStyle(makeNode({ status: 'queued' })).line).toBe('dashed');
+		expect(borderStyle(makeNode({ status: 'paused' })).line).toBe('dashed');
+		expect(borderStyle(makeNode({ status: 'active' })).line).toBe('solid');
+	});
+
+	it('tones the border warn while blocked and green once done', () => {
+		expect(borderStyle(makeNode({ blocked: true })).tone).toBe('warn');
+		expect(borderStyle(makeNode({ status: 'done', blocked: true })).tone).toBe('ok');
+		expect(borderStyle(makeNode({ status: 'done' })).tone).toBe('ok');
+		expect(borderStyle(makeNode()).tone).toBe('frame');
 	});
 
 	it('uses the node color, falling back to the kind default', () => {

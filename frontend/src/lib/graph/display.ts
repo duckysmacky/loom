@@ -44,9 +44,23 @@ export function isBacklog(node: NodeResponse): boolean {
 	return node.kind === 'idea' && node.status === 'idea';
 }
 
-/** Dashed border = not currently being worked on (queued, paused, or still an idea). */
-export function isDashed(node: NodeResponse): boolean {
-	return node.status === 'queued' || node.status === 'paused' || node.status === 'idea';
+export type BorderStyle = { line: 'solid' | 'dashed' | 'dotted'; tone: 'frame' | 'warn' | 'ok' };
+
+/**
+ * Card border language. Line: dotted for ideas (kind), dashed for anything
+ * not being worked on yet (queued/paused/idea status), solid otherwise.
+ * Tone: warn while blocked, green once done, the plain frame otherwise.
+ */
+export function borderStyle(node: NodeResponse): BorderStyle {
+	const line =
+		node.kind === 'idea'
+			? 'dotted'
+			: node.status === 'queued' || node.status === 'paused' || node.status === 'idea'
+				? 'dashed'
+				: 'solid';
+	const tone =
+		node.blocked && node.status !== 'done' ? 'warn' : node.status === 'done' ? 'ok' : 'frame';
+	return { line, tone };
 }
 
 export type Requirement = { node: NodeResponse; met: boolean };

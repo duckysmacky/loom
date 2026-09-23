@@ -2,7 +2,7 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { TIER_COLOR, accentColor, isDashed, progressPair } from '$lib/graph/display';
+	import { TIER_COLOR, accentColor, borderStyle, progressPair } from '$lib/graph/display';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -10,6 +10,7 @@
 
 	const node = $derived(data.node);
 	const kind = $derived(node.kind);
+	const border = $derived(borderStyle(node));
 	const progress = $derived(progressPair(node));
 </script>
 
@@ -17,10 +18,7 @@
 → dependent and child → container, left to right. -->
 <Handle type="target" position={Position.Left} />
 <div
-	class="canvas-node"
-	class:blocked={node.blocked && node.status !== 'done'}
-	class:dashed={isDashed(node)}
-	class:done={node.status === 'done'}
+	class="canvas-node line-{border.line} tone-{border.tone}"
 	class:dimmed={data.dimmed}
 	class:selected
 	style:width="{CANVAS_NODE_WIDTH}px"
@@ -65,16 +63,20 @@
 		text-transform: uppercase;
 	}
 
-	.dashed {
+	.line-dashed {
 		border-style: dashed;
 	}
 
-	.blocked {
+	.line-dotted {
+		border-style: dotted;
+	}
+
+	.tone-warn {
 		border-color: var(--warn);
 	}
 
-	.done {
-		border-color: var(--line);
+	.tone-ok {
+		border-color: var(--ok);
 	}
 
 	.selected {
