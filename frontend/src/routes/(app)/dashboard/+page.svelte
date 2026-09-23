@@ -164,7 +164,7 @@
 										<span class="row-title">{node.title}</span>
 										{#if progress}
 											<span class="path-progress">
-												<ProgressBar value={progress.done} total={progress.total} />
+												<ProgressBar value={progress.done} total={progress.total} height={8} />
 												<span class="row-meta">{progress.done}/{progress.total}</span>
 											</span>
 										{:else}
@@ -221,7 +221,7 @@
 
 	.columns {
 		display: grid;
-		grid-template-columns: minmax(0, 1fr) 300px;
+		grid-template-columns: minmax(0, 1fr) 380px;
 		gap: 18px;
 		align-items: start;
 	}
@@ -249,7 +249,11 @@
 	.rail {
 		display: flex;
 		flex-direction: column;
-		gap: 14px;
+		gap: 16px;
+	}
+
+	.rail .panel {
+		padding: 18px 20px;
 	}
 
 	.panel-head {
@@ -259,44 +263,44 @@
 	}
 
 	.panel-title {
-		font: 700 13px/1 var(--font-display);
+		font: 700 15px/1.1 var(--font-display);
 	}
 
 	.panel-sub {
-		margin: 5px 0 0;
-		font: 500 11.5px/1.4 var(--font-display);
+		margin: 6px 0 0;
+		font: 500 12.5px/1.45 var(--font-display);
 		color: var(--ink-2);
 	}
 
 	.more {
 		margin-left: auto;
-		font: 700 12px/1 var(--font-display);
+		font: 700 13px/1 var(--font-display);
 	}
 
 	.capture {
-		margin-top: 12px;
+		margin-top: 14px;
 		display: flex;
 		gap: 6px;
 	}
 
 	.rows {
 		list-style: none;
-		margin: 13px 0 0;
+		margin: 16px 0 0;
 		padding: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 11px;
+		gap: 14px;
 	}
 
 	.row {
 		display: flex;
 		align-items: center;
-		gap: 10px;
+		gap: 12px;
 	}
 
 	.dot {
-		width: 7px;
-		height: 7px;
+		width: 9px;
+		height: 9px;
 		flex: none;
 	}
 
@@ -306,7 +310,7 @@
 		min-width: 0;
 		display: flex;
 		flex-direction: column;
-		gap: 3px;
+		gap: 4px;
 		border: none;
 		background: none;
 		padding: 0;
@@ -314,7 +318,7 @@
 	}
 
 	.row-title {
-		font: 700 13px/1.2 var(--font-display);
+		font: 700 14.5px/1.25 var(--font-display);
 		color: var(--ink);
 		overflow-wrap: anywhere;
 	}
@@ -325,13 +329,13 @@
 	}
 
 	.row-meta {
-		font: 500 11px/1.3 var(--font-mono);
+		font: 500 12px/1.3 var(--font-mono);
 		color: var(--ink-2);
 	}
 
 	.path {
 		width: 100%;
-		gap: 7px;
+		gap: 9px;
 	}
 
 	.path-progress {
@@ -341,8 +345,8 @@
 	}
 
 	.nothing {
-		margin: 12px 0 0;
-		font: 500 12px/1.4 var(--font-display);
+		margin: 14px 0 0;
+		font: 500 13px/1.4 var(--font-display);
 		color: var(--ink-2);
 	}
 
