@@ -7,6 +7,23 @@
 
 	const flow = useSvelteFlow();
 
+	const MIN_ZOOM_PERCENT = 20;
+	const MAX_ZOOM_PERCENT = 200;
+
+	// Typed zoom: the field follows the live zoom until the user edits it.
+	let zoomDraft = $derived(String(Math.round(zoom * 100)));
+
+	function applyZoom() {
+		const percent = Number.parseFloat(zoomDraft);
+		if (!Number.isFinite(percent)) {
+			zoomDraft = String(Math.round(zoom * 100));
+			return;
+		}
+		const clamped = Math.min(MAX_ZOOM_PERCENT, Math.max(MIN_ZOOM_PERCENT, percent));
+		zoomDraft = String(Math.round(clamped));
+		flow.setZoom(clamped / 100, { duration: 200 });
+	}
+
 	// "Open in canvas" deep link: /board/canvas?focus=<node id> centres on it.
 	$effect(() => {
 		const focusId = page.url.searchParams.get('focus');
@@ -24,7 +41,16 @@
 <Panel position="bottom-left">
 	<div class="controls">
 		<button type="button" aria-label="Zoom out" onclick={() => flow.zoomOut()}>−</button>
-		<span class="zoom">{Math.round(zoom * 100)}%</span>
+		<label class="zoom">
+			<input
+				type="text"
+				inputmode="numeric"
+				aria-label="Zoom percent"
+				bind:value={zoomDraft}
+				onkeydown={(event) => event.key === 'Enter' && event.currentTarget.blur()}
+				onblur={applyZoom}
+			/>%
+		</label>
 		<button type="button" aria-label="Zoom in" onclick={() => flow.zoomIn()}>+</button>
 		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}>Fit</button>
 		<span class="hint">drag to pan · scroll to zoom · handle to connect</span>
@@ -70,10 +96,28 @@
 	}
 
 	.zoom {
+		display: inline-flex;
+		align-items: center;
+		gap: 1px;
 		font: 700 11px/1 var(--font-mono);
 		color: var(--ink-2);
-		min-width: 38px;
-		text-align: center;
+	}
+
+	.zoom input {
+		width: 38px;
+		height: 24px;
+		border: var(--border-width-hair) solid var(--line);
+		background: var(--surface-2);
+		text-align: right;
+		padding: 0 4px;
+		font: 700 11px/1 var(--font-mono);
+		color: var(--ink);
+	}
+
+	.zoom input:focus {
+		outline: none;
+		border-color: var(--accent);
+		background: var(--surface);
 	}
 
 	.hint {
