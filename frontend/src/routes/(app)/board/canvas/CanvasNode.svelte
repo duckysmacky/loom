@@ -2,7 +2,7 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { TIER_COLOR, accentColor, displayKind, progressPair } from '$lib/graph/display';
+	import { TIER_COLOR, accentColor, displayKind, isDashed, progressPair } from '$lib/graph/display';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -19,7 +19,7 @@
 <div
 	class="canvas-node"
 	class:blocked={node.blocked && node.status !== 'done'}
-	class:dashed={kind === 'idea' || kind === 'path'}
+	class:dashed={isDashed(node)}
 	class:done={node.status === 'done'}
 	class:dimmed={data.dimmed}
 	class:selected

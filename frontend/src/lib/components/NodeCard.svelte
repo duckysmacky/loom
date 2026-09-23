@@ -6,6 +6,7 @@
 	import {
 		accentColor,
 		displayKind,
+		isDashed,
 		notesExcerpt,
 		progressPair,
 		progressText,
@@ -54,7 +55,7 @@ the only card-level status tell besides the badge. Dashed for idea/path. -->
 	class="card"
 	class:feature
 	class:blocked={node.blocked && node.status !== 'done'}
-	class:dashed={kind === 'idea' || kind === 'path'}
+	class:dashed={isDashed(node)}
 	role="button"
 	tabindex="0"
 	onclick={() => openNode(node.id)}

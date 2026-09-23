@@ -4,12 +4,14 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { edgesApi, nodesApi } from '$lib/api/endpoints';
+	import { isBacklog } from '$lib/graph/display';
 	import { flowDirection, layoutPositions } from '$lib/graph/layout';
 	import { openNode } from '$lib/navigation';
 	import { boardFilters, matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
+	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import CanvasControls from './CanvasControls.svelte';
 	import CanvasEdge from './CanvasEdge.svelte';
 	import CanvasNode from './CanvasNode.svelte';
@@ -23,13 +25,15 @@
 	let zoom = $state(1);
 	let pendingConnection = $state<Connection | null>(null);
 
-	// Archived nodes leave the canvas entirely unless the filters ask for
-	// them; every other non-matching node stays in place, dimmed, so the
-	// graph's shape doesn't jump around while filtering.
-	const hidden = (status: string) =>
-		status === 'archived' &&
-		!boardFilters.showArchived &&
-		!boardFilters.statuses.includes('archived');
+	// Backlog ideas never appear on the board, and archived nodes leave the
+	// canvas unless the filters ask for them. Every other non-matching node
+	// stays in place, dimmed, so the graph's shape doesn't jump around while
+	// filtering.
+	const hidden = (node: NodeResponse) =>
+		isBacklog(node) ||
+		(node.status === 'archived' &&
+			!boardFilters.showArchived &&
+			!boardFilters.statuses.includes('archived'));
 
 	// Auto-layout depends on which nodes are still unplaced and where the
 	// placed ones sit, so it shifts whenever anything is dragged. Persisting a
@@ -39,7 +43,7 @@
 	const pinning = new Set<string>();
 
 	$effect(() => {
-		const shown = graph.nodes.filter((node) => !hidden(node.status));
+		const shown = graph.nodes.filter((node) => !hidden(node));
 		const shownIds = new Set(shown.map((node) => node.id));
 		const positions = layoutPositions(shown, graph.edges);
 

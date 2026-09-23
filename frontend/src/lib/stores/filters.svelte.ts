@@ -1,3 +1,4 @@
+import { isBacklog } from '$lib/graph/display';
 import { nodeMatches, type FilterCriteria } from '$lib/graph/filters';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -14,8 +15,9 @@ export const boardFilters = $state<FilterCriteria>({
 	showArchived: false
 });
 
+/** Board views never show backlog ideas; beyond that, the shared filters apply. */
 export function matchesBoardFilters(node: NodeResponse): boolean {
-	return nodeMatches(node, boardFilters);
+	return !isBacklog(node) && nodeMatches(node, boardFilters);
 }
 
 export function clearBoardFilters() {

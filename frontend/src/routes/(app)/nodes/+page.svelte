@@ -5,7 +5,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { accentColor, displayKind, notesExcerpt, shortDate } from '$lib/graph/display';
+	import { accentColor, displayKind, isBacklog, notesExcerpt, shortDate } from '$lib/graph/display';
 	import { openNode, withParam } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -52,7 +52,7 @@
 		{
 			value: 'backlog' as const,
 			label: 'Backlog',
-			count: graph.nodes.filter((node) => node.kind === 'idea' && node.status === 'idea').length
+			count: graph.nodes.filter(isBacklog).length
 		},
 		{ value: 'all' as const, label: 'All', count: graph.nodes.length },
 		{
@@ -85,10 +85,6 @@
 				const unmet = edge.kind === 'requires' && target.status !== 'done';
 				return [{ id: edge.id, mark: LINK_MARKS[edge.kind], title: target.title, unmet }];
 			});
-	}
-
-	function isBacklog(node: NodeResponse) {
-		return node.kind === 'idea' && node.status === 'idea';
 	}
 
 	async function restore(node: NodeResponse) {

@@ -3,6 +3,8 @@ import {
 	accentColor,
 	childrenOf,
 	displayKind,
+	isBacklog,
+	isDashed,
 	notesExcerpt,
 	progressText,
 	relativeDays,
@@ -15,6 +17,19 @@ describe('display helpers', () => {
 	it('shows a container as a path regardless of its stored kind', () => {
 		expect(displayKind(makeNode({ kind: 'idea' }))).toBe('idea');
 		expect(displayKind(makeNode({ container_progress: { done: 1, total: 2 } }))).toBe('path');
+	});
+
+	it('treats only unpromoted ideas as backlog', () => {
+		expect(isBacklog(makeNode({ kind: 'idea', status: 'idea' }))).toBe(true);
+		expect(isBacklog(makeNode({ kind: 'idea', status: 'queued' }))).toBe(false);
+		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(false);
+	});
+
+	it('dashes nodes that are not being worked on', () => {
+		expect(isDashed(makeNode({ status: 'queued' }))).toBe(true);
+		expect(isDashed(makeNode({ status: 'paused' }))).toBe(true);
+		expect(isDashed(makeNode({ status: 'active' }))).toBe(false);
+		expect(isDashed(makeNode({ status: 'done' }))).toBe(false);
 	});
 
 	it('uses the node color, falling back to the kind default', () => {

@@ -43,6 +43,19 @@ export const TIER_COLOR: Record<NodeResponse['focus'], string> = {
 	background: 'var(--line)'
 };
 
+/**
+ * An unpromoted idea sitting in the backlog. These stay out of the board
+ * views - they're waiting to be picked up, not part of the working graph.
+ */
+export function isBacklog(node: NodeResponse): boolean {
+	return node.kind === 'idea' && node.status === 'idea';
+}
+
+/** Dashed border = not currently being worked on (queued, paused, or still an idea). */
+export function isDashed(node: NodeResponse): boolean {
+	return node.status === 'queued' || node.status === 'paused' || node.status === 'idea';
+}
+
 export type Requirement = { node: NodeResponse; met: boolean };
 
 /** Nodes this one `requires`, each flagged met (`done`) or unmet. */
