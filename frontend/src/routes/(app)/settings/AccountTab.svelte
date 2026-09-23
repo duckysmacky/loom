@@ -94,7 +94,7 @@
 
 <style>
 	.value {
-		font: 400 12.5px/1 var(--font-mono);
+		font: 500 12.5px/1 var(--font-mono);
 		color: var(--ink-3);
 	}
 

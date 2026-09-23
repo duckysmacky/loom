@@ -164,7 +164,7 @@
 	.meta {
 		display: block;
 		margin-top: 4px;
-		font: 400 9.5px/1.2 var(--font-mono);
+		font: 500 9.5px/1.2 var(--font-mono);
 		letter-spacing: 0.08em;
 		text-transform: uppercase;
 		color: var(--ink-2);
@@ -187,7 +187,7 @@
 		padding: 10px 6px;
 		border-left: var(--border-width-hair) solid var(--line);
 		text-align: center;
-		font: 400 10px/1 var(--font-mono);
+		font: 500 10px/1 var(--font-mono);
 		color: var(--ink-2);
 	}
 
@@ -341,7 +341,7 @@
 	}
 
 	.status {
-		font: 400 9.5px/1 var(--font-mono);
+		font: 500 9.5px/1 var(--font-mono);
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--ink-2);

@@ -321,7 +321,7 @@
 	}
 
 	.row-meta {
-		font: 400 11px/1.3 var(--font-mono);
+		font: 500 11px/1.3 var(--font-mono);
 		color: var(--ink-2);
 	}
 

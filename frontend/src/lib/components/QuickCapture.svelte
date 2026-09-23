@@ -199,7 +199,7 @@
 		padding: 6px 9px;
 		border: var(--border-width-hair) solid var(--line);
 		background: var(--surface);
-		font: 400 10.5px/1 var(--font-mono);
+		font: 500 10.5px/1 var(--font-mono);
 		color: var(--ink-2);
 	}
 
@@ -225,7 +225,7 @@
 
 	.hint {
 		margin-right: auto;
-		font: 400 10.5px/1 var(--font-mono);
+		font: 500 10.5px/1 var(--font-mono);
 		color: var(--ink-2);
 	}
 </style>

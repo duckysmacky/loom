@@ -363,7 +363,7 @@
 	}
 
 	.kind {
-		font: 400 10px/1 var(--font-mono);
+		font: 500 10px/1 var(--font-mono);
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		margin-right: 6px;
@@ -374,7 +374,7 @@
 	}
 
 	.link {
-		font: 400 11.5px/1.4 var(--font-mono);
+		font: 500 11.5px/1.4 var(--font-mono);
 		color: var(--ink-2);
 	}
 

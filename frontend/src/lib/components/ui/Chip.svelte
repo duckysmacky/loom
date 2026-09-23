@@ -22,7 +22,7 @@
 		padding: 5px 8px;
 		border: var(--border-width-hair) solid var(--line);
 		background: var(--surface);
-		font: 400 10px/1 var(--font-mono);
+		font: 500 10px/1 var(--font-mono);
 		color: var(--ink-2);
 		white-space: nowrap;
 	}

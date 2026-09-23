@@ -227,7 +227,7 @@
 	}
 
 	.hint {
-		font: 400 10px/1 var(--font-mono);
+		font: 500 10px/1 var(--font-mono);
 		letter-spacing: 0.1em;
 		text-transform: uppercase;
 		color: var(--ink-2);

@@ -200,7 +200,7 @@
 	}
 
 	.count {
-		font: 400 10.5px/1 var(--font-mono);
+		font: 500 10.5px/1 var(--font-mono);
 		color: var(--ink-2);
 		margin-right: auto;
 	}

@@ -173,7 +173,7 @@
 	}
 
 	.email {
-		font: 400 10.5px/1.3 var(--font-mono);
+		font: 500 10.5px/1.3 var(--font-mono);
 		color: var(--ink-2);
 		border-bottom: var(--border-width-hair) solid var(--line);
 		word-break: break-all;

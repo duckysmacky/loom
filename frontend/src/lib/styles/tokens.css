@@ -1,8 +1,8 @@
 /*
- * Loom design system ("Blueprint Light") tokens - values copied exactly from
- * the design system's tokens.json. The dark block is not part of the design
- * system (it defines a light theme only); it is derived here to keep the
- * same navy drafting-sheet feel with inverted ink.
+ * Loom design system ("Blueprint Light") tokens - values copied from the
+ * design system's tokens.json, except the mono face (noted below). The dark
+ * block is not part of the design system (it defines a light theme only); it
+ * is derived here to keep the same navy drafting-sheet feel with inverted ink.
  */
 :root {
 	--ink: #132339;
@@ -47,7 +47,9 @@
 	--node-mauve: #8a7fa3;
 
 	--font-display: 'Space Grotesk', system-ui, sans-serif;
-	--font-mono: 'Space Mono', ui-monospace, monospace;
+	/* Deviation from the design system (Space Mono): IBM Plex Mono holds up
+	   far better at the 9-11px label sizes used everywhere. */
+	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
 
 	--space-1: 4px;
 	--space-2: 8px;

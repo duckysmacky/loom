@@ -58,7 +58,7 @@
 
 	.tagline {
 		margin-left: auto;
-		font: 400 10px/1 var(--font-mono);
+		font: 500 10px/1 var(--font-mono);
 		color: var(--side-ink);
 	}
 </style>

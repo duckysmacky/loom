@@ -171,7 +171,7 @@
 	}
 
 	.state {
-		font: 400 11px/1 var(--font-mono);
+		font: 500 11px/1 var(--font-mono);
 		color: var(--ok);
 	}
 
