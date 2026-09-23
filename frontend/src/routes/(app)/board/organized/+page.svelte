@@ -1,6 +1,7 @@
 <script lang="ts">
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import { TIER_COLOR, childrenOf } from '$lib/graph/display';
+	import { dependencyOrder } from '$lib/graph/order';
 	import { openNode } from '$lib/navigation';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -11,7 +12,11 @@
 	const byStatus = (left: NodeResponse, right: NodeResponse) =>
 		STATUS_ORDER.indexOf(left.status) - STATUS_ORDER.indexOf(right.status);
 
-	const visible = $derived(graph.nodes.filter(matchesBoardFilters).toSorted(byStatus));
+	// Status order first, then dependency order on top: prerequisites before
+	// what they unblock, so each tier reads left to right as a sequence.
+	const visible = $derived(
+		dependencyOrder(graph.nodes.filter(matchesBoardFilters).toSorted(byStatus), graph.edges)
+	);
 
 	// Paths get their own section instead of appearing in a focus tier. Any
 	// card with part_of children (path or not) shows them as a checklist.
