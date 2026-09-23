@@ -80,6 +80,9 @@ pub struct NodeResponse {
     /// `null` until it's placed by hand (the frontend auto-lays it out).
     pub canvas_x: Option<f64>,
     pub canvas_y: Option<f64>,
+    /// A path's box size on the canvas; both `null` means "fit the children".
+    pub canvas_width: Option<f64>,
+    pub canvas_height: Option<f64>,
     pub topic_ids: Vec<Uuid>,
     pub blocked: bool,
     pub container_progress: Option<Progress>,
@@ -157,6 +160,12 @@ pub struct UpdateNodeRequest {
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
     pub canvas_y: Option<Option<f64>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
+    pub canvas_width: Option<Option<f64>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
+    pub canvas_height: Option<Option<f64>>,
 }
 
 /// A view preset for `GET /api/nodes` - translated into `kind`/`status`

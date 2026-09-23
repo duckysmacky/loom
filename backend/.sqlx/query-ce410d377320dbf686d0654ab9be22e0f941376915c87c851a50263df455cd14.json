@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            status = COALESCE($4, status),\n            focus = COALESCE($5, focus),\n            title = COALESCE($6, title),\n            -- Tracked progress belongs to study nodes only: any other resulting\n            -- kind drops it (a kind change clears data the new kind can't have).\n            progress_current = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $7 THEN $8 ELSE progress_current\n            END,\n            progress_total = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $9 THEN $10 ELSE progress_total\n            END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            -- An explicit client value always wins ($15/$17). Otherwise,\n            -- the server tracks these itself: `started_at` is stamped the\n            -- first time status moves to `active` (never overwritten\n            -- again), and `completed_at` the first time it moves to\n            -- `done` - cleared automatically if status later moves away\n            -- from `done`, since it's no longer true.\n            started_at = CASE\n                WHEN $15 THEN $16\n                WHEN COALESCE($4, status) = 'active' AND started_at IS NULL THEN now()\n                ELSE started_at\n            END,\n            completed_at = CASE\n                WHEN $17 THEN $18\n                WHEN COALESCE($4, status) = 'done' AND completed_at IS NULL THEN now()\n                WHEN COALESCE($4, status) <> 'done' THEN NULL\n                ELSE completed_at\n            END,\n            canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,\n            canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,\n            progress_unit = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $23 THEN $24 ELSE progress_unit\n            END,\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, progress_unit, color, notes,\n            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y\n        ",
+  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total, n.progress_unit,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)\n                AS \"checklist_total!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)\n                AS \"checklist_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND n.status IN ('active', 'queued')\n          AND COALESCE(\n                (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id),\n                n.created_at\n              ) < now() - interval '14 days'\n        GROUP BY n.id\n        ORDER BY COALESCE((SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id), n.created_at) ASC\n        ",
   "describe": {
     "columns": [
       {
@@ -215,71 +215,75 @@
             "name": "canvas_y"
           }
         }
+      },
+      {
+        "ordinal": 16,
+        "name": "canvas_width",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_width"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "canvas_height",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_height"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "topic_ids!: Vec<Uuid>",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "blocked!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "container_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "container_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "checklist_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 23,
+        "name": "checklist_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 24,
+        "name": "last_poked_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        "Uuid",
-        {
-          "Custom": {
-            "name": "node_kind",
-            "kind": {
-              "Enum": [
-                "idea",
-                "project",
-                "study",
-                "path"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "node_status",
-            "kind": {
-              "Enum": [
-                "idea",
-                "queued",
-                "active",
-                "paused",
-                "done",
-                "archived"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "node_focus",
-            "kind": {
-              "Enum": [
-                "primary",
-                "secondary",
-                "background"
-              ]
-            }
-          }
-        },
-        "Text",
-        "Bool",
-        "Int4",
-        "Bool",
-        "Int4",
-        "Bool",
-        "Text",
-        "Bool",
-        "Text",
-        "Bool",
-        "Timestamptz",
-        "Bool",
-        "Timestamptz",
-        "Bool",
-        "Float8",
-        "Bool",
-        "Float8",
-        "Bool",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -298,8 +302,17 @@
       true,
       true,
       true,
-      true
+      true,
+      true,
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
     ]
   },
-  "hash": "97e026ac562ae0620ee2f41dfa44027b249eea910ed9b730253752a3c30a66a5"
+  "hash": "ce410d377320dbf686d0654ab9be22e0f941376915c87c851a50263df455cd14"
 }

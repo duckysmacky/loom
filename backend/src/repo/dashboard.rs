@@ -142,7 +142,7 @@ pub async fn get_stale(user_id: Uuid, pool: &PgPool) -> Result<Vec<NodeResponse>
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
-            n.canvas_x, n.canvas_y,
+            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (

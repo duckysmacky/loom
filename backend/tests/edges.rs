@@ -73,6 +73,21 @@ async fn create_node(app: &axum::Router, token: &str, title: &str) -> String {
     body["id"].as_str().unwrap().to_owned()
 }
 
+async fn create_path(app: &axum::Router, token: &str, title: &str) -> String {
+    let (status, body) = send(
+        app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "path", "title": title}),
+            Some(token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    body["id"].as_str().unwrap().to_owned()
+}
+
 async fn create_edge(
     app: &axum::Router,
     token: &str,
@@ -231,8 +246,8 @@ async fn requires_cycle_rejected_three_node(pool: PgPool) {
 async fn part_of_cycle_rejected_two_node(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "partofcycle@example.com").await;
-    let a = create_node(&app, &token, "A").await;
-    let b = create_node(&app, &token, "B").await;
+    let a = create_path(&app, &token, "A").await;
+    let b = create_path(&app, &token, "B").await;
 
     let (status, _) = create_edge(&app, &token, &a, &b, "part_of").await;
     assert_eq!(status, StatusCode::CREATED);
@@ -293,7 +308,7 @@ async fn blocked_reflects_requires_target_status(pool: PgPool) {
 async fn container_progress_reflects_children(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "container@example.com").await;
-    let p = create_node(&app, &token, "P").await;
+    let p = create_path(&app, &token, "P").await;
     let x = create_node(&app, &token, "X").await;
     let y = create_node(&app, &token, "Y").await;
 
@@ -401,4 +416,149 @@ async fn delete_edge_ownership_scoping(pool: PgPool) {
     )
     .await;
     assert_eq!(status, StatusCode::NO_CONTENT);
+}
+
+#[sqlx::test]
+async fn only_paths_can_contain_nodes(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "onlypaths@example.com").await;
+    let child = create_node(&app, &token, "child").await;
+    let not_a_path = create_node(&app, &token, "idea").await;
+
+    let (status, body) = create_edge(&app, &token, &child, &not_a_path, "part_of").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["error"], "only paths can contain nodes");
+}
+
+#[sqlx::test]
+async fn a_node_sits_in_one_path_but_paths_nest(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "onepath@example.com").await;
+    let child = create_node(&app, &token, "child").await;
+    let first = create_path(&app, &token, "first").await;
+    let second = create_path(&app, &token, "second").await;
+    let outer = create_path(&app, &token, "outer").await;
+
+    assert_eq!(
+        create_edge(&app, &token, &child, &first, "part_of").await.0,
+        StatusCode::CREATED
+    );
+    let (status, body) = create_edge(&app, &token, &child, &second, "part_of").await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    assert_eq!(body["error"], "already inside a path");
+
+    // A path can itself sit inside another path.
+    assert_eq!(
+        create_edge(&app, &token, &first, &outer, "part_of").await.0,
+        StatusCode::CREATED
+    );
+}
+
+#[sqlx::test]
+async fn joining_or_leaving_a_path_resets_the_canvas_position(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "relative@example.com").await;
+    let child = create_node(&app, &token, "child").await;
+    let path = create_path(&app, &token, "path").await;
+    let place = |id: &str| {
+        req(
+            "PATCH",
+            &format!("/api/nodes/{id}"),
+            json!({"canvas_x": 40, "canvas_y": 60}),
+            Some(&token),
+        )
+    };
+
+    send(&app, place(&child)).await;
+    let (_, edge) = create_edge(&app, &token, &child, &path, "part_of").await;
+    assert_eq!(
+        get_node(&app, &token, &child).await["canvas_x"],
+        Value::Null
+    );
+
+    send(&app, place(&child)).await;
+    let edge_id = edge["id"].as_str().unwrap();
+    let (status, _) = send(
+        &app,
+        req(
+            "DELETE",
+            &format!("/api/edges/{edge_id}"),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    assert_eq!(
+        get_node(&app, &token, &child).await["canvas_x"],
+        Value::Null
+    );
+}
+
+#[sqlx::test]
+async fn a_path_that_changes_kind_releases_its_nodes(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "release@example.com").await;
+    let child = create_node(&app, &token, "child").await;
+    let path = create_path(&app, &token, "path").await;
+    create_edge(&app, &token, &child, &path, "part_of").await;
+
+    let (status, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{path}"),
+            json!({"kind": "project"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["container_progress"], Value::Null);
+
+    // The child is free to join another path again.
+    let other = create_path(&app, &token, "other").await;
+    assert_eq!(
+        create_edge(&app, &token, &child, &other, "part_of").await.0,
+        StatusCode::CREATED
+    );
+}
+
+#[sqlx::test]
+async fn canvas_size_is_a_positive_pair(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "size@example.com").await;
+    let path = create_path(&app, &token, "path").await;
+    let uri = format!("/api/nodes/{path}");
+
+    let (status, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"canvas_width": 420.5, "canvas_height": 300}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["canvas_width"], 420.5);
+
+    let (status, _) = send(
+        &app,
+        req("PATCH", &uri, json!({"canvas_width": null}), Some(&token)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"canvas_width": -1, "canvas_height": 10}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }

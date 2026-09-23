@@ -2,13 +2,18 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery, EdgeResponse};
-use crate::models::node::Progress;
+use crate::models::node::{NodeKind, Progress};
+use sqlx::PgConnection;
 
 pub enum CreateEdgeOutcome {
     Created(EdgeResponse),
     NotFound,
     WouldCreateCycle,
     AlreadyExists,
+    /// `part_of` pointing at a node that isn't a path.
+    NotAPath,
+    /// `part_of` from a node that already sits in a path.
+    AlreadyInPath,
 }
 
 pub struct NodeDerivedState {
@@ -39,6 +44,19 @@ pub async fn create_edge(
 
     if !owned {
         return Ok(CreateEdgeOutcome::NotFound);
+    }
+
+    // Only paths contain nodes.
+    if request.kind == EdgeKind::PartOf {
+        let target_kind = sqlx::query_scalar!(
+            r#"SELECT kind AS "kind: NodeKind" FROM nodes WHERE id = $1"#,
+            request.to_node_id,
+        )
+        .fetch_one(&mut *tx)
+        .await?;
+        if target_kind != NodeKind::Path {
+            return Ok(CreateEdgeOutcome::NotAPath);
+        }
     }
 
     // `requires` cycles would make `blocked` unsatisfiable forever; `part_of`
@@ -102,11 +120,18 @@ pub async fn create_edge(
 
     match result {
         Ok(edge) => {
+            if edge.kind == EdgeKind::PartOf {
+                reset_canvas_position(&mut tx, edge.from_node_id).await?;
+            }
             tx.commit().await?;
             Ok(CreateEdgeOutcome::Created(edge))
         }
         Err(sqlx::Error::Database(db_error)) if db_error.is_unique_violation() => {
-            Ok(CreateEdgeOutcome::AlreadyExists)
+            if db_error.constraint() == Some("edges_one_path_per_node") {
+                Ok(CreateEdgeOutcome::AlreadyInPath)
+            } else {
+                Ok(CreateEdgeOutcome::AlreadyExists)
+            }
         }
         Err(error) => Err(error),
     }
@@ -139,19 +164,70 @@ pub async fn list_edges(
 }
 
 pub async fn delete_edge(user_id: Uuid, pool: &PgPool, edge_id: Uuid) -> Result<bool, sqlx::Error> {
-    let result = sqlx::query!(
+    let mut tx = pool.begin().await?;
+    let deleted = sqlx::query!(
         r#"
         DELETE FROM edges e
         USING nodes n
         WHERE e.id = $2 AND e.from_node_id = n.id AND n.user_id = $1
+        RETURNING e.from_node_id, e.kind AS "kind: EdgeKind"
         "#,
         user_id,
         edge_id,
     )
-    .execute(pool)
+    .fetch_optional(&mut *tx)
     .await?;
 
-    Ok(result.rows_affected() == 1)
+    let Some(deleted) = deleted else {
+        return Ok(false);
+    };
+    if deleted.kind == EdgeKind::PartOf {
+        reset_canvas_position(&mut tx, deleted.from_node_id).await?;
+    }
+    tx.commit().await?;
+    Ok(true)
+}
+
+/// Canvas positions are relative to the node's path, so joining or leaving
+/// one invalidates the saved position; the canvas re-lays it out.
+async fn reset_canvas_position(
+    connection: &mut PgConnection,
+    node_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE nodes SET canvas_x = NULL, canvas_y = NULL WHERE id = $1",
+        node_id,
+    )
+    .execute(connection)
+    .await?;
+    Ok(())
+}
+
+/// Releases every node contained in `path_id` (used when it stops being a
+/// path): drops their `part_of` edges and resets their canvas positions.
+pub async fn release_children(
+    user_id: Uuid,
+    connection: &mut PgConnection,
+    path_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        WITH released AS (
+            DELETE FROM edges e
+            USING nodes n
+            WHERE e.to_node_id = $2 AND e.kind = 'part_of'
+              AND n.id = e.to_node_id AND n.user_id = $1
+            RETURNING e.from_node_id
+        )
+        UPDATE nodes SET canvas_x = NULL, canvas_y = NULL
+        WHERE id IN (SELECT from_node_id FROM released)
+        "#,
+        user_id,
+        path_id,
+    )
+    .execute(connection)
+    .await?;
+    Ok(())
 }
 
 /// The `blocked`/`container_progress` derivation for a single node - reused

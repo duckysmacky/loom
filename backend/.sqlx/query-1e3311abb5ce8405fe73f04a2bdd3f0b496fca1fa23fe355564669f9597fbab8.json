@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH released AS (\n            DELETE FROM edges e\n            USING nodes n\n            WHERE e.to_node_id = $2 AND e.kind = 'part_of'\n              AND n.id = e.to_node_id AND n.user_id = $1\n            RETURNING e.from_node_id\n        )\n        UPDATE nodes SET canvas_x = NULL, canvas_y = NULL\n        WHERE id IN (SELECT from_node_id FROM released)\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "1e3311abb5ce8405fe73f04a2bdd3f0b496fca1fa23fe355564669f9597fbab8"
+}

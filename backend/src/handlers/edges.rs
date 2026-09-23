@@ -30,6 +30,8 @@ pub async fn create(
         CreateEdgeOutcome::NotFound => Err(ApiError::NotFound),
         CreateEdgeOutcome::WouldCreateCycle => Err(ApiError::Conflict("would create a cycle")),
         CreateEdgeOutcome::AlreadyExists => Err(ApiError::Conflict("edge already exists")),
+        CreateEdgeOutcome::NotAPath => Err(ApiError::InvalidInput("only paths can contain nodes")),
+        CreateEdgeOutcome::AlreadyInPath => Err(ApiError::Conflict("already inside a path")),
     }
 }
 

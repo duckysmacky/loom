@@ -1,0 +1,122 @@
+<script lang="ts">
+	import { flip } from 'svelte/animate';
+	import Badge from '$lib/components/ui/Badge.svelte';
+	import NodeCard from '$lib/components/NodeCard.svelte';
+	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
+	import { TIER_COLOR } from '$lib/graph/display';
+	import { openNode } from '$lib/navigation';
+	import type { NodeResponse } from '$lib/types/NodeResponse';
+	import PathBox from './PathBox.svelte';
+
+	let {
+		path,
+		childrenOf
+	}: {
+		path: NodeResponse;
+		/** The visible nodes inside a path, in display order. */
+		childrenOf: (pathId: string) => NodeResponse[];
+	} = $props();
+
+	const inside = $derived(childrenOf(path.id));
+	const progress = $derived(path.container_progress);
+</script>
+
+<!-- A path is a box its nodes sit inside; sub-paths nest as boxes within it.
+The translucent fill stacks, so deeper nesting reads darker. -->
+<section class="path-box" style:border-top-color={TIER_COLOR[path.focus]}>
+	<button type="button" class="head" onclick={() => openNode(path.id)}>
+		<span class="kind">path</span>
+		<Badge status={path.status} blocked={path.blocked} />
+		<span class="title">{path.title}</span>
+		{#if progress}
+			<span class="progress">
+				<ProgressBar value={progress.done} total={progress.total} />
+				<span>{progress.done} / {progress.total} done</span>
+			</span>
+		{/if}
+	</button>
+
+	{#if inside.length}
+		<div class="inside">
+			{#each inside as node (node.id)}
+				<div class="slot" class:nested={node.kind === 'path'} animate:flip={{ duration: 200 }}>
+					{#if node.kind === 'path'}
+						<PathBox path={node} {childrenOf} />
+					{:else}
+						<NodeCard {node} />
+					{/if}
+				</div>
+			{/each}
+		</div>
+	{:else}
+		<p class="empty">
+			Empty path. Add nodes from the node's detail view, or drag them into this box on the canvas.
+		</p>
+	{/if}
+</section>
+
+<style>
+	.path-box {
+		background: var(--path-fill);
+		border: var(--border-width) dashed var(--node-path);
+		border-top: 5px solid;
+		padding: 0 14px 14px;
+	}
+
+	.head {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: 100%;
+		padding: 12px 0;
+		border: none;
+		background: none;
+		text-align: left;
+		color: var(--ink);
+	}
+
+	.head:hover .title {
+		color: var(--accent);
+	}
+
+	.kind {
+		font: 700 9.5px/1 var(--font-mono);
+		letter-spacing: 0.14em;
+		text-transform: uppercase;
+		color: var(--node-path);
+	}
+
+	.title {
+		font: 700 17px/1.2 var(--font-display);
+	}
+
+	.progress {
+		margin-left: auto;
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		width: min(260px, 40%);
+		font: 600 11.5px/1 var(--font-mono);
+		color: var(--ink-2);
+		white-space: nowrap;
+	}
+
+	.inside {
+		display: grid;
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		gap: 12px;
+		align-items: stretch;
+	}
+
+	.nested {
+		grid-column: 1 / -1;
+	}
+
+	.empty {
+		margin: 0;
+		padding: 14px;
+		border: var(--border-width-hair) dashed var(--node-path);
+		font: 500 12.5px/1.4 var(--font-display);
+		color: var(--ink-2);
+	}
+</style>

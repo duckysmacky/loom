@@ -80,17 +80,6 @@ export function requirementsOf(
 		});
 }
 
-/** `part_of` children of a container, in edge order. */
-export function childrenOf(
-	nodeId: string,
-	edges: EdgeResponse[],
-	nodeById: Map<string, NodeResponse>
-): NodeResponse[] {
-	return edges
-		.filter((edge) => edge.kind === 'part_of' && edge.to_node_id === nodeId)
-		.flatMap((edge) => nodeById.get(edge.from_node_id) ?? []);
-}
-
 const DAY_MS = 86_400_000;
 
 export function daysSince(iso: string, now = Date.now()): number {

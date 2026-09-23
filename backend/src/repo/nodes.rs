@@ -30,6 +30,8 @@ pub(crate) struct NodeRow {
     pub(crate) completed_at: Option<DateTime<Utc>>,
     pub(crate) canvas_x: Option<f64>,
     pub(crate) canvas_y: Option<f64>,
+    pub(crate) canvas_width: Option<f64>,
+    pub(crate) canvas_height: Option<f64>,
     pub(crate) topic_ids: Vec<Uuid>,
     pub(crate) blocked: bool,
     pub(crate) container_total: i64,
@@ -66,6 +68,8 @@ impl From<NodeRow> for NodeResponse {
             completed_at: row.completed_at,
             canvas_x: row.canvas_x,
             canvas_y: row.canvas_y,
+            canvas_width: row.canvas_width,
+            canvas_height: row.canvas_height,
             topic_ids: row.topic_ids,
             blocked: row.blocked,
             container_progress,
@@ -103,7 +107,7 @@ pub async fn create_node(
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
             title, progress_current, progress_total, progress_unit, color, notes,
             created_at, updated_at, started_at, completed_at,
-            canvas_x, canvas_y,
+            canvas_x, canvas_y, canvas_width, canvas_height,
             ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
             false AS "blocked!",
             0::bigint AS "container_total!",
@@ -143,7 +147,7 @@ pub async fn list_nodes(
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
-            n.canvas_x, n.canvas_y,
+            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (
@@ -210,7 +214,7 @@ pub async fn get_node(
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
-            n.canvas_x, n.canvas_y,
+            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (
@@ -264,6 +268,10 @@ pub async fn update_node(
     let canvas_x = request.canvas_x.flatten();
     let canvas_y_set = request.canvas_y.is_some();
     let canvas_y = request.canvas_y.flatten();
+    let canvas_width_set = request.canvas_width.is_some();
+    let canvas_width = request.canvas_width.flatten();
+    let canvas_height_set = request.canvas_height.is_some();
+    let canvas_height = request.canvas_height.flatten();
     let progress_unit_set = request.progress_unit.is_some();
     let progress_unit = request.progress_unit.clone().flatten();
 
@@ -307,6 +315,8 @@ pub async fn update_node(
             END,
             canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,
             canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,
+            canvas_width = CASE WHEN $25 THEN $26 ELSE canvas_width END,
+            canvas_height = CASE WHEN $27 THEN $28 ELSE canvas_height END,
             progress_unit = CASE
                 WHEN COALESCE($3, kind) <> 'study' THEN NULL
                 WHEN $23 THEN $24 ELSE progress_unit
@@ -316,7 +326,8 @@ pub async fn update_node(
         RETURNING
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
             title, progress_current, progress_total, progress_unit, color, notes,
-            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y
+            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y,
+            canvas_width, canvas_height
         "#,
         user_id,
         node_id,
@@ -342,6 +353,10 @@ pub async fn update_node(
         canvas_y,
         progress_unit_set,
         progress_unit,
+        canvas_width_set,
+        canvas_width,
+        canvas_height_set,
+        canvas_height,
     )
     .fetch_optional(&mut *tx)
     .await?;
@@ -353,6 +368,10 @@ pub async fn update_node(
     // progress columns above, in the same transaction.
     if row.kind != NodeKind::Project {
         checklist::delete_all_for_node(user_id, &mut tx, row.id).await?;
+    }
+    // Only paths contain nodes: a node that stops being one lets go of them.
+    if row.kind != NodeKind::Path {
+        edges::release_children(user_id, &mut tx, row.id).await?;
     }
     tx.commit().await?;
 
@@ -378,6 +397,8 @@ pub async fn update_node(
         completed_at: row.completed_at,
         canvas_x: row.canvas_x,
         canvas_y: row.canvas_y,
+        canvas_width: row.canvas_width,
+        canvas_height: row.canvas_height,
         topic_ids,
         blocked: derived.blocked,
         container_progress: derived.container_progress,

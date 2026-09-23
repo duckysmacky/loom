@@ -357,16 +357,8 @@ async fn paths_list_open_path_kind_nodes_with_progress(pool: PgPool) {
         json!({"kind": "path", "title": "archived-path", "status": "archived"}),
     )
     .await;
-    add_edge(&app, &token, &open_child, &archived_path, "part_of").await;
-
-    // A project with part_of children is a container, but not a path.
-    let project_container = create_node(
-        &app,
-        &token,
-        json!({"kind": "project", "title": "project-container", "status": "active"}),
-    )
-    .await;
-    add_edge(&app, &token, &done_child, &project_container, "part_of").await;
+    let archived_child = create_node(&app, &token, json!({"kind": "study", "title": "c"})).await;
+    add_edge(&app, &token, &archived_child, &archived_path, "part_of").await;
 
     let (_, dashboard) = send(
         &app,

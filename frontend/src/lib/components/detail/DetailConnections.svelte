@@ -14,7 +14,7 @@
 	const RELATIONS = {
 		requires: { label: 'Requires', kind: 'requires', outgoing: true },
 		required_by: { label: 'Required by', kind: 'requires', outgoing: false },
-		part_of: { label: 'Part of', kind: 'part_of', outgoing: true },
+		part_of: { label: 'Inside path', kind: 'part_of', outgoing: true },
 		contains: { label: 'Contains', kind: 'part_of', outgoing: false },
 		related: { label: 'Related', kind: 'related', outgoing: true }
 	} as const;
@@ -36,10 +36,23 @@
 						: outgoing
 							? 'part_of'
 							: 'contains';
+			// A path's contents have their own section (DetailContains).
+			if (relation === 'contains') return [];
 			// Only this node's own requirements can block it.
 			const unmet = relation === 'requires' && other.status !== 'done';
 			return [{ edge, other, relation, unmet }];
 		})
+	);
+
+	// "Inside path" is only on offer while the node isn't in a path yet (one
+	// path per node); contents are added from the path's own Contains section.
+	const inPath = $derived(
+		graph.edges.some((edge) => edge.kind === 'part_of' && edge.from_node_id === node.id)
+	);
+	const addable = $derived(
+		(Object.keys(RELATIONS) as Relation[]).filter(
+			(option) => option !== 'contains' && (option !== 'part_of' || !inPath)
+		)
 	);
 
 	let adding = $state(false);
@@ -49,6 +62,8 @@
 	const candidates = $derived(
 		graph.nodes
 			.filter((candidate) => candidate.id !== node.id && candidate.status !== 'archived')
+			// Only paths can contain nodes.
+			.filter((candidate) => relation !== 'part_of' || candidate.kind === 'path')
 			.toSorted((left, right) => left.title.localeCompare(right.title))
 	);
 
@@ -98,8 +113,8 @@
 	{#if adding}
 		<div class="add">
 			<select class="field" aria-label="Relation" bind:value={relation}>
-				{#each Object.entries(RELATIONS) as [value, { label }] (value)}
-					<option {value}>{label}</option>
+				{#each addable as value (value)}
+					<option {value}>{RELATIONS[value].label}</option>
 				{/each}
 			</select>
 			<select class="field" aria-label="Node" bind:value={otherId}>

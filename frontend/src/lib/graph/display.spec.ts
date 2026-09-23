@@ -4,7 +4,6 @@ import {
 	fromDateInput,
 	incrementedProgress,
 	kindChangeLosses,
-	childrenOf,
 	isBacklog,
 	borderStyle,
 	notesExcerpt,
@@ -58,13 +57,6 @@ describe('display helpers', () => {
 			['course', false],
 			['math', true]
 		]);
-	});
-
-	it('lists part_of children of a container', () => {
-		const path = makeNode({ id: 'path' });
-		const child = makeNode({ id: 'child' });
-		const byId = new Map([path, child].map((node) => [node.id, node]));
-		expect(childrenOf('path', [makeEdge('child', 'path', 'part_of')], byId)).toEqual([child]);
 	});
 
 	it('takes progress from the one source each kind has', () => {

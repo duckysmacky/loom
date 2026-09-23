@@ -162,8 +162,19 @@ fn map_node_error(error: sqlx::Error) -> ApiError {
     if let sqlx::Error::Database(db_error) = &error
         && db_error.is_check_violation()
     {
-        if db_error.constraint() == Some("nodes_canvas_position_pair") {
-            return ApiError::InvalidInput("canvas_x/canvas_y must be set or cleared together");
+        match db_error.constraint() {
+            Some("nodes_canvas_position_pair") => {
+                return ApiError::InvalidInput("canvas_x/canvas_y must be set or cleared together");
+            }
+            Some("nodes_canvas_size_pair") => {
+                return ApiError::InvalidInput(
+                    "canvas_width/canvas_height must be set or cleared together",
+                );
+            }
+            Some("nodes_canvas_size_positive") => {
+                return ApiError::InvalidInput("canvas_width/canvas_height must be positive");
+            }
+            _ => {}
         }
         return ApiError::InvalidInput("progress_current/progress_total is invalid");
     }

@@ -24,6 +24,7 @@
 	import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
 	import DetailChecklist from './DetailChecklist.svelte';
 	import DetailConnections from './DetailConnections.svelte';
+	import DetailContains from './DetailContains.svelte';
 	import DetailNotes from './DetailNotes.svelte';
 	import DetailTopics from './DetailTopics.svelte';
 
@@ -206,6 +207,9 @@
 					{/if}
 
 					<DetailNotes {node} />
+					{#if node.kind === 'path'}
+						<DetailContains {node} />
+					{/if}
 					{#if node.kind === 'project'}
 						<DetailChecklist {node} />
 					{/if}

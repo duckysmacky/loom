@@ -1,12 +1,14 @@
 <script lang="ts">
+	import { flip } from 'svelte/animate';
 	import NodeCard from '$lib/components/NodeCard.svelte';
-	import { TIER_COLOR, childrenOf } from '$lib/graph/display';
+	import { TIER_COLOR } from '$lib/graph/display';
 	import { dependencyOrder } from '$lib/graph/order';
-	import { openNode } from '$lib/navigation';
+	import { matchesOrContainsMatch, parentPathOf } from '$lib/graph/paths';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import type { NodeStatus } from '$lib/types/NodeStatus';
+	import PathBox from './PathBox.svelte';
 
 	const STATUS_ORDER: NodeStatus[] = ['active', 'queued', 'paused', 'idea', 'done', 'archived'];
 	const byStatus = (left: NodeResponse, right: NodeResponse) =>
@@ -14,44 +16,34 @@
 
 	// Status order first, then dependency order on top: prerequisites before
 	// what they unblock, so each tier reads left to right as a sequence.
-	const visible = $derived(
-		dependencyOrder(graph.nodes.filter(matchesBoardFilters).toSorted(byStatus), graph.edges)
-	);
+	const ordered = $derived(dependencyOrder(graph.nodes.toSorted(byStatus), graph.edges));
+	const parentOf = $derived(parentPathOf(graph.edges));
 
-	// Paths get their own section instead of appearing in a focus tier. Any
-	// card with part_of children (path or not) shows them as a checklist.
+	// A path stays visible while anything inside it matches the filters.
+	const isShown = (node: NodeResponse) =>
+		matchesOrContainsMatch(node, ordered, parentOf, matchesBoardFilters);
+
+	const childrenOf = (pathId: string) =>
+		ordered.filter((node) => parentOf.get(node.id) === pathId && isShown(node));
+
+	// Nodes inside a path render only inside its box; top-level paths get
+	// their own section.
+	const topLevel = $derived(ordered.filter((node) => !parentOf.has(node.id) && isShown(node)));
+	const tier = (focus: NodeResponse['focus']) =>
+		topLevel.filter((node) => node.kind !== 'path' && node.focus === focus);
+
 	const sections = $derived([
-		{
-			id: 'primary',
-			title: 'Primary',
-			bar: TIER_COLOR.primary,
-			nodes: visible.filter((node) => node.kind !== 'path' && node.focus === 'primary')
-		},
-		{
-			id: 'secondary',
-			title: 'Secondary',
-			bar: TIER_COLOR.secondary,
-			nodes: visible.filter((node) => node.kind !== 'path' && node.focus === 'secondary')
-		},
-		{
-			id: 'background',
-			title: 'Background',
-			bar: TIER_COLOR.background,
-			nodes: visible.filter((node) => node.kind !== 'path' && node.focus === 'background')
-		},
-		{
-			id: 'paths',
-			title: 'Paths',
-			bar: 'var(--node-path)',
-			nodes: visible.filter((node) => node.kind === 'path')
-		}
+		{ id: 'primary', title: 'Primary', bar: TIER_COLOR.primary, nodes: tier('primary') },
+		{ id: 'secondary', title: 'Secondary', bar: TIER_COLOR.secondary, nodes: tier('secondary') },
+		{ id: 'background', title: 'Background', bar: TIER_COLOR.background, nodes: tier('background') }
 	]);
+	const paths = $derived(topLevel.filter((node) => node.kind === 'path'));
 </script>
 
 <div class="page">
 	{#if !graph.loaded}
 		<p class="muted">Loading…</p>
-	{:else if !visible.length}
+	{:else if !topLevel.length}
 		<div class="empty">
 			{graph.nodes.length
 				? 'No nodes match these filters.'
@@ -67,44 +59,32 @@
 					<h2 class="title" id="tier-{section.id}">{section.title}</h2>
 					<span class="meta">
 						{section.nodes.length}
-						{section.id === 'paths' ? 'in flight' : section.nodes.length === 1 ? 'node' : 'nodes'}
+						{section.nodes.length === 1 ? 'node' : 'nodes'}
 					</span>
 				</div>
 				<div class="grid">
 					{#each section.nodes as node (node.id)}
-						{#if node.container_progress}
-							<NodeCard {node}>
-								<ul class="checklist">
-									{#each childrenOf(node.id, graph.edges, graph.nodeById) as child (child.id)}
-										<li>
-											<button
-												type="button"
-												class="child"
-												class:done={child.status === 'done'}
-												onclick={(event) => {
-													event.stopPropagation();
-													openNode(child.id);
-												}}
-											>
-												{#if child.status === 'done'}
-													<span class="check">✓</span>
-												{:else}
-													<span class="circle"></span>
-												{/if}
-												<span class="child-title">{child.title}</span>
-											</button>
-										</li>
-									{/each}
-								</ul>
-							</NodeCard>
-						{:else}
-							<NodeCard {node} />
-						{/if}
+						<div class="cell" animate:flip={{ duration: 200 }}><NodeCard {node} /></div>
 					{/each}
 				</div>
 			</section>
 		{/if}
 	{/each}
+
+	{#if paths.length}
+		<section aria-labelledby="tier-paths">
+			<div class="section-head">
+				<span class="bar" style:background="var(--node-path)"></span>
+				<h2 class="title" id="tier-paths">Paths</h2>
+				<span class="meta">{paths.length} {paths.length === 1 ? 'path' : 'paths'}</span>
+			</div>
+			<div class="paths">
+				{#each paths as path (path.id)}
+					<div animate:flip={{ duration: 200 }}><PathBox {path} {childrenOf} /></div>
+				{/each}
+			</div>
+		</section>
+	{/if}
 </div>
 
 <style>
@@ -137,50 +117,15 @@
 		color: var(--ink-2);
 	}
 
-	.checklist {
-		list-style: none;
-		margin: 11px 0 0;
-		padding: 9px;
-		border: var(--border-width-hair) dashed var(--line);
+	.cell {
 		display: flex;
 		flex-direction: column;
-		gap: 7px;
 	}
 
-	.child {
+	.paths {
+		margin-top: 12px;
 		display: flex;
-		align-items: center;
-		gap: 8px;
-		width: 100%;
-		border: none;
-		background: none;
-		padding: 0;
-		text-align: left;
-		font: 600 12.5px/1.35 var(--font-display);
-		color: var(--ink);
-		min-height: 20px;
-	}
-
-	.child:hover .child-title {
-		color: var(--accent);
-	}
-
-	.child.done .child-title {
-		text-decoration: line-through;
-		color: var(--ink-2);
-	}
-
-	.check {
-		width: 12px;
-		color: var(--ok);
-		font-weight: 700;
-	}
-
-	.circle {
-		width: 12px;
-		height: 12px;
-		flex: none;
-		border: 1.5px solid var(--line);
-		border-radius: 50%;
+		flex-direction: column;
+		gap: 16px;
 	}
 </style>

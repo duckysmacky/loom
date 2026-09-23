@@ -5,7 +5,13 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { edgesApi, nodesApi } from '$lib/api/endpoints';
 	import { isBacklog } from '$lib/graph/display';
-	import { flowDirection, layoutPositions } from '$lib/graph/layout';
+	import {
+		CANVAS_NODE_HEIGHT,
+		CANVAS_NODE_WIDTH,
+		flowDirection,
+		layoutCanvas
+	} from '$lib/graph/layout';
+	import { ancestorPaths, nestingDepth, parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { boardFilters, matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -15,9 +21,10 @@
 	import CanvasControls from './CanvasControls.svelte';
 	import CanvasEdge from './CanvasEdge.svelte';
 	import CanvasNode from './CanvasNode.svelte';
+	import CanvasPath from './CanvasPath.svelte';
 	import type { LoomFlowEdge, LoomFlowNode } from './types';
 
-	const nodeTypes = { loom: CanvasNode };
+	const nodeTypes = { loom: CanvasNode, loomPath: CanvasPath };
 	const edgeTypes = { loom: CanvasEdge };
 
 	let nodes = $state.raw<LoomFlowNode[]>([]);
@@ -45,25 +52,41 @@
 	$effect(() => {
 		const shown = graph.nodes.filter((node) => !hidden(node));
 		const shownIds = new Set(shown.map((node) => node.id));
-		const positions = layoutPositions(shown, graph.edges);
+		const placements = layoutCanvas(shown, graph.edges);
 
 		for (const node of shown) {
 			if (node.canvas_x !== null || pinning.has(node.id)) continue;
 			pinning.add(node.id);
-			persistPosition(node.id, positions.get(node.id)!).finally(() => pinning.delete(node.id));
+			persistPosition(node.id, placements.get(node.id)!.position).finally(() =>
+				pinning.delete(node.id)
+			);
 		}
 		const dimmedIds = new Set(
 			shown.filter((node) => !matchesBoardFilters(node)).map((node) => node.id)
 		);
 
-		nodes = shown.map((node) => ({
-			id: node.id,
-			type: 'loom' as const,
-			position: positions.get(node.id)!,
-			data: { node, dimmed: dimmedIds.has(node.id) },
-			deletable: false
-		}));
+		// xyflow needs a parent listed before its children.
+		const parentOf = parentPathOf(graph.edges);
+		const parentsFirst = shown.toSorted(
+			(left, right) => nestingDepth(left.id, parentOf) - nestingDepth(right.id, parentOf)
+		);
+		nodes = parentsFirst.map((node) => {
+			const { position, size, parentId } = placements.get(node.id)!;
+			const isPath = node.kind === 'path';
+			return {
+				id: node.id,
+				type: isPath ? ('loomPath' as const) : ('loom' as const),
+				position,
+				parentId,
+				// Path boxes have an explicit size (resizable); cards size themselves.
+				...(isPath ? { width: size.width, height: size.height } : {}),
+				data: { node, dimmed: dimmedIds.has(node.id) },
+				deletable: false
+			};
+		});
+		// part_of is drawn as containment (the box), not as a line.
 		edges = graph.edges
+			.filter((edge) => edge.kind !== 'part_of')
 			.filter((edge) => shownIds.has(edge.from_node_id) && shownIds.has(edge.to_node_id))
 			.map((edge) => {
 				const { source, target } = flowDirection(edge);
@@ -74,6 +97,7 @@
 					source,
 					target,
 					type: 'loom' as const,
+					zIndex: 1,
 					data: {
 						kind: edge.kind,
 						unmet,
@@ -97,8 +121,85 @@
 		}
 	}
 
-	async function savePositions({ nodes: dragged }: { nodes: LoomFlowNode[] }) {
-		for (const node of dragged) await persistPosition(node.id, node.position);
+	const sizeOf = (flowNode: LoomFlowNode) => ({
+		width: flowNode.width ?? flowNode.measured?.width ?? CANVAS_NODE_WIDTH,
+		height: flowNode.height ?? flowNode.measured?.height ?? CANVAS_NODE_HEIGHT
+	});
+
+	/**
+	 * Drag stop doubles as "drop into / out of a path": the innermost path box
+	 * under the node's centre becomes its parent. Same parent → just save the
+	 * (relative) position; different parent → move the part_of edge, then save
+	 * the position relative to the new parent.
+	 */
+	async function settleDrag({ nodes: dragged }: { nodes: LoomFlowNode[] }) {
+		const byId = new Map(nodes.map((flowNode) => [flowNode.id, flowNode]));
+		const absolute = (id: string) => {
+			const point = { x: 0, y: 0 };
+			for (let current = byId.get(id); current; current = byId.get(current.parentId ?? '')) {
+				point.x += current.position.x;
+				point.y += current.position.y;
+			}
+			return point;
+		};
+		const parentOf = parentPathOf(graph.edges);
+		const draggedIds = new Set(dragged.map((flowNode) => flowNode.id));
+		let membershipChanged = false;
+
+		for (const moved of dragged) {
+			// Moving along with a dragged ancestor: its relative position is unchanged.
+			if (ancestorPaths(moved.id, parentOf).some((id) => draggedIds.has(id))) continue;
+
+			const topLeft = absolute(moved.id);
+			const size = sizeOf(moved);
+			const centre = { x: topLeft.x + size.width / 2, y: topLeft.y + size.height / 2 };
+			const target = nodes
+				.filter((candidate) => candidate.type === 'loomPath' && candidate.id !== moved.id)
+				.filter((candidate) => !ancestorPaths(candidate.id, parentOf).includes(moved.id))
+				.filter((candidate) => {
+					const origin = absolute(candidate.id);
+					const box = sizeOf(candidate);
+					return (
+						centre.x >= origin.x &&
+						centre.x <= origin.x + box.width &&
+						centre.y >= origin.y &&
+						centre.y <= origin.y + box.height
+					);
+				})
+				.toSorted(
+					(left, right) => nestingDepth(right.id, parentOf) - nestingDepth(left.id, parentOf)
+				)[0];
+
+			if (target?.id === moved.parentId) {
+				await persistPosition(moved.id, moved.position);
+				continue;
+			}
+
+			membershipChanged = true;
+			const previous = graph.edges.find(
+				(edge) => edge.kind === 'part_of' && edge.from_node_id === moved.id
+			);
+			const base = target ? absolute(target.id) : { x: 0, y: 0 };
+			try {
+				if (previous) await edgesApi.remove(previous.id);
+				if (target) {
+					await edgesApi.create({ from_node_id: moved.id, to_node_id: target.id, kind: 'part_of' });
+				}
+				await nodesApi.update(moved.id, {
+					canvas_x: Math.round(topLeft.x - base.x),
+					canvas_y: Math.round(topLeft.y - base.y)
+				});
+				const movedTitle = moved.data.node.title;
+				notify(
+					target
+						? `Moved “${movedTitle}” into “${target.data.node.title}”`
+						: `Moved “${movedTitle}” out of its path`
+				);
+			} catch (error) {
+				notifyError(error);
+			}
+		}
+		if (membershipChanged) await graph.load();
 	}
 
 	const title = (id: string | undefined) => (id ? graph.nodeById.get(id)?.title : '') ?? '';
@@ -113,10 +214,14 @@
 				label: `${title(target)} requires ${title(source)}`,
 				request: { from_node_id: target, to_node_id: source, kind: 'requires' }
 			},
-			{
-				label: `${title(source)} is part of ${title(target)}`,
-				request: { from_node_id: source, to_node_id: target, kind: 'part_of' }
-			},
+			...(graph.nodeById.get(target)?.kind === 'path'
+				? [
+						{
+							label: `${title(source)} goes inside path ${title(target)}`,
+							request: { from_node_id: source, to_node_id: target, kind: 'part_of' as const }
+						}
+					]
+				: []),
 			{
 				label: `${title(source)} is related to ${title(target)}`,
 				request: { from_node_id: source, to_node_id: target, kind: 'related' }
@@ -152,7 +257,7 @@
 		deleteKey={['Delete', 'Backspace']}
 		proOptions={{ hideAttribution: true }}
 		onnodeclick={({ node }) => openNode(node.id)}
-		onnodedragstop={savePositions}
+		onnodedragstop={settleDrag}
 		onbeforeconnect={(connection) => {
 			pendingConnection = connection;
 			return false;
