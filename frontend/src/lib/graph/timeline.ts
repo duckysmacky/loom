@@ -1,9 +1,14 @@
 import type { NodeResponse } from '$lib/types/NodeResponse';
-import { shortDate } from './display';
 
-const DAY_MS = 86_400_000;
+export const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
-const MIN_WEEKS = 4;
+/** Weeks of runway before the earliest start and after today. */
+const LEAD_WEEKS = 1;
+const TRAIL_WEEKS = 8;
+
+export const MIN_PX_PER_DAY = 2;
+export const MAX_PX_PER_DAY = 60;
+export const DEFAULT_PX_PER_DAY = 12;
 
 /** Monday 00:00 (local time) of the week containing `time`. */
 export function startOfWeek(time: number): number {
@@ -13,53 +18,75 @@ export function startOfWeek(time: number): number {
 	return date.getTime();
 }
 
-export type TimelineWindow = {
-	start: number;
-	end: number;
-	weeks: { start: number; label: string }[];
-};
+/** Time span the timeline covers: from a week before the earliest start to 8 weeks past today. */
+export type TimelineRange = { start: number; end: number };
 
-/**
- * Week columns from the week of the earliest start to the current week
- * (inclusive), at least `MIN_WEEKS` wide.
- */
-export function timelineWindow(nodes: NodeResponse[], now = Date.now()): TimelineWindow {
+export function timelineRange(nodes: NodeResponse[], now = Date.now()): TimelineRange {
 	const starts = nodes.flatMap((node) => (node.started_at ? [Date.parse(node.started_at)] : []));
-	const end = startOfWeek(now) + WEEK_MS;
-	const earliest = startOfWeek(Math.min(now, ...starts));
-	const start = Math.min(earliest, end - MIN_WEEKS * WEEK_MS);
-
-	const weeks = [];
-	for (let weekStart = start; weekStart < end; weekStart += WEEK_MS) {
-		weeks.push({ start: weekStart, label: shortDate(new Date(weekStart).toISOString()) });
-	}
-	return { start, end, weeks };
+	return {
+		start: startOfWeek(Math.min(now, ...starts)) - LEAD_WEEKS * WEEK_MS,
+		end: startOfWeek(now) + (TRAIL_WEEKS + 1) * WEEK_MS
+	};
 }
 
-const percentOf = (time: number, window: TimelineWindow) =>
-	((time - window.start) / (window.end - window.start)) * 100;
+/** Horizontal pixel offset of `time` within the range. */
+export function xOf(time: number, range: TimelineRange, pxPerDay: number): number {
+	return ((time - range.start) / DAY_MS) * pxPerDay;
+}
+
+export function rangeWidth(range: TimelineRange, pxPerDay: number): number {
+	return xOf(range.end, range, pxPerDay);
+}
+
+/** Monday timestamps of every week in the range. */
+export function weekStarts(range: TimelineRange): number[] {
+	const weeks = [];
+	for (let week = startOfWeek(range.start); week < range.end; week += WEEK_MS) weeks.push(week);
+	return weeks;
+}
 
 /**
- * Horizontal span of a node's bar, in percent of the window: started_at to
- * completed_at, or to now while still open. `null` for never-started nodes.
+ * A node's bar in pixels: started_at to completed_at, or to now while still
+ * open. `null` for never-started nodes. At least a sliver wide.
  */
 export function barSpan(
 	node: NodeResponse,
-	window: TimelineWindow,
+	range: TimelineRange,
+	pxPerDay: number,
 	now = Date.now()
 ): { left: number; width: number } | null {
 	if (!node.started_at) return null;
 	const start = Date.parse(node.started_at);
 	const finish = node.completed_at ? Date.parse(node.completed_at) : now;
-	const left = Math.max(0, percentOf(start, window));
-	const right = Math.min(100, percentOf(Math.max(finish, start), window));
-	// At least a sliver, so a node started today is still visible.
-	return { left, width: Math.max(right - left, 0.8) };
+	const left = xOf(start, range, pxPerDay);
+	return { left, width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4) };
 }
 
-/** Position of the node's last poke, in percent of the window. */
-export function pokeOffset(node: NodeResponse, window: TimelineWindow): number | null {
+/** Pixel offset of the node's last poke, or null when it has none in range. */
+export function pokeOffset(
+	node: NodeResponse,
+	range: TimelineRange,
+	pxPerDay: number
+): number | null {
 	if (!node.last_poked_at) return null;
-	const offset = percentOf(Date.parse(node.last_poked_at), window);
-	return offset >= 0 && offset <= 100 ? offset : null;
+	const time = Date.parse(node.last_poked_at);
+	return time >= range.start && time <= range.end ? xOf(time, range, pxPerDay) : null;
+}
+
+export function clampZoom(pxPerDay: number): number {
+	return Math.min(MAX_PX_PER_DAY, Math.max(MIN_PX_PER_DAY, pxPerDay));
+}
+
+/**
+ * New scroll offset after zooming, keeping the date under the pointer in
+ * place. `pointerX` is measured from the start of the time axis in the
+ * viewport (i.e. after the fixed name column).
+ */
+export function scrollAfterZoom(
+	scrollLeft: number,
+	pointerX: number,
+	fromPxPerDay: number,
+	toPxPerDay: number
+): number {
+	return ((scrollLeft + pointerX) / fromPxPerDay) * toPxPerDay - pointerX;
 }
