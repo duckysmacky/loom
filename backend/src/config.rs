@@ -10,6 +10,7 @@ pub struct Config {
     pub db_password: String,
     pub db_name: String,
     pub bind_addr: String,
+    pub jwt_secret: String,
 }
 
 impl Config {
@@ -25,6 +26,7 @@ impl Config {
             db_password: require_env("DB_PASSWORD")?,
             db_name: require_env("DB_NAME")?,
             bind_addr: env::var("BIND_ADDR").unwrap_or_else(|_| "0.0.0.0:8080".to_string()),
+            jwt_secret: require_env("JWT_SECRET")?,
         })
     }
 }

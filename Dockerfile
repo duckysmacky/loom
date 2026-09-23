@@ -14,6 +14,7 @@ RUN cargo chef cook --release --recipe-path recipe.json
 COPY backend/Cargo.toml backend/Cargo.lock ./
 COPY backend/src ./src
 COPY backend/migrations ./migrations
+COPY backend/.sqlx ./.sqlx
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release
