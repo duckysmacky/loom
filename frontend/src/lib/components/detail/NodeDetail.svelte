@@ -34,6 +34,7 @@
 	let titleDraft = $state('');
 	let progressCurrent = $state<number | null>(null);
 	let progressTotal = $state<number | null>(null);
+	let progressUnit = $state('');
 
 	// Reset local drafts whenever a different node (or a fresh copy of it
 	// after a mutation) is shown.
@@ -42,6 +43,7 @@
 		titleDraft = node.title;
 		progressCurrent = node.progress_current;
 		progressTotal = node.progress_total;
+		progressUnit = node.progress_unit ?? '';
 	});
 
 	$effect(() => {
@@ -65,7 +67,11 @@
 
 	function saveProgress(current: NodeResponse) {
 		if (progressCurrent === null || progressTotal === null) return;
-		update(current, { progress_current: progressCurrent, progress_total: progressTotal });
+		update(current, {
+			progress_current: progressCurrent,
+			progress_total: progressTotal,
+			progress_unit: progressUnit.trim() || null
+		});
 	}
 
 	async function poke(current: NodeResponse) {
@@ -146,7 +152,7 @@
 									aria-label="Done so far"
 									bind:value={progressCurrent}
 								/>
-								<span class="of">of</span>
+								<span class="of">/</span>
 								<input
 									class="field"
 									type="number"
@@ -154,12 +160,23 @@
 									aria-label="Total"
 									bind:value={progressTotal}
 								/>
+								<input
+									class="field unit"
+									maxlength="40"
+									placeholder="videos, chapters…"
+									aria-label="What is being counted"
+									bind:value={progressUnit}
+								/>
 								<Button type="submit" variant="poke">Save</Button>
 								{#if node.progress_total !== null}
 									<Button
 										variant="quiet"
-										onclick={() => update(node, { progress_current: null, progress_total: null })}
-										>Clear</Button
+										onclick={() =>
+											update(node, {
+												progress_current: null,
+												progress_total: null,
+												progress_unit: null
+											})}>Clear</Button
 									>
 								{/if}
 							</form>
@@ -461,6 +478,12 @@
 	.progress .field {
 		width: 84px;
 		padding: 8px 10px;
+	}
+
+	.progress .field.unit {
+		width: auto;
+		flex: 1;
+		min-width: 120px;
 	}
 
 	.of {

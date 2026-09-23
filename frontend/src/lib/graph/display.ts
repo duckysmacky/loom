@@ -140,12 +140,16 @@ export function progressOf(
 	return null;
 }
 
-/** "15 of 30", "3 of 5 tasks", "1 of 2 done", or null. */
+/** "15 / 30 videos" (unit label optional), "3 / 5 tasks", "1 / 2 done", or null. */
 export function progressText(node: NodeResponse): string | null {
 	const progress = progressOf(node);
 	if (!progress) return null;
-	const suffix = { tracked: '', tasks: ' tasks', children: ' done' }[progress.unit];
-	return `${progress.done} of ${progress.total}${suffix}`;
+	const suffix = {
+		tracked: node.progress_unit ? ` ${node.progress_unit}` : '',
+		tasks: ' tasks',
+		children: ' done'
+	}[progress.unit];
+	return `${progress.done} / ${progress.total}${suffix}`;
 }
 
 /** [done, total] of whichever progress the node shows. */

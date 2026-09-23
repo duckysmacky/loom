@@ -69,9 +69,12 @@ describe('display helpers', () => {
 		const children = { container_progress: { done: 1, total: 2 } };
 		const checklist = { checklist_progress: { done: 3, total: 5 } };
 		const tracked = { progress_current: 15, progress_total: 30 };
-		expect(progressText(makeNode({ ...children, ...checklist, ...tracked }))).toBe('15 of 30');
-		expect(progressText(makeNode({ ...children, ...checklist }))).toBe('3 of 5 tasks');
-		expect(progressText(makeNode(children))).toBe('1 of 2 done');
+		expect(progressText(makeNode({ ...children, ...checklist, ...tracked }))).toBe('15 / 30');
+		expect(progressText(makeNode({ ...checklist, ...tracked, progress_unit: 'videos' }))).toBe(
+			'15 / 30 videos'
+		);
+		expect(progressText(makeNode({ ...children, ...checklist }))).toBe('3 / 5 tasks');
+		expect(progressText(makeNode(children))).toBe('1 / 2 done');
 		expect(progressText(makeNode())).toBeNull();
 	});
 

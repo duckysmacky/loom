@@ -855,3 +855,46 @@ async fn explicit_started_and_completed_dates_override_auto_stamping(pool: PgPoo
     .await;
     assert_eq!(cleared["started_at"], Value::Null);
 }
+
+#[sqlx::test]
+async fn progress_unit_is_trimmed_optional_and_clearable(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "progressunit@example.com").await;
+    let node = create_node(
+        &app,
+        &token,
+        json!({
+            "kind": "study", "title": "book",
+            "progress_current": 3, "progress_total": 20, "progress_unit": "  chapters  "
+        }),
+    )
+    .await;
+    assert_eq!(node["progress_unit"], "chapters");
+    let uri = format!("/api/nodes/{}", node["id"].as_str().unwrap());
+
+    // Untouched by an unrelated PATCH, blank clears it.
+    let (_, renamed) = send(
+        &app,
+        req("PATCH", &uri, json!({"title": "b"}), Some(&token)),
+    )
+    .await;
+    assert_eq!(renamed["progress_unit"], "chapters");
+    let (_, blanked) = send(
+        &app,
+        req("PATCH", &uri, json!({"progress_unit": "   "}), Some(&token)),
+    )
+    .await;
+    assert_eq!(blanked["progress_unit"], Value::Null);
+
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"progress_unit": "x".repeat(41)}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}

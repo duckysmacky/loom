@@ -2,7 +2,13 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { TIER_COLOR, accentColor, borderStyle, progressPair } from '$lib/graph/display';
+	import {
+		TIER_COLOR,
+		accentColor,
+		borderStyle,
+		progressPair,
+		progressText
+	} from '$lib/graph/display';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -33,7 +39,7 @@
 	{#if progress}
 		<div class="progress">
 			<ProgressBar value={progress[0]} total={progress[1]} height={5} />
-			<span>{progress[0]}/{progress[1]}</span>
+			<span>{progressText(node)}</span>
 		</div>
 	{/if}
 	<div

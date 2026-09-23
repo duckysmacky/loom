@@ -68,6 +68,8 @@ pub struct NodeResponse {
     pub title: String,
     pub progress_current: Option<i32>,
     pub progress_total: Option<i32>,
+    /// What the progress counts ("videos", "chapters"); display only.
+    pub progress_unit: Option<String>,
     pub color: Option<String>,
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
@@ -104,6 +106,9 @@ pub struct CreateNodeRequest {
     pub progress_total: Option<i32>,
     #[serde(default)]
     #[ts(optional = nullable)]
+    pub progress_unit: Option<String>,
+    #[serde(default)]
+    #[ts(optional = nullable)]
     pub color: Option<String>,
     #[serde(default)]
     #[ts(optional = nullable)]
@@ -131,6 +136,9 @@ pub struct UpdateNodeRequest {
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
     pub progress_total: Option<Option<i32>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
+    pub progress_unit: Option<Option<String>>,
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
     pub color: Option<Option<String>>,

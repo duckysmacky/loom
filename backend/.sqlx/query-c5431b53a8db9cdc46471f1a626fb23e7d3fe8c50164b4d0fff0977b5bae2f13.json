@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            status = COALESCE($4, status),\n            focus = COALESCE($5, focus),\n            title = COALESCE($6, title),\n            progress_current = CASE WHEN $7 THEN $8 ELSE progress_current END,\n            progress_total = CASE WHEN $9 THEN $10 ELSE progress_total END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            -- An explicit client value always wins ($15/$17). Otherwise,\n            -- the server tracks these itself: `started_at` is stamped the\n            -- first time status moves to `active` (never overwritten\n            -- again), and `completed_at` the first time it moves to\n            -- `done` - cleared automatically if status later moves away\n            -- from `done`, since it's no longer true.\n            started_at = CASE\n                WHEN $15 THEN $16\n                WHEN COALESCE($4, status) = 'active' AND started_at IS NULL THEN now()\n                ELSE started_at\n            END,\n            completed_at = CASE\n                WHEN $17 THEN $18\n                WHEN COALESCE($4, status) = 'done' AND completed_at IS NULL THEN now()\n                WHEN COALESCE($4, status) <> 'done' THEN NULL\n                ELSE completed_at\n            END,\n            canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,\n            canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, color, notes,\n            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y\n        ",
+  "query": "\n        -- Same auto-stamping as update_node: a node created straight into\n        -- `active`/`done` gets started_at/completed_at, not just one that\n        -- transitions there later.\n        INSERT INTO nodes (\n            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,\n            started_at, completed_at, progress_unit\n        )\n        VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9,\n            CASE WHEN $3 = 'active'::node_status THEN now() END,\n            CASE WHEN $3 = 'done'::node_status THEN now() END,\n            $10\n        )\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, progress_unit, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            canvas_x, canvas_y,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            0::bigint AS \"checklist_total!\",\n            0::bigint AS \"checklist_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
   "describe": {
     "columns": [
       {
@@ -119,6 +119,17 @@
       },
       {
         "ordinal": 7,
+        "name": "progress_unit",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "progress_unit"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
         "name": "color",
         "type_info": "Text",
         "origin": {
@@ -129,7 +140,7 @@
         }
       },
       {
-        "ordinal": 8,
+        "ordinal": 9,
         "name": "notes",
         "type_info": "Text",
         "origin": {
@@ -140,7 +151,7 @@
         }
       },
       {
-        "ordinal": 9,
+        "ordinal": 10,
         "name": "created_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -151,7 +162,7 @@
         }
       },
       {
-        "ordinal": 10,
+        "ordinal": 11,
         "name": "updated_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -162,7 +173,7 @@
         }
       },
       {
-        "ordinal": 11,
+        "ordinal": 12,
         "name": "started_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -173,7 +184,7 @@
         }
       },
       {
-        "ordinal": 12,
+        "ordinal": 13,
         "name": "completed_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -184,7 +195,7 @@
         }
       },
       {
-        "ordinal": 13,
+        "ordinal": 14,
         "name": "canvas_x",
         "type_info": "Float8",
         "origin": {
@@ -195,7 +206,7 @@
         }
       },
       {
-        "ordinal": 14,
+        "ordinal": 15,
         "name": "canvas_y",
         "type_info": "Float8",
         "origin": {
@@ -204,11 +215,52 @@
             "name": "canvas_y"
           }
         }
+      },
+      {
+        "ordinal": 16,
+        "name": "topic_ids!: Vec<Uuid>",
+        "type_info": "UuidArray",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 17,
+        "name": "blocked!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 18,
+        "name": "container_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
+        "name": "container_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "checklist_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
+        "name": "checklist_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 22,
+        "name": "last_poked_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
       }
     ],
     "parameters": {
       "Left": [
-        "Uuid",
         "Uuid",
         {
           "Custom": {
@@ -251,22 +303,11 @@
           }
         },
         "Text",
-        "Bool",
         "Int4",
-        "Bool",
         "Int4",
-        "Bool",
         "Text",
-        "Bool",
         "Text",
-        "Bool",
-        "Timestamptz",
-        "Bool",
-        "Timestamptz",
-        "Bool",
-        "Float8",
-        "Bool",
-        "Float8"
+        "Text"
       ]
     },
     "nullable": [
@@ -279,13 +320,21 @@
       true,
       true,
       true,
+      true,
       false,
       false,
       true,
       true,
       true,
-      true
+      true,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null,
+      null
     ]
   },
-  "hash": "7d6c8ab0e3180c537564211dc5759779056427d29fbfaf2a83d609353edf1452"
+  "hash": "c5431b53a8db9cdc46471f1a626fb23e7d3fe8c50164b4d0fff0977b5bae2f13"
 }

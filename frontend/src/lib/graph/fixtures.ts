@@ -11,6 +11,7 @@ export function makeNode(overrides: Partial<NodeResponse> = {}): NodeResponse {
 		title: 'Node',
 		progress_current: null,
 		progress_total: null,
+		progress_unit: null,
 		color: null,
 		notes: null,
 		created_at: '2026-09-01T00:00:00Z',

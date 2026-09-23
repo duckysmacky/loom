@@ -33,6 +33,7 @@ pub async fn create(
     if let Some(color) = &request.color {
         validate_color(color)?;
     }
+    request.progress_unit = clean_progress_unit(request.progress_unit.take())?;
 
     let node = nodes::create_node(user_id, &state.pool, &request)
         .await
@@ -65,6 +66,9 @@ pub async fn update(
     }
     if let Some(Some(color)) = &request.color {
         validate_color(color)?;
+    }
+    if let Some(unit) = request.progress_unit.take() {
+        request.progress_unit = Some(clean_progress_unit(unit)?);
     }
 
     let node = nodes::update_node(user_id, &state.pool, node_id, &request)
@@ -108,6 +112,21 @@ pub async fn detach_topic(
         DetachOutcome::Detached => Ok(StatusCode::NO_CONTENT),
         DetachOutcome::NotFound => Err(ApiError::NotFound),
     }
+}
+
+const MAX_PROGRESS_UNIT_LEN: usize = 40;
+
+/// Trims the progress label; blank means "no label" (stored as NULL).
+fn clean_progress_unit(unit: Option<String>) -> Result<Option<String>, ApiError> {
+    let Some(unit) = unit.map(|unit| unit.trim().to_string()) else {
+        return Ok(None);
+    };
+    if unit.chars().count() > MAX_PROGRESS_UNIT_LEN {
+        return Err(ApiError::InvalidInput(
+            "progress_unit must be at most 40 characters",
+        ));
+    }
+    Ok((!unit.is_empty()).then_some(unit))
 }
 
 /// Maps the nodes CHECK constraints (progress pair, canvas position pair)

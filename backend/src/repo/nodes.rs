@@ -21,6 +21,7 @@ pub(crate) struct NodeRow {
     pub(crate) title: String,
     pub(crate) progress_current: Option<i32>,
     pub(crate) progress_total: Option<i32>,
+    pub(crate) progress_unit: Option<String>,
     pub(crate) color: Option<String>,
     pub(crate) notes: Option<String>,
     pub(crate) created_at: DateTime<Utc>,
@@ -56,6 +57,7 @@ impl From<NodeRow> for NodeResponse {
             title: row.title,
             progress_current: row.progress_current,
             progress_total: row.progress_total,
+            progress_unit: row.progress_unit,
             color: row.color,
             notes: row.notes,
             created_at: row.created_at,
@@ -89,16 +91,17 @@ pub async fn create_node(
         -- transitions there later.
         INSERT INTO nodes (
             user_id, kind, status, focus, title, progress_current, progress_total, color, notes,
-            started_at, completed_at
+            started_at, completed_at, progress_unit
         )
         VALUES (
             $1, $2, $3, $4, $5, $6, $7, $8, $9,
             CASE WHEN $3 = 'active'::node_status THEN now() END,
-            CASE WHEN $3 = 'done'::node_status THEN now() END
+            CASE WHEN $3 = 'done'::node_status THEN now() END,
+            $10
         )
         RETURNING
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
-            title, progress_current, progress_total, color, notes,
+            title, progress_current, progress_total, progress_unit, color, notes,
             created_at, updated_at, started_at, completed_at,
             canvas_x, canvas_y,
             ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
@@ -118,6 +121,7 @@ pub async fn create_node(
         request.progress_total,
         request.color,
         request.notes,
+        request.progress_unit,
     )
     .fetch_one(pool)
     .await?;
@@ -137,7 +141,7 @@ pub async fn list_nodes(
         r#"
         SELECT
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
-            n.title, n.progress_current, n.progress_total,
+            n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
             n.canvas_x, n.canvas_y,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
@@ -204,7 +208,7 @@ pub async fn get_node(
         r#"
         SELECT
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
-            n.title, n.progress_current, n.progress_total,
+            n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
             n.canvas_x, n.canvas_y,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
@@ -260,6 +264,8 @@ pub async fn update_node(
     let canvas_x = request.canvas_x.flatten();
     let canvas_y_set = request.canvas_y.is_some();
     let canvas_y = request.canvas_y.flatten();
+    let progress_unit_set = request.progress_unit.is_some();
+    let progress_unit = request.progress_unit.clone().flatten();
 
     let row = sqlx::query!(
         r#"
@@ -291,11 +297,12 @@ pub async fn update_node(
             END,
             canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,
             canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,
+            progress_unit = CASE WHEN $23 THEN $24 ELSE progress_unit END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
         RETURNING
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
-            title, progress_current, progress_total, color, notes,
+            title, progress_current, progress_total, progress_unit, color, notes,
             created_at, updated_at, started_at, completed_at, canvas_x, canvas_y
         "#,
         user_id,
@@ -320,6 +327,8 @@ pub async fn update_node(
         canvas_x,
         canvas_y_set,
         canvas_y,
+        progress_unit_set,
+        progress_unit,
     )
     .fetch_optional(pool)
     .await?;
@@ -340,6 +349,7 @@ pub async fn update_node(
         title: row.title,
         progress_current: row.progress_current,
         progress_total: row.progress_total,
+        progress_unit: row.progress_unit,
         color: row.color,
         notes: row.notes,
         created_at: row.created_at,
