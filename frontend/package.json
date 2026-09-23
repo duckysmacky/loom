@@ -5,7 +5,7 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
-		"types": "cd ../backend && TS_RS_EXPORT_DIR=../frontend/src/lib/types SQLX_OFFLINE=true cargo test --lib --quiet export_bindings",
+		"types": "rm -rf src/lib/types && cd ../backend && TS_RS_EXPORT_DIR=../frontend/src/lib/types SQLX_OFFLINE=true cargo test --lib --quiet export_bindings",
 		"prebuild": "npm run types",
 		"build": "vite build",
 		"preview": "vite preview",

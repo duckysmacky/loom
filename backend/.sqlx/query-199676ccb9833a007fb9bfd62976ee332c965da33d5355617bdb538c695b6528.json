@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        -- Same auto-stamping as update_node: a node created straight into\n        -- `active`/`done` gets started_at/completed_at, not just one that\n        -- transitions there later.\n        INSERT INTO nodes (\n            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,\n            started_at, completed_at\n        )\n        VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9,\n            CASE WHEN $3 = 'active'::node_status THEN now() END,\n            CASE WHEN $3 = 'done'::node_status THEN now() END\n        )\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            canvas_x, canvas_y,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
+  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            n.canvas_x, n.canvas_y,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)\n                AS \"checklist_total!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)\n                AS \"checklist_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND ($2::node_status IS NULL OR n.status = $2)\n          AND ($3::node_focus IS NULL OR n.focus = $3)\n          AND ($4::node_kind IS NULL OR n.kind = $4)\n          AND ($5::node_kind IS NULL OR n.kind = $5)\n          AND ($6::node_status IS NULL OR n.status = $6)\n        GROUP BY n.id\n        ORDER BY n.created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -231,6 +231,18 @@
       },
       {
         "ordinal": 19,
+        "name": "checklist_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "checklist_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
         "name": "last_poked_at",
         "type_info": "Timestamptz",
         "origin": "Expression"
@@ -239,19 +251,6 @@
     "parameters": {
       "Left": [
         "Uuid",
-        {
-          "Custom": {
-            "name": "node_kind",
-            "kind": {
-              "Enum": [
-                "idea",
-                "project",
-                "course",
-                "path"
-              ]
-            }
-          }
-        },
         {
           "Custom": {
             "name": "node_status",
@@ -279,11 +278,47 @@
             }
           }
         },
-        "Text",
-        "Int4",
-        "Int4",
-        "Text",
-        "Text"
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "course",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "course",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        }
       ]
     },
     "nullable": [
@@ -306,8 +341,10 @@
       null,
       null,
       null,
+      null,
+      null,
       null
     ]
   },
-  "hash": "4a84217c0946996bb4202a1ad4fe6b23acfd0960d48b5368adcda3c763b0b4f8"
+  "hash": "199676ccb9833a007fb9bfd62976ee332c965da33d5355617bdb538c695b6528"
 }

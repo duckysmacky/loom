@@ -3,10 +3,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::node::{
-    ContainerProgress, CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse,
-    NodeStatus, NodeView, UpdateNodeRequest,
+    CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
+    Progress, UpdateNodeRequest,
 };
-use crate::repo::{edges, node_topics, pokes};
+use crate::repo::{checklist, edges, node_topics, pokes};
 
 /// Query target for every node-returning query - flat fields only, since
 /// `query!`/`query_as!` map one SQL column to one struct field.
@@ -33,14 +33,20 @@ pub(crate) struct NodeRow {
     pub(crate) blocked: bool,
     pub(crate) container_total: i64,
     pub(crate) container_done: i64,
+    pub(crate) checklist_total: i64,
+    pub(crate) checklist_done: i64,
     pub(crate) last_poked_at: Option<DateTime<Utc>>,
 }
 
 impl From<NodeRow> for NodeResponse {
     fn from(row: NodeRow) -> Self {
-        let container_progress = (row.container_total > 0).then_some(ContainerProgress {
+        let container_progress = (row.container_total > 0).then_some(Progress {
             done: row.container_done,
             total: row.container_total,
+        });
+        let checklist_progress = (row.checklist_total > 0).then_some(Progress {
+            done: row.checklist_done,
+            total: row.checklist_total,
         });
         NodeResponse {
             id: row.id,
@@ -61,6 +67,7 @@ impl From<NodeRow> for NodeResponse {
             topic_ids: row.topic_ids,
             blocked: row.blocked,
             container_progress,
+            checklist_progress,
             last_poked_at: row.last_poked_at,
         }
     }
@@ -98,6 +105,8 @@ pub async fn create_node(
             false AS "blocked!",
             0::bigint AS "container_total!",
             0::bigint AS "container_done!",
+            0::bigint AS "checklist_total!",
+            0::bigint AS "checklist_done!",
             NULL::timestamptz AS last_poked_at
         "#,
         user_id,
@@ -143,6 +152,10 @@ pub async fn list_nodes(
             (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
              WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
                 AS "container_done!",
+            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)
+                AS "checklist_total!",
+            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)
+                AS "checklist_done!",
             (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id
@@ -206,6 +219,10 @@ pub async fn get_node(
             (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
              WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
                 AS "container_done!",
+            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)
+                AS "checklist_total!",
+            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)
+                AS "checklist_done!",
             (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id
@@ -313,6 +330,7 @@ pub async fn update_node(
     let topic_ids = node_topics::topic_ids_for_node(user_id, pool, row.id).await?;
     let derived = edges::derived_state(user_id, pool, row.id).await?;
     let last_poked_at = pokes::last_poked_at(user_id, pool, row.id).await?;
+    let checklist_progress = checklist::progress_for_node(user_id, pool, row.id).await?;
 
     Ok(Some(NodeResponse {
         id: row.id,
@@ -333,6 +351,7 @@ pub async fn update_node(
         topic_ids,
         blocked: derived.blocked,
         container_progress: derived.container_progress,
+        checklist_progress,
         last_poked_at,
     }))
 }

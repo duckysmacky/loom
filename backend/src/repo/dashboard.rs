@@ -155,6 +155,10 @@ pub async fn get_stale(user_id: Uuid, pool: &PgPool) -> Result<Vec<NodeResponse>
             (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
              WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
                 AS "container_done!",
+            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)
+                AS "checklist_total!",
+            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)
+                AS "checklist_done!",
             (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
         FROM nodes n
         LEFT JOIN node_topics nt ON nt.node_id = n.id

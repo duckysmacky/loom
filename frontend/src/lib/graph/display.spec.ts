@@ -58,11 +58,13 @@ describe('display helpers', () => {
 		expect(childrenOf('path', [makeEdge('child', 'path', 'part_of')], byId)).toEqual([child]);
 	});
 
-	it('formats progress for tracked counts and containers', () => {
-		expect(progressText(makeNode({ progress_current: 15, progress_total: 30 }))).toBe('15 of 30');
-		expect(progressText(makeNode({ container_progress: { done: 1, total: 2 } }))).toBe(
-			'1 of 2 done'
-		);
+	it('prefers tracked progress, then the checklist, then part_of children', () => {
+		const children = { container_progress: { done: 1, total: 2 } };
+		const checklist = { checklist_progress: { done: 3, total: 5 } };
+		const tracked = { progress_current: 15, progress_total: 30 };
+		expect(progressText(makeNode({ ...children, ...checklist, ...tracked }))).toBe('15 of 30');
+		expect(progressText(makeNode({ ...children, ...checklist }))).toBe('3 of 5 tasks');
+		expect(progressText(makeNode(children))).toBe('1 of 2 done');
 		expect(progressText(makeNode())).toBeNull();
 	});
 

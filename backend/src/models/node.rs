@@ -39,13 +39,13 @@ pub enum NodeFocus {
     Background,
 }
 
-/// Derived child-completion ratio for a `part_of` container node - `done`/
-/// `total` count of children pointing at it via a `part_of` edge. Distinct
-/// from `progress_current`/`progress_total`, which are real user-editable
-/// columns (e.g. a course's "15 of 30 videos").
+/// A derived done/total ratio: `container_progress` counts `part_of` children,
+/// `checklist_progress` counts checklist items. Distinct from
+/// `progress_current`/`progress_total`, which are real user-editable columns
+/// (e.g. a course's "15 of 30 videos").
 #[derive(Debug, Clone, Copy, Serialize, TS)]
 #[ts(export)]
-pub struct ContainerProgress {
+pub struct Progress {
     #[ts(type = "number")]
     pub done: i64,
     #[ts(type = "number")]
@@ -80,7 +80,8 @@ pub struct NodeResponse {
     pub canvas_y: Option<f64>,
     pub topic_ids: Vec<Uuid>,
     pub blocked: bool,
-    pub container_progress: Option<ContainerProgress>,
+    pub container_progress: Option<Progress>,
+    pub checklist_progress: Option<Progress>,
     pub last_poked_at: Option<DateTime<Utc>>,
 }
 

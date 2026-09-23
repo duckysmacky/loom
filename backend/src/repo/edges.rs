@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery, EdgeResponse};
-use crate::models::node::ContainerProgress;
+use crate::models::node::Progress;
 
 pub enum CreateEdgeOutcome {
     Created(EdgeResponse),
@@ -13,7 +13,7 @@ pub enum CreateEdgeOutcome {
 
 pub struct NodeDerivedState {
     pub blocked: bool,
-    pub container_progress: Option<ContainerProgress>,
+    pub container_progress: Option<Progress>,
 }
 
 pub async fn create_edge(
@@ -186,7 +186,7 @@ pub async fn derived_state(
 
     Ok(NodeDerivedState {
         blocked: row.blocked,
-        container_progress: (row.container_total > 0).then_some(ContainerProgress {
+        container_progress: (row.container_total > 0).then_some(Progress {
             done: row.container_done,
             total: row.container_total,
         }),

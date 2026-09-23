@@ -2,6 +2,7 @@ import { queryString, request } from './client';
 import type { AuthResponse } from '$lib/types/AuthResponse';
 import type { AuthUserView } from '$lib/types/AuthUserView';
 import type { CanvasResponse } from '$lib/types/CanvasResponse';
+import type { ChecklistItemResponse } from '$lib/types/ChecklistItemResponse';
 import type { ChangePasswordRequest } from '$lib/types/ChangePasswordRequest';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
 import type { CreateNodeRequest } from '$lib/types/CreateNodeRequest';
@@ -15,6 +16,7 @@ import type { PokeResponse } from '$lib/types/PokeResponse';
 import type { RefreshResponse } from '$lib/types/RefreshResponse';
 import type { SignupRequest } from '$lib/types/SignupRequest';
 import type { TopicResponse } from '$lib/types/TopicResponse';
+import type { UpdateChecklistItemRequest } from '$lib/types/UpdateChecklistItemRequest';
 import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
 import type { UpdateTopicRequest } from '$lib/types/UpdateTopicRequest';
 
@@ -49,6 +51,15 @@ export const nodesApi = {
 		request<void>('DELETE', `/nodes/${nodeId}/topics/${topicId}`),
 	poke: (nodeId: string) => request<PokeResponse>('POST', `/nodes/${nodeId}/pokes`),
 	pokes: (nodeId: string) => request<PokeResponse[]>('GET', `/nodes/${nodeId}/pokes`)
+};
+
+export const checklistApi = {
+	list: (nodeId: string) => request<ChecklistItemResponse[]>('GET', `/nodes/${nodeId}/checklist`),
+	add: (nodeId: string, title: string) =>
+		request<ChecklistItemResponse>('POST', `/nodes/${nodeId}/checklist`, { title }),
+	update: (itemId: string, body: UpdateChecklistItemRequest) =>
+		request<ChecklistItemResponse>('PATCH', `/checklist/${itemId}`, body),
+	remove: (itemId: string) => request<void>('DELETE', `/checklist/${itemId}`)
 };
 
 export const edgesApi = {

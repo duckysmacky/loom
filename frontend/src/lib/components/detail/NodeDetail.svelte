@@ -19,6 +19,7 @@
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
+	import DetailChecklist from './DetailChecklist.svelte';
 	import DetailConnections from './DetailConnections.svelte';
 	import DetailNotes from './DetailNotes.svelte';
 	import DetailTopics from './DetailTopics.svelte';
@@ -166,6 +167,7 @@
 					{/if}
 
 					<DetailNotes {node} />
+					<DetailChecklist {node} />
 					<DetailConnections {node} />
 				</div>
 

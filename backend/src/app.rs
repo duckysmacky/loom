@@ -3,7 +3,7 @@ use std::time::Duration;
 use axum::response::IntoResponse;
 use axum::{
     Router,
-    routing::{delete, get, post},
+    routing::{delete, get, patch, post},
 };
 use tower_governor::{
     GovernorLayer, errors::GovernorError, governor::GovernorConfigBuilder,
@@ -84,7 +84,16 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/{id}/pokes",
             get(handlers::pokes::list).post(handlers::pokes::create),
+        )
+        .route(
+            "/{id}/checklist",
+            get(handlers::checklist::list).post(handlers::checklist::create),
         );
+
+    let checklist_routes = Router::new().route(
+        "/{id}",
+        patch(handlers::checklist::update).delete(handlers::checklist::delete),
+    );
 
     let topic_routes = Router::new()
         .route(
@@ -115,7 +124,8 @@ pub fn build_router(state: AppState) -> Router {
                 .nest("/auth", auth_routes)
                 .nest("/nodes", node_routes)
                 .nest("/topics", topic_routes)
-                .nest("/edges", edge_routes),
+                .nest("/edges", edge_routes)
+                .nest("/checklist", checklist_routes),
         )
         .with_state(state)
         .layer(TraceLayer::new_for_http())

@@ -110,26 +110,33 @@ export function fromDateInput(value: string): string | null {
 	return value ? new Date(`${value}T00:00:00`).toISOString() : null;
 }
 
-/** "15 of 30" for tracked progress, "1 of 2 done" for containers, else null. */
-export function progressText(node: NodeResponse): string | null {
+/**
+ * The progress a node shows, by precedence: its own tracked counter (e.g. a
+ * course's videos), then its checklist, then its part_of children.
+ */
+export function progressOf(
+	node: NodeResponse
+): { done: number; total: number; unit: 'tracked' | 'tasks' | 'children' } | null {
 	if (node.progress_current !== null && node.progress_total !== null) {
-		return `${node.progress_current} of ${node.progress_total}`;
+		return { done: node.progress_current, total: node.progress_total, unit: 'tracked' };
 	}
-	if (node.container_progress) {
-		return `${node.container_progress.done} of ${node.container_progress.total} done`;
-	}
+	if (node.checklist_progress) return { ...node.checklist_progress, unit: 'tasks' };
+	if (node.container_progress) return { ...node.container_progress, unit: 'children' };
 	return null;
 }
 
-/** [current, total] for whichever progress the node carries. */
+/** "15 of 30", "3 of 5 tasks", "1 of 2 done", or null. */
+export function progressText(node: NodeResponse): string | null {
+	const progress = progressOf(node);
+	if (!progress) return null;
+	const suffix = { tracked: '', tasks: ' tasks', children: ' done' }[progress.unit];
+	return `${progress.done} of ${progress.total}${suffix}`;
+}
+
+/** [done, total] of whichever progress the node shows. */
 export function progressPair(node: NodeResponse): [number, number] | null {
-	if (node.progress_current !== null && node.progress_total !== null) {
-		return [node.progress_current, node.progress_total];
-	}
-	if (node.container_progress) {
-		return [node.container_progress.done, node.container_progress.total];
-	}
-	return null;
+	const progress = progressOf(node);
+	return progress ? [progress.done, progress.total] : null;
 }
 
 /** First non-heading line of the markdown notes, stripped of markup. */

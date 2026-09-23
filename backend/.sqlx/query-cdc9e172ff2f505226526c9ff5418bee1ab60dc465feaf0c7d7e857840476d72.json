@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            n.canvas_x, n.canvas_y,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1 AND n.id = $2\n        GROUP BY n.id\n        ",
+  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            n.canvas_x, n.canvas_y,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)\n                AS \"checklist_total!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)\n                AS \"checklist_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND n.status IN ('active', 'queued')\n          AND COALESCE(\n                (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id),\n                n.created_at\n              ) < now() - interval '14 days'\n        GROUP BY n.id\n        ORDER BY COALESCE((SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id), n.created_at) ASC\n        ",
   "describe": {
     "columns": [
       {
@@ -231,6 +231,18 @@
       },
       {
         "ordinal": 19,
+        "name": "checklist_total!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 20,
+        "name": "checklist_done!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 21,
         "name": "last_poked_at",
         "type_info": "Timestamptz",
         "origin": "Expression"
@@ -238,7 +250,6 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
         "Uuid"
       ]
     },
@@ -262,8 +273,10 @@
       null,
       null,
       null,
+      null,
+      null,
       null
     ]
   },
-  "hash": "694b3d9b7f0ade2241e48e7148ad4468b48255cba9bcfd747899aa1b3c148f4d"
+  "hash": "cdc9e172ff2f505226526c9ff5418bee1ab60dc465feaf0c7d7e857840476d72"
 }

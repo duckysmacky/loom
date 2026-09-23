@@ -1,5 +1,6 @@
 pub mod auth;
 pub mod board;
+pub mod checklist;
 pub mod dashboard;
 pub mod edges;
 pub mod error;
