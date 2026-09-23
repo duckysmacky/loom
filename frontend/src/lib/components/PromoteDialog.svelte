@@ -14,7 +14,7 @@
 	 */
 	let { node, onclose }: { node: NodeResponse | null; onclose: () => void } = $props();
 
-	let kind = $state<'project' | 'course' | 'path'>('project');
+	let kind = $state<'project' | 'study' | 'path'>('project');
 	let status = $state<'queued' | 'active'>('queued');
 	let focus = $state<NodeFocus>('secondary');
 	let saving = $state(false);
@@ -44,7 +44,7 @@
 				onchange={(value) => (kind = value)}
 				options={[
 					{ value: 'project', label: 'Project' },
-					{ value: 'course', label: 'Course' },
+					{ value: 'study', label: 'Study' },
 					{ value: 'path', label: 'Path' }
 				]}
 			/>

@@ -92,7 +92,7 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
     let mut by_kind = KindCounts {
         idea: 0,
         project: 0,
-        course: 0,
+        study: 0,
         path: 0,
     };
     let mut total = 0i64;
@@ -114,7 +114,7 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         match row.kind {
             NodeKind::Idea => by_kind.idea += row.count,
             NodeKind::Project => by_kind.project += row.count,
-            NodeKind::Course => by_kind.course += row.count,
+            NodeKind::Study => by_kind.study += row.count,
             NodeKind::Path => by_kind.path += row.count,
         }
     }

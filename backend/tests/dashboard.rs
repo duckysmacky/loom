@@ -122,7 +122,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "course", "title": "d", "status": "archived"}),
+        json!({"kind": "study", "title": "d", "status": "archived"}),
     )
     .await;
 
@@ -140,7 +140,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     assert_eq!(counts["by_status"]["queued"], 0);
     assert_eq!(counts["by_kind"]["idea"], 2);
     assert_eq!(counts["by_kind"]["project"], 1);
-    assert_eq!(counts["by_kind"]["course"], 1);
+    assert_eq!(counts["by_kind"]["study"], 1);
     assert_eq!(counts["by_kind"]["path"], 0);
     assert_eq!(counts["backlog"], 2);
     assert_eq!(counts["blocked"], 0);
@@ -339,13 +339,13 @@ async fn paths_list_open_path_kind_nodes_with_progress(pool: PgPool) {
     let done_child = create_node(
         &app,
         &token,
-        json!({"kind": "course", "title": "child-done", "status": "done"}),
+        json!({"kind": "study", "title": "child-done", "status": "done"}),
     )
     .await;
     let open_child = create_node(
         &app,
         &token,
-        json!({"kind": "course", "title": "child-open"}),
+        json!({"kind": "study", "title": "child-open"}),
     )
     .await;
     add_edge(&app, &token, &done_child, &path, "part_of").await;

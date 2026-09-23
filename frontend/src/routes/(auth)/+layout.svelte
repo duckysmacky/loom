@@ -14,7 +14,7 @@
 		<div class="brand">
 			<span class="mark"></span>
 			<span class="wordmark">LOOM</span>
-			<span class="tagline">projects · courses · ideas, as one graph</span>
+			<span class="tagline">projects · studies · ideas, as one graph</span>
 		</div>
 		{@render children()}
 	</div>

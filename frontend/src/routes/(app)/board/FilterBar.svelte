@@ -11,7 +11,7 @@
 			options: [
 				['idea', 'Idea'],
 				['project', 'Project'],
-				['course', 'Course'],
+				['study', 'Study'],
 				['path', 'Path']
 			]
 		},

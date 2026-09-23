@@ -803,7 +803,7 @@ async fn creating_straight_into_active_or_done_stamps_timestamps(pool: PgPool) {
     let done = create_node(
         &app,
         &token,
-        json!({"kind": "course", "title": "d", "status": "done"}),
+        json!({"kind": "study", "title": "d", "status": "done"}),
     )
     .await;
     assert!(!done["completed_at"].is_null());

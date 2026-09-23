@@ -16,7 +16,7 @@ that it should be redeclared here.
 
 `@xyflow/svelte` for the canvas view. Custom node and edge components
 should follow the visual language from the Claude Design mockups: kind
-badges (course/project/idea/path), status badges (including a distinct
+badges (idea/project/study/path), status badges (including a distinct
 treatment for `blocked`), a progress bar on nodes with
 `progress_current`/`progress_total`, and per-edge-kind connector styling
 — `requires` as a strong directional line, `part_of` as

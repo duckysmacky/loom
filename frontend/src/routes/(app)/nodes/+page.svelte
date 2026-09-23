@@ -116,7 +116,7 @@
 					<option value="">Any</option>
 					<option value="idea">Idea</option>
 					<option value="project">Project</option>
-					<option value="course">Course</option>
+					<option value="study">Study</option>
 					<option value="path">Path</option>
 				</select>
 			</label>

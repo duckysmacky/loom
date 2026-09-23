@@ -18,7 +18,8 @@ export const ACCENT_PALETTE = [
 ] as const;
 
 const DEFAULT_ACCENT: Record<NodeResponse['kind'], string> = {
-	course: 'var(--node-course)',
+	// The design system names this accent after the old "course" kind.
+	study: 'var(--node-course)',
 	project: 'var(--node-blue)',
 	idea: 'var(--node-idea)',
 	path: 'var(--node-path)'
@@ -126,7 +127,7 @@ export function fromDateInput(value: string): string | null {
 
 /**
  * The progress a node shows, by precedence: its own tracked counter (e.g. a
- * course's videos), then its checklist, then its part_of children.
+ * study's videos), then its checklist, then its part_of children.
  */
 export function progressOf(
 	node: NodeResponse

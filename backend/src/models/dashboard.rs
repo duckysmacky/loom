@@ -28,7 +28,7 @@ pub struct KindCounts {
     #[ts(type = "number")]
     pub project: i64,
     #[ts(type = "number")]
-    pub course: i64,
+    pub study: i64,
     #[ts(type = "number")]
     pub path: i64,
 }

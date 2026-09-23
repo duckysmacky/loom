@@ -41,7 +41,7 @@
 			options={[
 				{ value: 'idea', label: 'Idea' },
 				{ value: 'project', label: 'Project' },
-				{ value: 'course', label: 'Course' },
+				{ value: 'study', label: 'Study' },
 				{ value: 'path', label: 'Path' }
 			]}
 		/>

@@ -12,7 +12,7 @@ use super::deserialize_some;
 pub enum NodeKind {
     Idea,
     Project,
-    Course,
+    Study,
     Path,
 }
 
@@ -42,7 +42,7 @@ pub enum NodeFocus {
 /// A derived done/total ratio: `container_progress` counts `part_of` children,
 /// `checklist_progress` counts checklist items. Distinct from
 /// `progress_current`/`progress_total`, which are real user-editable columns
-/// (e.g. a course's "15 of 30 videos").
+/// (e.g. a study's "15 of 30 videos").
 #[derive(Debug, Clone, Copy, Serialize, TS)]
 #[ts(export)]
 pub struct Progress {

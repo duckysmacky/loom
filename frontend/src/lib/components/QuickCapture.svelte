@@ -41,7 +41,7 @@
 		if (!trimmed) return;
 		saving = true;
 		// An idea stays at status "idea" (it lands in the backlog); a project or
-		// course is queued unless it's being started right away.
+		// study is queued unless it's being started right away.
 		const status = kind === 'idea' ? 'idea' : startNow ? 'active' : 'queued';
 		const created = await graph.mutate(async () => {
 			const node = await nodesApi.create({ kind, title: trimmed, focus, status });
@@ -86,7 +86,7 @@
 					options={[
 						{ value: 'idea', label: 'Idea' },
 						{ value: 'project', label: 'Project' },
-						{ value: 'course', label: 'Course' },
+						{ value: 'study', label: 'Study' },
 						{ value: 'path', label: 'Path' }
 					]}
 				/>

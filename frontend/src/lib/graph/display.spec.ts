@@ -37,7 +37,7 @@ describe('display helpers', () => {
 
 	it('uses the node color, falling back to the kind default', () => {
 		expect(accentColor(makeNode({ color: '#123456' }))).toBe('#123456');
-		expect(accentColor(makeNode({ kind: 'course' }))).toBe('var(--node-course)');
+		expect(accentColor(makeNode({ kind: 'study' }))).toBe('var(--node-course)');
 		expect(accentColor(makeNode({ kind: 'path' }))).toBe('var(--node-path)');
 	});
 
