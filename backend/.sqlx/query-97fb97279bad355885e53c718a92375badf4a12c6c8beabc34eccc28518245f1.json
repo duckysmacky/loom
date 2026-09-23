@@ -1,0 +1,25 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            EXISTS(SELECT 1 FROM nodes WHERE id = $1 AND user_id = $3)\n            AND EXISTS(SELECT 1 FROM topics WHERE id = $2 AND user_id = $3)\n            AS \"owned!\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "owned!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "97fb97279bad355885e53c718a92375badf4a12c6c8beabc34eccc28518245f1"
+}

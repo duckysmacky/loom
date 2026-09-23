@@ -36,3 +36,35 @@ impl From<sqlx::Error> for AuthError {
         Self::Internal(error.into())
     }
 }
+
+/// Error shape for the node/topic handlers only - mirrors `AuthError`
+/// deliberately rather than sharing it; Phase 7 "Hardening" owns
+/// generalizing error responses across the app.
+pub enum ApiError {
+    NotFound,
+    Conflict(&'static str),
+    InvalidInput(&'static str),
+    Internal(anyhow::Error),
+}
+
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        let (status, message) = match self {
+            Self::NotFound => (StatusCode::NOT_FOUND, "not found"),
+            Self::Conflict(message) => (StatusCode::CONFLICT, message),
+            Self::InvalidInput(message) => (StatusCode::BAD_REQUEST, message),
+            Self::Internal(error) => {
+                tracing::error!(?error, "api error");
+                (StatusCode::INTERNAL_SERVER_ERROR, "internal error")
+            }
+        };
+
+        (status, Json(json!({ "error": message }))).into_response()
+    }
+}
+
+impl From<sqlx::Error> for ApiError {
+    fn from(error: sqlx::Error) -> Self {
+        Self::Internal(error.into())
+    }
+}

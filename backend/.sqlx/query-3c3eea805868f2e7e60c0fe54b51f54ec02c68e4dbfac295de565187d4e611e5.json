@@ -1,0 +1,29 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT nt.topic_id\n        FROM node_topics nt\n        JOIN nodes n ON n.id = nt.node_id\n        WHERE n.user_id = $1 AND nt.node_id = $2\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "topic_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "node_topics",
+            "name": "topic_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "3c3eea805868f2e7e60c0fe54b51f54ec02c68e4dbfac295de565187d4e611e5"
+}

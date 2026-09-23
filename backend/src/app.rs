@@ -2,7 +2,7 @@ use std::time::Duration;
 
 use axum::{
     Router,
-    routing::{get, post},
+    routing::{delete, get, post},
 };
 use tower_governor::{GovernorLayer, governor::GovernorConfigBuilder};
 use tower_http::trace::TraceLayer;
@@ -39,12 +39,43 @@ pub fn build_router(state: AppState) -> Router {
         .route("/logout", post(handlers::auth::logout))
         .route("/me", get(handlers::auth::me));
 
+    let node_routes = Router::new()
+        .route(
+            "/",
+            get(handlers::nodes::list).post(handlers::nodes::create),
+        )
+        .route(
+            "/{id}",
+            get(handlers::nodes::get)
+                .patch(handlers::nodes::update)
+                .delete(handlers::nodes::delete),
+        )
+        .route("/{id}/topics", post(handlers::nodes::attach_topic))
+        .route(
+            "/{id}/topics/{topic_id}",
+            delete(handlers::nodes::detach_topic),
+        );
+
+    let topic_routes = Router::new()
+        .route(
+            "/",
+            get(handlers::topics::list).post(handlers::topics::create),
+        )
+        .route(
+            "/{id}",
+            get(handlers::topics::get)
+                .patch(handlers::topics::update)
+                .delete(handlers::topics::delete),
+        );
+
     Router::new()
         .nest(
             "/api",
             Router::new()
                 .route("/health", get(health))
-                .nest("/auth", auth_routes),
+                .nest("/auth", auth_routes)
+                .nest("/nodes", node_routes)
+                .nest("/topics", topic_routes),
         )
         .with_state(state)
         .layer(TraceLayer::new_for_http())

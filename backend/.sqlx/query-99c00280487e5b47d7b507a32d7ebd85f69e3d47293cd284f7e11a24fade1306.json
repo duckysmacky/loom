@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM node_topics WHERE node_id = $1 AND topic_id = $2",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "99c00280487e5b47d7b507a32d7ebd85f69e3d47293cd284f7e11a24fade1306"
+}
