@@ -6,6 +6,16 @@
 	{#each toasts as toast (toast.id)}
 		<div class="toast {toast.tone}" role={toast.tone === 'error' ? 'alert' : 'status'}>
 			<span>{toast.message}</span>
+			{#if toast.action}
+				<button
+					type="button"
+					class="action"
+					onclick={() => {
+						toast.action!.run();
+						dismiss(toast.id);
+					}}>{toast.action.label}</button
+				>
+			{/if}
 			<button type="button" aria-label="Dismiss" onclick={() => dismiss(toast.id)}>✕</button>
 		</div>
 	{/each}
@@ -40,8 +50,18 @@
 		border-color: var(--warn);
 	}
 
-	button {
+	.action {
+		font: 700 10.5px/1.4 var(--font-mono);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		text-decoration: underline;
+	}
+
+	button:first-of-type {
 		margin-left: auto;
+	}
+
+	button {
 		border: none;
 		background: none;
 		color: inherit;

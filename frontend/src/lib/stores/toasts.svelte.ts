@@ -1,14 +1,15 @@
 import { ApiError } from '$lib/api/client';
 
-export type Toast = { id: number; message: string; tone: 'info' | 'error' };
+export type ToastAction = { label: string; run: () => void };
+export type Toast = { id: number; message: string; tone: 'info' | 'error'; action?: ToastAction };
 
 export const toasts = $state<Toast[]>([]);
 
 let nextToastId = 0;
 
-export function notify(message: string, tone: Toast['tone'] = 'info') {
+export function notify(message: string, tone: Toast['tone'] = 'info', action?: ToastAction) {
 	const id = nextToastId++;
-	toasts.push({ id, message, tone });
+	toasts.push({ id, message, tone, action });
 	setTimeout(() => dismiss(id), tone === 'error' ? 6000 : 3500);
 }
 
