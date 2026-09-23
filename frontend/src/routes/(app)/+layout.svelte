@@ -86,4 +86,11 @@
 		display: flex;
 		flex-direction: column;
 	}
+
+	/* Narrow screens: the sidebar folds into a strip above the top bar. */
+	@media (max-width: 900px) {
+		.shell {
+			flex-direction: column;
+		}
+	}
 </style>

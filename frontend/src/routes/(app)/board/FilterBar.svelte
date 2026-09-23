@@ -161,7 +161,7 @@
 		max-height: 280px;
 		overflow-y: auto;
 		background: var(--surface);
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 		padding: 6px;
 		display: flex;
 		flex-direction: column;

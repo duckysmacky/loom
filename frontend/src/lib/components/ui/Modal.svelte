@@ -38,7 +38,7 @@
 <style>
 	dialog {
 		padding: 0;
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 		background: var(--surface);
 		color: var(--ink);
 		margin-top: 12vh;

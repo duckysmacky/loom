@@ -98,7 +98,7 @@ the only card-level status tell besides the badge. Dashed for idea/path. -->
 <style>
 	.card {
 		background: var(--surface);
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 		padding: var(--card-pad);
 		cursor: pointer;
 		display: flex;

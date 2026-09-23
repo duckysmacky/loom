@@ -31,7 +31,7 @@
 	.sheet {
 		width: min(400px, 100%);
 		background: var(--surface);
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 	}
 
 	.brand {
@@ -41,7 +41,7 @@
 		flex-wrap: wrap;
 		padding: 16px 22px;
 		background: var(--side);
-		border-bottom: var(--border-width) solid var(--ink);
+		border-bottom: var(--border-width) solid var(--frame);
 	}
 
 	.mark {

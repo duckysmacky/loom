@@ -114,4 +114,8 @@ double rail into the container, reading as nesting; related: light dots. -->
 		stroke: var(--bg);
 		stroke-width: 4px;
 	}
+
+	.edge-label.unmet {
+		fill: var(--warn);
+	}
 </style>

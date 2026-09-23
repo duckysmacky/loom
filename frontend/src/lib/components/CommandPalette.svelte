@@ -154,7 +154,7 @@
 		align-items: center;
 		gap: 10px;
 		padding: 14px 16px;
-		border-bottom: var(--border-width) solid var(--ink);
+		border-bottom: var(--border-width) solid var(--frame);
 	}
 
 	.lens {

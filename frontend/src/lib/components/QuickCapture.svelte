@@ -148,7 +148,7 @@
 
 	.title {
 		border: none;
-		border-bottom: var(--border-width) solid var(--ink);
+		border-bottom: var(--border-width) solid var(--frame);
 		background: none;
 		padding: 6px 0 8px;
 		font: 700 20px/1.2 var(--font-display);

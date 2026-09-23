@@ -19,7 +19,9 @@
 	</button>
 
 	<div class="actions">
-		<Button variant="accent" onclick={() => (overlays.captureOpen = true)}>+ Quick capture</Button>
+		<Button variant="accent" onclick={() => (overlays.captureOpen = true)}>
+			+<span class="capture-label"> Quick capture</span>
+		</Button>
 		<div class="account">
 			<button
 				type="button"
@@ -124,7 +126,7 @@
 		top: calc(100% + 8px);
 		min-width: 200px;
 		background: var(--surface);
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 		display: flex;
 		flex-direction: column;
 	}
@@ -141,6 +143,33 @@
 	.menu > a:hover,
 	.menu > button:hover {
 		background: var(--surface-2);
+	}
+
+	@media (max-width: 700px) {
+		.topbar {
+			padding: 10px 14px;
+			gap: 10px;
+			position: static;
+		}
+
+		.search {
+			margin-left: 0;
+			min-width: 0;
+		}
+
+		.placeholder,
+		.key {
+			display: none;
+		}
+
+		.search {
+			flex: 0 0 auto;
+			padding: 9px 10px;
+		}
+
+		.capture-label {
+			display: none;
+		}
 	}
 
 	.email {

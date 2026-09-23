@@ -40,7 +40,7 @@
 		padding: 11px 13px;
 		background: var(--ink);
 		color: var(--on-ink);
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 		font: 600 12.5px/1.4 var(--font-display);
 	}
 

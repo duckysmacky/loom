@@ -9,6 +9,9 @@
 	--ink-2: #5d6f85;
 	--ink-3: #48586d;
 	--line: #c3ccd6;
+	/* Structural 2px frames (cards, dialogs, menus). Ink in light; toned down
+	   in dark, where full-strength ink borders glare. */
+	--frame: #132339;
 	--surface: #ffffff;
 	--surface-2: #eef1f5;
 	--chip: #dfe5ec;
@@ -75,6 +78,7 @@
 	--ink-2: #92a3b7;
 	--ink-3: #b4c1cf;
 	--line: #34475f;
+	--frame: #5a6f8e;
 	--surface: #15223a;
 	--surface-2: #1b2a43;
 	--chip: #25374f;

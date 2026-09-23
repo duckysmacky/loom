@@ -43,7 +43,7 @@
 <style>
 	.canvas-node {
 		background: var(--surface);
-		border: var(--border-width) solid var(--ink);
+		border: var(--border-width) solid var(--frame);
 		padding: 10px 12px;
 		color: var(--ink);
 		font-family: var(--font-display);

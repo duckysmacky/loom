@@ -157,4 +157,38 @@
 		font: 700 11px/1 var(--font-mono);
 		color: var(--side-hi);
 	}
+
+	@media (max-width: 900px) {
+		.sidebar {
+			width: auto;
+			height: auto;
+			position: static;
+			flex-direction: row;
+			align-items: center;
+			padding: 10px 12px;
+			border-right: none;
+			border-bottom: var(--border-width-hair) solid var(--side-line);
+			overflow-x: auto;
+		}
+
+		.brand {
+			padding: 0 14px 0 4px;
+		}
+
+		.items {
+			flex-direction: row;
+			padding: 0;
+		}
+
+		.item {
+			padding: 8px 10px;
+			white-space: nowrap;
+		}
+
+		/* Board views are one click away in the board's own switcher. */
+		.items ul,
+		.hints {
+			display: none;
+		}
+	}
 </style>
