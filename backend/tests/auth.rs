@@ -390,3 +390,229 @@ async fn login_rate_limited_after_repeated_failures(pool: PgPool) {
 
     assert_eq!(last_status, StatusCode::TOO_MANY_REQUESTS);
 }
+
+fn bearer_request(uri: &str, body: Value, token: &str) -> Request<Body> {
+    Request::builder()
+        .method("POST")
+        .uri(uri)
+        .header(header::CONTENT_TYPE, "application/json")
+        .header(header::AUTHORIZATION, format!("Bearer {token}"))
+        .extension(ConnectInfo(TEST_PEER))
+        .body(Body::from(body.to_string()))
+        .unwrap()
+}
+
+/// Signs up and returns (access token, refresh cookie pair).
+async fn signup_session(app: &axum::Router, email: &str) -> (String, String) {
+    let (status, body, cookie) = send(
+        app,
+        json_request(
+            "POST",
+            "/api/auth/signup",
+            json!({"email": email, "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    (
+        body["access_token"].as_str().unwrap().to_owned(),
+        cookie_pair(&cookie.unwrap()).to_owned(),
+    )
+}
+
+#[sqlx::test]
+async fn change_password_signs_out_other_sessions_but_keeps_this_one(pool: PgPool) {
+    let app = app(pool);
+    let (token, _) = signup_session(&app, "rotate@example.com").await;
+    let (_, _, other_session) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/login",
+            json!({"email": "rotate@example.com", "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    let other_cookie = cookie_pair(&other_session.unwrap()).to_owned();
+
+    let (status, body, new_cookie) = send(
+        &app,
+        bearer_request(
+            "/api/auth/password",
+            json!({"current_password": "password123", "new_password": "a-new-password"}),
+            &token,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert!(!body["access_token"].as_str().unwrap().is_empty());
+    let new_cookie = cookie_pair(&new_cookie.expect("fresh refresh cookie")).to_owned();
+
+    let (other_status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/refresh",
+            Value::Null,
+            Some(&other_cookie),
+        ),
+    )
+    .await;
+    assert_eq!(other_status, StatusCode::UNAUTHORIZED);
+
+    let (this_status, ..) = send(
+        &app,
+        json_request("POST", "/api/auth/refresh", Value::Null, Some(&new_cookie)),
+    )
+    .await;
+    assert_eq!(this_status, StatusCode::OK);
+}
+
+#[sqlx::test]
+async fn change_password_replaces_the_login_credential(pool: PgPool) {
+    let app = app(pool);
+    let (token, _) = signup_session(&app, "credential@example.com").await;
+    let (status, ..) = send(
+        &app,
+        bearer_request(
+            "/api/auth/password",
+            json!({"current_password": "password123", "new_password": "a-new-password"}),
+            &token,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let login = |password: &str| {
+        json_request(
+            "POST",
+            "/api/auth/login",
+            json!({"email": "credential@example.com", "password": password}),
+            None,
+        )
+    };
+    let (old_status, ..) = send(&app, login("password123")).await;
+    assert_eq!(old_status, StatusCode::UNAUTHORIZED);
+    let (new_status, ..) = send(&app, login("a-new-password")).await;
+    assert_eq!(new_status, StatusCode::OK);
+}
+
+#[sqlx::test]
+async fn change_password_with_wrong_current_password_is_400_and_changes_nothing(pool: PgPool) {
+    let app = app(pool);
+    let (token, _) = signup_session(&app, "wrongcurrent@example.com").await;
+
+    let (status, body, cookie) = send(
+        &app,
+        bearer_request(
+            "/api/auth/password",
+            json!({"current_password": "not-my-password", "new_password": "a-new-password"}),
+            &token,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["error"], "current password is incorrect");
+    assert!(cookie.is_none());
+
+    let (login_status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/login",
+            json!({"email": "wrongcurrent@example.com", "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(login_status, StatusCode::OK);
+}
+
+#[sqlx::test]
+async fn change_password_enforces_length_rules(pool: PgPool) {
+    let app = app(pool);
+    let (token, _) = signup_session(&app, "shortnew@example.com").await;
+
+    let (status, body, _) = send(
+        &app,
+        bearer_request(
+            "/api/auth/password",
+            json!({"current_password": "password123", "new_password": "short"}),
+            &token,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(body["error"], "password must be at least 8 characters");
+}
+
+#[sqlx::test]
+async fn change_password_requires_a_bearer_token(pool: PgPool) {
+    let app = app(pool);
+    let (status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/password",
+            json!({"current_password": "password123", "new_password": "a-new-password"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn replaying_a_logged_out_cookie_does_not_sign_out_other_sessions(pool: PgPool) {
+    let app = app(pool);
+    let (_, logged_out_cookie) = signup_session(&app, "stale@example.com").await;
+    let (_, _, other_session) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/login",
+            json!({"email": "stale@example.com", "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    let other_cookie = cookie_pair(&other_session.unwrap()).to_owned();
+
+    send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/logout",
+            Value::Null,
+            Some(&logged_out_cookie),
+        ),
+    )
+    .await;
+    let (stale_status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/refresh",
+            Value::Null,
+            Some(&logged_out_cookie),
+        ),
+    )
+    .await;
+    assert_eq!(stale_status, StatusCode::UNAUTHORIZED);
+
+    // Only a replayed *rotated* token is a theft signal - this one was
+    // revoked by logout, so the other session survives.
+    let (other_status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/refresh",
+            Value::Null,
+            Some(&other_cookie),
+        ),
+    )
+    .await;
+    assert_eq!(other_status, StatusCode::OK);
+}

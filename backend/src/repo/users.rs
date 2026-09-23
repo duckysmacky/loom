@@ -49,3 +49,18 @@ pub async fn find_by_id(pool: &PgPool, user_id: Uuid) -> Result<Option<User>, sq
     .fetch_optional(pool)
     .await
 }
+
+pub async fn update_password_hash(
+    pool: &PgPool,
+    user_id: Uuid,
+    password_hash: &str,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE users SET password_hash = $2 WHERE id = $1",
+        user_id,
+        password_hash,
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}

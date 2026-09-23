@@ -8,7 +8,7 @@ use super::extract::ApiJson;
 use crate::auth::{jwt, password, refresh_token};
 use crate::middleware::auth_user::AuthUser;
 use crate::models::auth::{
-    AuthResponse, AuthUserView, LoginRequest, RefreshResponse, SignupRequest,
+    AuthResponse, AuthUserView, ChangePasswordRequest, LoginRequest, RefreshResponse, SignupRequest,
 };
 use crate::repo;
 use crate::state::AppState;
@@ -104,7 +104,7 @@ pub async fn refresh(
             repo::refresh_tokens::revoke_all_for_user(&state.pool, user_id).await?;
             return Err(ApiError::InvalidToken);
         }
-        repo::refresh_tokens::ConsumeOutcome::NotFound => return Err(ApiError::InvalidToken),
+        repo::refresh_tokens::ConsumeOutcome::Invalid => return Err(ApiError::InvalidToken),
     };
 
     let (access_token, jar) = issue_tokens(&state, jar, user_id).await?;
@@ -119,7 +119,7 @@ pub async fn logout(
     if let Some(raw_token) = jar.get(REFRESH_COOKIE_NAME).map(|c| c.value().to_owned()) {
         let token_hash = refresh_token::hash_token(&raw_token);
         if let repo::refresh_tokens::ConsumeOutcome::Reused(user_id) =
-            repo::refresh_tokens::consume(&state.pool, &token_hash).await?
+            repo::refresh_tokens::revoke(&state.pool, &token_hash).await?
         {
             repo::refresh_tokens::revoke_all_for_user(&state.pool, user_id).await?;
         }
@@ -140,6 +140,37 @@ pub async fn me(
         id: user.id,
         email: user.email,
     }))
+}
+
+/// Changes the signed-in user's password. A wrong `current_password` is a
+/// 400, not a 401 - the caller's session is valid, and a 401 would make
+/// clients treat it as an expired access token. Every refresh token is
+/// revoked (signing out other sessions) and this session gets a fresh pair.
+/// Access tokens already issued elsewhere stay valid until they expire
+/// (15 min) - they're stateless JWTs.
+pub async fn change_password(
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
+    jar: CookieJar,
+    ApiJson(body): ApiJson<ChangePasswordRequest>,
+) -> Result<(CookieJar, Json<RefreshResponse>), ApiError> {
+    validate_password(&body.new_password)?;
+
+    let user = repo::users::find_by_id(&state.pool, user_id)
+        .await?
+        .ok_or(ApiError::InvalidToken)?;
+    if !password::verify_password_blocking(body.current_password, user.password_hash).await {
+        return Err(ApiError::InvalidInput("current password is incorrect"));
+    }
+
+    let password_hash = password::hash_password_blocking(body.new_password)
+        .await
+        .map_err(|e| ApiError::Internal(e.into()))?;
+    repo::users::update_password_hash(&state.pool, user_id, &password_hash).await?;
+    repo::refresh_tokens::revoke_all_for_user(&state.pool, user_id).await?;
+
+    let (access_token, jar) = issue_tokens(&state, jar, user_id).await?;
+    Ok((jar, Json(RefreshResponse { access_token })))
 }
 
 /// Issues a fresh access token and a fresh (stored) refresh token, and
@@ -199,6 +230,10 @@ fn validate_credentials(email: &str, password: &str) -> Result<(), ApiError> {
     if !is_valid_email(email) {
         return Err(ApiError::InvalidInput("invalid email"));
     }
+    validate_password(password)
+}
+
+fn validate_password(password: &str) -> Result<(), ApiError> {
     if password.len() < MIN_PASSWORD_LEN {
         return Err(ApiError::InvalidInput(
             "password must be at least 8 characters",

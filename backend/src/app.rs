@@ -48,13 +48,15 @@ pub fn build_router(state: AppState) -> Router {
         }
     });
 
-    // Signup, login, and refresh all either run Argon2 or write a DB row -
-    // all three get the same per-IP throttle so none is a free CPU/DB sink.
+    // Signup, login, refresh and password change all either run Argon2 or
+    // write a DB row - all get the same per-IP throttle so none is a free
+    // CPU/DB sink.
     // logout/me are cheap, authenticated-only reads/writes and don't need it.
     let throttled_auth_routes = Router::new()
         .route("/signup", post(handlers::auth::signup))
         .route("/login", post(handlers::auth::login))
         .route("/refresh", post(handlers::auth::refresh))
+        .route("/password", post(handlers::auth::change_password))
         .route_layer(
             GovernorLayer::new(auth_governor_config).error_handler(governor_error_response),
         );

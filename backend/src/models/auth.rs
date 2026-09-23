@@ -18,6 +18,14 @@ pub struct LoginRequest {
     pub password: String,
 }
 
+// No `Debug` either - both fields are plaintext passwords.
+#[derive(Deserialize, TS)]
+#[ts(export)]
+pub struct ChangePasswordRequest {
+    pub current_password: String,
+    pub new_password: String,
+}
+
 #[derive(Debug, Serialize, TS)]
 #[ts(export)]
 pub struct AuthUserView {
