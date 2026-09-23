@@ -1,0 +1,72 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT status AS \"status: NodeStatus\", kind AS \"kind: NodeKind\", COUNT(*) AS \"count!\"\n        FROM nodes\n        WHERE user_id = $1\n        GROUP BY status, kind\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "status: NodeStatus",
+        "type_info": {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind: NodeKind",
+        "type_info": {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "course"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "count!",
+        "type_info": "Int8",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      null
+    ]
+  },
+  "hash": "709fbb7c770a6d4df2a02246d0d8f184c52b57905e5a9862125e0755eef80076"
+}

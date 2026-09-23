@@ -1,4 +1,6 @@
 pub mod auth;
+pub mod board;
+pub mod dashboard;
 pub mod edge;
 pub mod node;
 pub mod poke;

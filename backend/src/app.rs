@@ -84,6 +84,8 @@ pub fn build_router(state: AppState) -> Router {
             "/api",
             Router::new()
                 .route("/health", get(health))
+                .route("/board/canvas", get(handlers::board::canvas))
+                .route("/dashboard", get(handlers::dashboard::get))
                 .nest("/auth", auth_routes)
                 .nest("/nodes", node_routes)
                 .nest("/topics", topic_routes)

@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::models::node::{
     ContainerProgress, CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse,
-    NodeStatus, UpdateNodeRequest,
+    NodeStatus, NodeView, UpdateNodeRequest,
 };
 use crate::repo::{edges, node_topics, pokes};
 
@@ -13,25 +13,25 @@ use crate::repo::{edges, node_topics, pokes};
 /// `container_progress`'s nested shape has no single-column representation,
 /// so it's carried as two flat counts here and folded into
 /// `NodeResponse::container_progress` by `From<NodeRow>`.
-struct NodeRow {
-    id: Uuid,
-    kind: NodeKind,
-    status: NodeStatus,
-    focus: NodeFocus,
-    title: String,
-    progress_current: Option<i32>,
-    progress_total: Option<i32>,
-    color: Option<String>,
-    notes: Option<String>,
-    created_at: DateTime<Utc>,
-    updated_at: DateTime<Utc>,
-    started_at: Option<DateTime<Utc>>,
-    completed_at: Option<DateTime<Utc>>,
-    topic_ids: Vec<Uuid>,
-    blocked: bool,
-    container_total: i64,
-    container_done: i64,
-    last_poked_at: Option<DateTime<Utc>>,
+pub(crate) struct NodeRow {
+    pub(crate) id: Uuid,
+    pub(crate) kind: NodeKind,
+    pub(crate) status: NodeStatus,
+    pub(crate) focus: NodeFocus,
+    pub(crate) title: String,
+    pub(crate) progress_current: Option<i32>,
+    pub(crate) progress_total: Option<i32>,
+    pub(crate) color: Option<String>,
+    pub(crate) notes: Option<String>,
+    pub(crate) created_at: DateTime<Utc>,
+    pub(crate) updated_at: DateTime<Utc>,
+    pub(crate) started_at: Option<DateTime<Utc>>,
+    pub(crate) completed_at: Option<DateTime<Utc>>,
+    pub(crate) topic_ids: Vec<Uuid>,
+    pub(crate) blocked: bool,
+    pub(crate) container_total: i64,
+    pub(crate) container_done: i64,
+    pub(crate) last_poked_at: Option<DateTime<Utc>>,
 }
 
 impl From<NodeRow> for NodeResponse {
@@ -106,6 +106,8 @@ pub async fn list_nodes(
     pool: &PgPool,
     filters: &NodeListQuery,
 ) -> Result<Vec<NodeResponse>, sqlx::Error> {
+    let (view_kind, view_status) = view_predicates(filters.view);
+
     let rows = sqlx::query_as!(
         NodeRow,
         r#"
@@ -132,6 +134,8 @@ pub async fn list_nodes(
           AND ($2::node_status IS NULL OR n.status = $2)
           AND ($3::node_focus IS NULL OR n.focus = $3)
           AND ($4::node_kind IS NULL OR n.kind = $4)
+          AND ($5::node_kind IS NULL OR n.kind = $5)
+          AND ($6::node_status IS NULL OR n.status = $6)
         GROUP BY n.id
         ORDER BY n.created_at DESC
         "#,
@@ -139,11 +143,26 @@ pub async fn list_nodes(
         filters.status as Option<NodeStatus>,
         filters.focus as Option<NodeFocus>,
         filters.kind as Option<NodeKind>,
+        view_kind as Option<NodeKind>,
+        view_status as Option<NodeStatus>,
     )
     .fetch_all(pool)
     .await?;
 
     Ok(rows.into_iter().map(NodeResponse::from).collect())
+}
+
+/// Translates `view` into the effective (kind, status) constraint it
+/// implies. `backlog` = unpromoted ideas: kind=idea AND status=idea, since
+/// promoting to project/course changes `kind` - an idea still at
+/// kind='idea'/status='idea' has never been promoted. `archived` =
+/// status=archived. `all`/`None` = no extra constraint.
+fn view_predicates(view: Option<NodeView>) -> (Option<NodeKind>, Option<NodeStatus>) {
+    match view {
+        Some(NodeView::Backlog) => (Some(NodeKind::Idea), Some(NodeStatus::Idea)),
+        Some(NodeView::Archived) => (None, Some(NodeStatus::Archived)),
+        Some(NodeView::All) | None => (None, None),
+    }
 }
 
 pub async fn get_node(

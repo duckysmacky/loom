@@ -1,3 +1,5 @@
+pub mod board;
+pub mod dashboard;
 pub mod edges;
 pub mod node_topics;
 pub mod nodes;

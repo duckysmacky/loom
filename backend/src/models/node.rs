@@ -114,6 +114,18 @@ pub struct UpdateNodeRequest {
     pub completed_at: Option<Option<DateTime<Utc>>>,
 }
 
+/// A view preset for `GET /api/nodes` - translated into `kind`/`status`
+/// constraints in Rust before the query runs (not a `sqlx::Type`: it's
+/// never bound directly to a SQL parameter, unlike `NodeStatus`/`NodeFocus`/
+/// `NodeKind`, which map 1:1 onto Postgres enum columns).
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS)]
+#[serde(rename_all = "snake_case")]
+pub enum NodeView {
+    Backlog,
+    All,
+    Archived,
+}
+
 #[derive(Debug, Default, Deserialize, TS)]
 pub struct NodeListQuery {
     #[serde(default)]
@@ -122,6 +134,8 @@ pub struct NodeListQuery {
     pub focus: Option<NodeFocus>,
     #[serde(default)]
     pub kind: Option<NodeKind>,
+    #[serde(default)]
+    pub view: Option<NodeView>,
 }
 
 #[derive(Debug, Deserialize, TS)]

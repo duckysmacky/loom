@@ -422,3 +422,110 @@ async fn attach_and_detach_topic_on_another_users_node_returns_404(pool: PgPool)
     .await;
     assert_eq!(detach_status, StatusCode::NOT_FOUND);
 }
+
+#[sqlx::test]
+async fn view_backlog_includes_only_unpromoted_ideas(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "viewbacklog@example.com").await;
+
+    create_node(&app, &token, json!({"kind": "idea", "title": "backlog"})).await;
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "promoted"}),
+    )
+    .await;
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "idea", "title": "queued-idea", "status": "queued"}),
+    )
+    .await;
+
+    let (_, list) = send(
+        &app,
+        req("GET", "/api/nodes?view=backlog", Value::Null, Some(&token)),
+    )
+    .await;
+    let titles: Vec<String> = list
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["title"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(titles, vec!["backlog".to_string()]);
+}
+
+#[sqlx::test]
+async fn view_archived_includes_only_archived(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "viewarchived@example.com").await;
+
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "idea", "title": "archived", "status": "archived"}),
+    )
+    .await;
+    create_node(&app, &token, json!({"kind": "idea", "title": "active"})).await;
+
+    let (_, list) = send(
+        &app,
+        req("GET", "/api/nodes?view=archived", Value::Null, Some(&token)),
+    )
+    .await;
+    let titles: Vec<String> = list
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|n| n["title"].as_str().unwrap().to_owned())
+        .collect();
+    assert_eq!(titles, vec!["archived".to_string()]);
+}
+
+#[sqlx::test]
+async fn view_all_matches_unfiltered_behavior(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "viewall@example.com").await;
+
+    create_node(&app, &token, json!({"kind": "idea", "title": "a"})).await;
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "b", "status": "archived"}),
+    )
+    .await;
+
+    let (_, unfiltered) = send(&app, req("GET", "/api/nodes", Value::Null, Some(&token))).await;
+    let (_, view_all) = send(
+        &app,
+        req("GET", "/api/nodes?view=all", Value::Null, Some(&token)),
+    )
+    .await;
+    assert_eq!(
+        unfiltered.as_array().unwrap().len(),
+        view_all.as_array().unwrap().len()
+    );
+    assert_eq!(unfiltered.as_array().unwrap().len(), 2);
+}
+
+#[sqlx::test]
+async fn view_combines_with_explicit_status_filter(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "viewcombine@example.com").await;
+    create_node(&app, &token, json!({"kind": "idea", "title": "backlog"})).await;
+
+    // view=backlog implies status=idea; contradicting it with status=active
+    // legitimately empties the result via AND, not a special case.
+    let (_, list) = send(
+        &app,
+        req(
+            "GET",
+            "/api/nodes?view=backlog&status=active",
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(list.as_array().unwrap().len(), 0);
+}
