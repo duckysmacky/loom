@@ -178,7 +178,7 @@
 		--xy-node-border-radius: 0;
 		--xy-handle-background-color: var(--surface);
 		--xy-handle-border-color: var(--ink-2);
-		--xy-selection-background-color: rgba(47, 111, 176, 0.08);
+		--xy-selection-background-color: var(--selection-tint);
 		--xy-selection-border: 1px dashed var(--accent);
 		--xy-connectionline-stroke: var(--accent);
 		--xy-connectionline-stroke-width: 2;

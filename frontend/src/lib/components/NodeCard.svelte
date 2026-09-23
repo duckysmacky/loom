@@ -58,7 +58,12 @@ the only card-level status tell besides the badge. Dashed for idea/path. -->
 	role="button"
 	tabindex="0"
 	onclick={() => openNode(node.id)}
-	onkeydown={(event) => event.key === 'Enter' && openNode(node.id)}
+	onkeydown={(event) => {
+		if (event.target === event.currentTarget && (event.key === 'Enter' || event.key === ' ')) {
+			event.preventDefault();
+			openNode(node.id);
+		}
+	}}
 >
 	<div class="head">
 		<span class="accent" style:background={accentColor(node)}></span>

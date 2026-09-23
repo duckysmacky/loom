@@ -10,6 +10,7 @@
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
 
 	let dashboard = $state<DashboardResponse | null>(null);
+	let loadFailed = $state(false);
 	let ideaTitle = $state('');
 
 	// Refetch whenever the graph cache reloads, i.e. after any mutation.
@@ -17,8 +18,14 @@
 		void graph.version;
 		dashboardApi
 			.get()
-			.then((response) => (dashboard = response))
-			.catch(notifyError);
+			.then((response) => {
+				dashboard = response;
+				loadFailed = false;
+			})
+			.catch((error) => {
+				loadFailed = true;
+				notifyError(error);
+			});
 	});
 
 	const actionableCount = $derived(
@@ -58,7 +65,7 @@
 
 <div class="page">
 	{#if !dashboard}
-		<p class="muted">Loading…</p>
+		<p class="muted">{loadFailed ? 'Could not load the dashboard. Try reloading.' : 'Loading…'}</p>
 	{:else}
 		<div class="tiles">
 			{#each tiles as tile (tile.label)}

@@ -1,42 +1,37 @@
-# sv
+# Loom frontend
 
-Everything you need to build a Svelte project, powered by [`sv`](https://github.com/sveltejs/cli).
+SvelteKit + TypeScript SPA, built with `adapter-static` and served by the
+Axum backend (see the root `README.md` and `CLAUDE.md`). Visual language
+follows the "Loom" design system.
 
-## Creating a project
-
-If you're seeing this, you've probably already done this step. Congrats!
-
-```sh
-# create a new project
-npx sv create my-app
-```
-
-To recreate this project with the same configuration:
+## Development
 
 ```sh
-# recreate this project
-npx sv@0.17.1 create --template minimal --types ts --add ai-tools="ide:claude-code+delivery:plugin" vitest="usages:unit,component" prettier eslint --install npm loom
-```
+# 1. backend on :8080 (from ../backend; needs Postgres, see ../.env.example)
+DB_HOST=localhost cargo run
 
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```sh
+# 2. frontend dev server on :5173, proxying /api to :8080
+npm install
 npm run dev
-
-# or start the server and open the app in a new browser tab
-npm run dev -- --open
 ```
 
-## Building
+## Scripts
 
-To create a production version of your app:
+- `npm run types` - regenerates `src/lib/types/` from the backend's ts-rs
+  derives (runs `cargo test export_bindings`). Runs automatically before
+  `build` and `check`; the directory is gitignored.
+- `npm run check` - svelte-check type checking.
+- `npm run lint` / `npm run format` - Prettier + ESLint.
+- `npm test` - unit tests (API client token refresh, graph/timeline/filter
+  helpers).
+- `npm run build` - static output in `build/`.
 
-```sh
-npm run build
-```
+## Layout
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://svelte.dev/docs/kit/adapters) for your target environment.
+- `src/lib/api` - fetch client (in-memory access token, single-flight
+  refresh) and typed endpoint functions.
+- `src/lib/stores` - session, the shared graph cache, board filters,
+  preferences, overlays, toasts.
+- `src/lib/graph` - pure display/layout/timeline/filter helpers.
+- `src/routes/(auth)` - login/signup; `src/routes/(app)` - everything
+  behind sign-in.
