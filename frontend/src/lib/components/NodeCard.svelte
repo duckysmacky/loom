@@ -109,6 +109,8 @@ the only card-level status tell besides the badge. Dashed for idea/path. -->
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
+		/* Fills its grid cell, so cards in a row line up. */
+		height: 100%;
 	}
 
 	.card:hover {
@@ -187,7 +189,9 @@ the only card-level status tell besides the badge. Dashed for idea/path. -->
 	}
 
 	.actions {
-		margin-top: 12px;
+		/* Pinned to the bottom of a stretched card. */
+		margin-top: auto;
+		padding-top: 12px;
 		display: flex;
 		justify-content: flex-end;
 	}

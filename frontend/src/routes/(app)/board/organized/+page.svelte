@@ -122,9 +122,11 @@
 	.grid {
 		margin-top: 12px;
 		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(230px, 1fr));
+		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		/* Every card in a section gets the same width and height. */
+		grid-auto-rows: 1fr;
 		gap: 12px;
-		align-items: start;
+		align-items: stretch;
 	}
 
 	.empty {
