@@ -41,12 +41,17 @@ pub async fn create_edge(
         return Ok(CreateEdgeOutcome::NotFound);
     }
 
-    if request.kind == EdgeKind::Requires {
-        // Serializes concurrent requires-edge inserts for this user so two
+    // `requires` cycles would make `blocked` unsatisfiable forever; `part_of`
+    // cycles would make container progress meaningless (a container whose
+    // progress derives from a child that's itself derived from it) and
+    // break canvas nesting. `related` is a soft, non-hierarchical
+    // association - cycles there are fine.
+    if matches!(request.kind, EdgeKind::Requires | EdgeKind::PartOf) {
+        // Serializes concurrent same-kind edge inserts for this user so two
         // requests can't both pass the cycle check below before either
         // commits. Per-user, not global - cheap at this app's scale.
-        // ponytail: per-user advisory lock, revisit only if requires-edge
-        // writes become a hot path (they won't, this is a single-user graph).
+        // ponytail: per-user advisory lock, revisit only if edge writes
+        // become a hot path (they won't, this is a single-user graph).
         sqlx::query!(
             "SELECT pg_advisory_xact_lock(hashtext($1)::bigint)",
             user_id.to_string()
@@ -54,22 +59,24 @@ pub async fn create_edge(
         .execute(&mut *tx)
         .await?;
 
-        // Would to_node_id already (transitively) require from_node_id? If
-        // so, adding from_node_id -> to_node_id would close a cycle.
+        // Would to_node_id already (transitively) point at from_node_id via
+        // this same edge kind? If so, adding from_node_id -> to_node_id
+        // would close a cycle.
         let would_cycle = sqlx::query_scalar!(
             r#"
             WITH RECURSIVE reachable AS (
                 SELECT to_node_id AS node_id FROM edges
-                WHERE from_node_id = $1 AND kind = 'requires'
+                WHERE from_node_id = $1 AND kind = $3
                 UNION
                 SELECT e.to_node_id FROM edges e
                 JOIN reachable r ON e.from_node_id = r.node_id
-                WHERE e.kind = 'requires'
+                WHERE e.kind = $3
             )
             SELECT EXISTS(SELECT 1 FROM reachable WHERE node_id = $2) AS "would_cycle!"
             "#,
             request.to_node_id,
             request.from_node_id,
+            request.kind as EdgeKind,
         )
         .fetch_one(&mut *tx)
         .await?;

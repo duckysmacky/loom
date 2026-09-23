@@ -4,6 +4,7 @@ use ts_rs::TS;
 use super::node::NodeResponse;
 
 #[derive(Debug, Clone, Copy, Serialize, TS)]
+#[ts(export)]
 pub struct StatusCounts {
     pub idea: i64,
     pub queued: i64,
@@ -14,6 +15,7 @@ pub struct StatusCounts {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, TS)]
+#[ts(export)]
 pub struct KindCounts {
     pub idea: i64,
     pub project: i64,
@@ -21,6 +23,7 @@ pub struct KindCounts {
 }
 
 #[derive(Debug, Clone, Copy, Serialize, TS)]
+#[ts(export)]
 pub struct DashboardCounts {
     pub total: i64,
     pub by_status: StatusCounts,
@@ -31,6 +34,7 @@ pub struct DashboardCounts {
 /// the unblocked-primary list, in one payload ("control panel for what's
 /// up right now").
 #[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct DashboardResponse {
     pub counts: DashboardCounts,
     pub stale: Vec<NodeResponse>,

@@ -1,4 +1,5 @@
 use axum::body::Body;
+use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use loom::app::build_router;
@@ -21,11 +22,21 @@ async fn send(app: &axum::Router, req: Request<Body>) -> (StatusCode, Value) {
     (status, body)
 }
 
+const TEST_PEER: std::net::SocketAddr = std::net::SocketAddr::new(
+    std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)),
+    12345,
+);
+
+/// Every request needs `ConnectInfo` attached, same as
+/// `into_make_service_with_connect_info` would in production - the
+/// `/api/auth/*` rate limiter's `SmartIpKeyExtractor` falls back to it
+/// when there's no forwarded-for header, which `oneshot` never provides.
 fn req(method: &str, uri: &str, body: Value, token: Option<&str>) -> Request<Body> {
     let mut builder = Request::builder()
         .method(method)
         .uri(uri)
-        .header(header::CONTENT_TYPE, "application/json");
+        .header(header::CONTENT_TYPE, "application/json")
+        .extension(ConnectInfo(TEST_PEER));
     if let Some(token) = token {
         builder = builder.header(header::AUTHORIZATION, format!("Bearer {token}"));
     }

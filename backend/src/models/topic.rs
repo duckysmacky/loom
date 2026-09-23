@@ -6,6 +6,7 @@ use uuid::Uuid;
 use super::deserialize_some;
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow, TS)]
+#[ts(export)]
 pub struct TopicResponse {
     pub id: Uuid,
     pub name: String,
@@ -15,16 +16,21 @@ pub struct TopicResponse {
 }
 
 #[derive(Debug, Deserialize, TS)]
+#[ts(export)]
 pub struct CreateTopicRequest {
     pub name: String,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub color: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, TS)]
+#[ts(export)]
 pub struct UpdateTopicRequest {
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub name: Option<String>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub color: Option<Option<String>>,
 }

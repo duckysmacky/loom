@@ -7,6 +7,7 @@ use uuid::Uuid;
 /// always read under a known `/nodes/{id}/pokes` URL, redundant to echo
 /// back.
 #[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct PokeResponse {
     pub id: Uuid,
     pub poked_at: DateTime<Utc>,

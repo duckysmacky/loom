@@ -1,0 +1,36 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH RECURSIVE reachable AS (\n                SELECT to_node_id AS node_id FROM edges\n                WHERE from_node_id = $1 AND kind = $3\n                UNION\n                SELECT e.to_node_id FROM edges e\n                JOIN reachable r ON e.from_node_id = r.node_id\n                WHERE e.kind = $3\n            )\n            SELECT EXISTS(SELECT 1 FROM reachable WHERE node_id = $2) AS \"would_cycle!\"\n            ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "would_cycle!",
+        "type_info": "Bool",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "edge_kind",
+            "kind": {
+              "Enum": [
+                "requires",
+                "part_of",
+                "related"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      null
+    ]
+  },
+  "hash": "760d028fa28c0470cee8d89645041c96e3e0fae831af7b53a168ed5f9c7367e4"
+}

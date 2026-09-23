@@ -234,8 +234,23 @@ pub async fn update_node(
             progress_total = CASE WHEN $9 THEN $10 ELSE progress_total END,
             color = CASE WHEN $11 THEN $12 ELSE color END,
             notes = CASE WHEN $13 THEN $14 ELSE notes END,
-            started_at = CASE WHEN $15 THEN $16 ELSE started_at END,
-            completed_at = CASE WHEN $17 THEN $18 ELSE completed_at END,
+            -- An explicit client value always wins ($15/$17). Otherwise,
+            -- the server tracks these itself: `started_at` is stamped the
+            -- first time status moves to `active` (never overwritten
+            -- again), and `completed_at` the first time it moves to
+            -- `done` - cleared automatically if status later moves away
+            -- from `done`, since it's no longer true.
+            started_at = CASE
+                WHEN $15 THEN $16
+                WHEN COALESCE($4, status) = 'active' AND started_at IS NULL THEN now()
+                ELSE started_at
+            END,
+            completed_at = CASE
+                WHEN $17 THEN $18
+                WHEN COALESCE($4, status) = 'done' AND completed_at IS NULL THEN now()
+                WHEN COALESCE($4, status) <> 'done' THEN NULL
+                ELSE completed_at
+            END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
         RETURNING

@@ -8,6 +8,7 @@ use super::node::NodeResponse;
 /// node and every edge) in one payload. No filters: whole-graph view, any
 /// client-side filtering is a Phase 11 frontend concern.
 #[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct CanvasResponse {
     pub nodes: Vec<NodeResponse>,
     pub edges: Vec<EdgeResponse>,

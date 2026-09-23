@@ -1,4 +1,5 @@
 use axum::body::Body;
+use axum::extract::ConnectInfo;
 use axum::http::{Request, StatusCode, header};
 use http_body_util::BodyExt;
 use loom::app::build_router;
@@ -21,11 +22,21 @@ async fn send(app: &axum::Router, req: Request<Body>) -> (StatusCode, Value) {
     (status, body)
 }
 
+const TEST_PEER: std::net::SocketAddr = std::net::SocketAddr::new(
+    std::net::IpAddr::V4(std::net::Ipv4Addr::new(127, 0, 0, 1)),
+    12345,
+);
+
+/// Every request needs `ConnectInfo` attached, same as
+/// `into_make_service_with_connect_info` would in production - the
+/// `/api/auth/*` rate limiter's `SmartIpKeyExtractor` falls back to it
+/// when there's no forwarded-for header, which `oneshot` never provides.
 fn req(method: &str, uri: &str, body: Value, token: Option<&str>) -> Request<Body> {
     let mut builder = Request::builder()
         .method(method)
         .uri(uri)
-        .header(header::CONTENT_TYPE, "application/json");
+        .header(header::CONTENT_TYPE, "application/json")
+        .extension(ConnectInfo(TEST_PEER));
     if let Some(token) = token {
         builder = builder.header(header::AUTHORIZATION, format!("Bearer {token}"));
     }
@@ -160,6 +171,69 @@ async fn patch_omitted_field_kept_explicit_null_clears(pool: PgPool) {
     )
     .await;
     assert_eq!(body["notes"], Value::Null);
+}
+
+#[sqlx::test]
+async fn started_at_and_completed_at_are_auto_stamped_and_cleared(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "autostamp@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap().to_owned();
+    assert_eq!(node["started_at"], Value::Null);
+    assert_eq!(node["completed_at"], Value::Null);
+
+    // status -> active stamps started_at, once, automatically.
+    let (_, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"status": "active"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert!(!body["started_at"].is_null());
+    let started_at = body["started_at"].clone();
+
+    // An unrelated update doesn't re-stamp it.
+    let (_, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"title": "renamed"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(body["started_at"], started_at);
+
+    // status -> done stamps completed_at.
+    let (_, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"status": "done"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert!(!body["completed_at"].is_null());
+
+    // Moving away from done clears completed_at again.
+    let (_, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"status": "active"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(body["completed_at"], Value::Null);
 }
 
 #[sqlx::test]
@@ -543,6 +617,63 @@ async fn missing_or_garbage_token_returns_401(pool: PgPool) {
     )
     .await;
     assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn malformed_path_uuid_returns_400_with_consistent_error_shape(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "badpathuuid@example.com").await;
+
+    let (status, body) = send(
+        &app,
+        req("GET", "/api/nodes/not-a-uuid", Value::Null, Some(&token)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        body["error"].is_string(),
+        "expected {{\"error\": ...}} shape, got {body:?}"
+    );
+}
+
+#[sqlx::test]
+async fn color_must_be_a_hex_code(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "badcolor@example.com").await;
+
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "idea", "title": "n", "color": "blue"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "idea", "title": "n", "color": "#a3c9ff"}),
+    )
+    .await;
+    assert_eq!(node["color"], "#a3c9ff");
+}
+
+#[sqlx::test]
+async fn title_and_color_are_trimmed(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "trimmed@example.com").await;
+
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "idea", "title": "  padded title  "}),
+    )
+    .await;
+    assert_eq!(node["title"], "padded title");
 }
 
 #[sqlx::test]

@@ -17,6 +17,14 @@ fn app(pool: PgPool) -> axum::Router {
     build_router(AppState::new(pool, TEST_JWT_SECRET))
 }
 
+fn app_with_signup_policy(pool: PgPool, allow_signup: bool) -> axum::Router {
+    build_router(AppState::with_signup_policy(
+        pool,
+        TEST_JWT_SECRET,
+        allow_signup,
+    ))
+}
+
 async fn send(app: &axum::Router, req: Request<Body>) -> (StatusCode, Value, Option<String>) {
     let response = app.clone().oneshot(req).await.unwrap();
     let status = response.status();
@@ -117,6 +125,84 @@ async fn signup_duplicate_email_returns_409(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn signup_rejects_password_over_max_length(pool: PgPool) {
+    let app = app(pool);
+    let (status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/signup",
+            json!({"email": "toolong@example.com", "password": "a".repeat(129)}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test]
+async fn malformed_json_body_gets_consistent_error_shape(pool: PgPool) {
+    let app = app(pool);
+    let request = Request::builder()
+        .method("POST")
+        .uri("/api/auth/signup")
+        .header(header::CONTENT_TYPE, "application/json")
+        .extension(ConnectInfo(TEST_PEER))
+        .body(Body::from("not json"))
+        .unwrap();
+    let (status, body, _) = send(&app, request).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert!(
+        body["error"].is_string(),
+        "expected {{\"error\": ...}} shape, got {body:?}"
+    );
+}
+
+#[sqlx::test]
+async fn signup_disabled_returns_403(pool: PgPool) {
+    let app = app_with_signup_policy(pool, false);
+    let (status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/signup",
+            json!({"email": "blocked@example.com", "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::FORBIDDEN);
+}
+
+#[sqlx::test]
+async fn login_is_case_insensitive_on_email(pool: PgPool) {
+    let app = app(pool);
+    let (signup_status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/signup",
+            json!({"email": "MixedCase@Example.com", "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(signup_status, StatusCode::CREATED);
+
+    let (login_status, ..) = send(
+        &app,
+        json_request(
+            "POST",
+            "/api/auth/login",
+            json!({"email": "mixedcase@example.com", "password": "password123"}),
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(login_status, StatusCode::OK);
+}
+
+#[sqlx::test]
 async fn login_success_returns_tokens(pool: PgPool) {
     let app = app(pool);
     let body = json!({"email": "login@example.com", "password": "password123"});
@@ -206,13 +292,15 @@ async fn refresh_rotates_token_and_old_cookie_rejected(pool: PgPool) {
     .await;
     assert_eq!(replay_status, StatusCode::UNAUTHORIZED);
 
-    // The new cookie still works.
-    let (still_works_status, ..) = send(
+    // A rotated-out token being presented again is treated as a theft
+    // signal - the whole refresh-token family (including the cookie that
+    // *did* rotate correctly) is revoked, not just the replayed one.
+    let (family_revoked_status, ..) = send(
         &app,
         json_request("POST", "/api/auth/refresh", Value::Null, Some(&new_cookie)),
     )
     .await;
-    assert_eq!(still_works_status, StatusCode::OK);
+    assert_eq!(family_revoked_status, StatusCode::UNAUTHORIZED);
 }
 
 #[sqlx::test]

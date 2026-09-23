@@ -1,1 +1,4 @@
 target/
+# ts-rs's `#[ts(export)]` output - Phase 8 wires copying/generating these
+# into the frontend as part of the build; nothing here is hand-maintained.
+bindings/

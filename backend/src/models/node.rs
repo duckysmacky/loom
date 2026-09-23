@@ -6,6 +6,7 @@ use uuid::Uuid;
 use super::deserialize_some;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[ts(export)]
 #[sqlx(type_name = "node_kind", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum NodeKind {
@@ -15,6 +16,7 @@ pub enum NodeKind {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[ts(export)]
 #[sqlx(type_name = "node_status", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum NodeStatus {
@@ -27,6 +29,7 @@ pub enum NodeStatus {
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[ts(export)]
 #[sqlx(type_name = "node_focus", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
 pub enum NodeFocus {
@@ -40,6 +43,7 @@ pub enum NodeFocus {
 /// from `progress_current`/`progress_total`, which are real user-editable
 /// columns (e.g. a course's "15 of 30 videos").
 #[derive(Debug, Clone, Copy, Serialize, TS)]
+#[ts(export)]
 pub struct ContainerProgress {
     pub done: i64,
     pub total: i64,
@@ -52,6 +56,7 @@ pub struct ContainerProgress {
 /// this directly once `container_progress` is involved (no single-column
 /// SQL representation for a nested shape) - see `repo::nodes::NodeRow`.
 #[derive(Debug, Clone, Serialize, TS)]
+#[ts(export)]
 pub struct NodeResponse {
     pub id: Uuid,
     pub kind: NodeKind,
@@ -73,44 +78,62 @@ pub struct NodeResponse {
 }
 
 #[derive(Debug, Deserialize, TS)]
+#[ts(export)]
 pub struct CreateNodeRequest {
     pub kind: NodeKind,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub status: Option<NodeStatus>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
     pub title: String,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub progress_current: Option<i32>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub progress_total: Option<i32>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub color: Option<String>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub notes: Option<String>,
 }
 
 #[derive(Debug, Default, Deserialize, TS)]
+#[ts(export)]
 pub struct UpdateNodeRequest {
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub kind: Option<NodeKind>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub status: Option<NodeStatus>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub title: Option<String>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub progress_current: Option<Option<i32>>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub progress_total: Option<Option<i32>>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub color: Option<Option<String>>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub notes: Option<Option<String>>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub started_at: Option<Option<DateTime<Utc>>>,
     #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
     pub completed_at: Option<Option<DateTime<Utc>>>,
 }
 
@@ -119,6 +142,7 @@ pub struct UpdateNodeRequest {
 /// never bound directly to a SQL parameter, unlike `NodeStatus`/`NodeFocus`/
 /// `NodeKind`, which map 1:1 onto Postgres enum columns).
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS)]
+#[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum NodeView {
     Backlog,
@@ -127,18 +151,24 @@ pub enum NodeView {
 }
 
 #[derive(Debug, Default, Deserialize, TS)]
+#[ts(export)]
 pub struct NodeListQuery {
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub status: Option<NodeStatus>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub kind: Option<NodeKind>,
     #[serde(default)]
+    #[ts(optional = nullable)]
     pub view: Option<NodeView>,
 }
 
 #[derive(Debug, Deserialize, TS)]
+#[ts(export)]
 pub struct AttachTopicRequest {
     pub topic_id: Uuid,
 }
