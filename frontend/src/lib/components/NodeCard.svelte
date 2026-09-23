@@ -5,7 +5,6 @@
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
 		accentColor,
-		displayKind,
 		isDashed,
 		notesExcerpt,
 		progressPair,
@@ -33,7 +32,7 @@
 		children?: Snippet;
 	} = $props();
 
-	const kind = $derived(displayKind(node));
+	const kind = $derived(node.kind);
 	const unmet = $derived(
 		requirementsOf(node.id, graph.edges, graph.nodeById).filter((requirement) => !requirement.met)
 	);

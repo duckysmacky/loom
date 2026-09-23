@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
 	import Modal from '$lib/components/ui/Modal.svelte';
-	import { accentColor, displayKind } from '$lib/graph/display';
+	import { accentColor } from '$lib/graph/display';
 	import { fuzzyScore } from '$lib/fuzzy';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -60,7 +60,7 @@
 		const nodeItems: Item[] = graph.nodes.map((node) => ({
 			id: node.id,
 			label: node.title,
-			hint: `${displayKind(node)} · ${node.blocked && node.status !== 'done' ? 'blocked' : node.status}`,
+			hint: `${node.kind} · ${node.blocked && node.status !== 'done' ? 'blocked' : node.status}`,
 			color: accentColor(node),
 			run: () => openNode(node.id)
 		}));

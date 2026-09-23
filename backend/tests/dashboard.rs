@@ -141,6 +141,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     assert_eq!(counts["by_kind"]["idea"], 2);
     assert_eq!(counts["by_kind"]["project"], 1);
     assert_eq!(counts["by_kind"]["course"], 1);
+    assert_eq!(counts["by_kind"]["path"], 0);
     assert_eq!(counts["backlog"], 2);
     assert_eq!(counts["blocked"], 0);
 }
@@ -325,14 +326,14 @@ async fn backlog_count_and_recent_backlog_cover_only_unpromoted_ideas(pool: PgPo
 }
 
 #[sqlx::test]
-async fn containers_list_open_paths_with_progress(pool: PgPool) {
+async fn paths_list_open_path_kind_nodes_with_progress(pool: PgPool) {
     let app = app(pool.clone());
-    let token = signup(&app, "containers@example.com").await;
+    let token = signup(&app, "paths@example.com").await;
 
     let path = create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "path", "status": "active"}),
+        json!({"kind": "path", "title": "path", "status": "active"}),
     )
     .await;
     let done_child = create_node(
@@ -353,10 +354,19 @@ async fn containers_list_open_paths_with_progress(pool: PgPool) {
     let archived_path = create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "archived-path", "status": "archived"}),
+        json!({"kind": "path", "title": "archived-path", "status": "archived"}),
     )
     .await;
     add_edge(&app, &token, &open_child, &archived_path, "part_of").await;
+
+    // A project with part_of children is a container, but not a path.
+    let project_container = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "project-container", "status": "active"}),
+    )
+    .await;
+    add_edge(&app, &token, &done_child, &project_container, "part_of").await;
 
     let (_, dashboard) = send(
         &app,
@@ -364,9 +374,9 @@ async fn containers_list_open_paths_with_progress(pool: PgPool) {
     )
     .await;
 
-    assert_eq!(titles(&dashboard["containers"]), vec!["path".to_string()]);
+    assert_eq!(titles(&dashboard["paths"]), vec!["path".to_string()]);
     assert_eq!(
-        dashboard["containers"][0]["container_progress"],
+        dashboard["paths"][0]["container_progress"],
         json!({"done": 1, "total": 2})
     );
 }
@@ -385,7 +395,7 @@ async fn dashboard_is_isolated_per_user(pool: PgPool) {
     .await;
     assert_eq!(dashboard_b["counts"]["total"], 0);
     assert_eq!(dashboard_b["stale"].as_array().unwrap().len(), 0);
-    for list in ["primary", "recent_backlog", "containers"] {
+    for list in ["primary", "recent_backlog", "paths"] {
         assert_eq!(dashboard_b[list].as_array().unwrap().len(), 0, "{list}");
     }
 }

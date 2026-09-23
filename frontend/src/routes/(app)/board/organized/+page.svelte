@@ -13,32 +13,32 @@
 
 	const visible = $derived(graph.nodes.filter(matchesBoardFilters).toSorted(byStatus));
 
-	// Containers get their own Paths section (with the child checklist)
-	// instead of appearing in a focus tier.
+	// Paths get their own section instead of appearing in a focus tier. Any
+	// card with part_of children (path or not) shows them as a checklist.
 	const sections = $derived([
 		{
 			id: 'primary',
 			title: 'Primary',
 			bar: TIER_COLOR.primary,
-			nodes: visible.filter((node) => !node.container_progress && node.focus === 'primary')
+			nodes: visible.filter((node) => node.kind !== 'path' && node.focus === 'primary')
 		},
 		{
 			id: 'secondary',
 			title: 'Secondary',
 			bar: TIER_COLOR.secondary,
-			nodes: visible.filter((node) => !node.container_progress && node.focus === 'secondary')
+			nodes: visible.filter((node) => node.kind !== 'path' && node.focus === 'secondary')
 		},
 		{
 			id: 'background',
 			title: 'Background',
 			bar: TIER_COLOR.background,
-			nodes: visible.filter((node) => !node.container_progress && node.focus === 'background')
+			nodes: visible.filter((node) => node.kind !== 'path' && node.focus === 'background')
 		},
 		{
 			id: 'paths',
 			title: 'Paths',
 			bar: 'var(--node-path)',
-			nodes: visible.filter((node) => node.container_progress)
+			nodes: visible.filter((node) => node.kind === 'path')
 		}
 	]);
 </script>
@@ -67,7 +67,7 @@
 				</div>
 				<div class="grid">
 					{#each section.nodes as node (node.id)}
-						{#if section.id === 'paths'}
+						{#if node.container_progress}
 							<NodeCard {node}>
 								<ul class="checklist">
 									{#each childrenOf(node.id, graph.edges, graph.nodeById) as child (child.id)}

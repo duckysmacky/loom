@@ -6,13 +6,7 @@
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import {
-		ACCENT_PALETTE,
-		accentColor,
-		displayKind,
-		relativeDays,
-		shortDate
-	} from '$lib/graph/display';
+	import { ACCENT_PALETTE, accentColor, relativeDays, shortDate } from '$lib/graph/display';
 	import { closeNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -106,7 +100,7 @@
 				<Button variant="quiet" onclick={closeNode}>Close</Button>
 			</div>
 		{:else}
-			{@const kind = displayKind(node)}
+			{@const kind = node.kind}
 			{@const blocked = node.blocked && node.status !== 'done'}
 			<div class="stripe" style:background={blocked ? 'var(--warn)' : accentColor(node)}></div>
 
@@ -151,6 +145,7 @@
 							<option value="idea">Idea</option>
 							<option value="project">Project</option>
 							<option value="course">Course</option>
+							<option value="path">Path</option>
 						</select>
 					</label>
 				</div>

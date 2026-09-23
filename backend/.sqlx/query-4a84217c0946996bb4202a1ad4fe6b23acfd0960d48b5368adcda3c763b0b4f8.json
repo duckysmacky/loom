@@ -24,7 +24,8 @@
               "Enum": [
                 "idea",
                 "project",
-                "course"
+                "course",
+                "path"
               ]
             }
           }
@@ -245,7 +246,8 @@
               "Enum": [
                 "idea",
                 "project",
-                "course"
+                "course",
+                "path"
               ]
             }
           }

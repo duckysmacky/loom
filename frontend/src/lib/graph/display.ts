@@ -1,13 +1,6 @@
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
-/** Kind as shown on badges - a `part_of` container reads as a "path". */
-export type DisplayKind = NodeResponse['kind'] | 'path';
-
-export function displayKind(node: NodeResponse): DisplayKind {
-	return node.container_progress ? 'path' : node.kind;
-}
-
 /**
  * Fixed node-accent palette from the design system (identity, never status).
  * Stored on nodes/topics as the hex value - the API only accepts hex colors.
@@ -24,7 +17,7 @@ export const ACCENT_PALETTE = [
 	'#5d6f85'
 ] as const;
 
-const DEFAULT_ACCENT: Record<DisplayKind, string> = {
+const DEFAULT_ACCENT: Record<NodeResponse['kind'], string> = {
 	course: 'var(--node-course)',
 	project: 'var(--node-blue)',
 	idea: 'var(--node-idea)',
@@ -33,7 +26,7 @@ const DEFAULT_ACCENT: Record<DisplayKind, string> = {
 
 /** CSS color for a node's accent - its own color, else its kind's default. */
 export function accentColor(node: NodeResponse): string {
-	return node.color ?? DEFAULT_ACCENT[displayKind(node)];
+	return node.color ?? DEFAULT_ACCENT[node.kind];
 }
 
 /** Focus-tier marker colors, shared by the Organized section bars and canvas cards. */

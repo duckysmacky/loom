@@ -29,6 +29,8 @@ pub struct KindCounts {
     pub project: i64,
     #[ts(type = "number")]
     pub course: i64,
+    #[ts(type = "number")]
+    pub path: i64,
 }
 
 #[derive(Debug, Clone, Copy, Serialize, TS)]
@@ -59,6 +61,6 @@ pub struct DashboardResponse {
     pub primary: Vec<NodeResponse>,
     /// The newest unpromoted ideas, newest first.
     pub recent_backlog: Vec<NodeResponse>,
-    /// `part_of` containers (paths) not done/archived, newest first.
-    pub containers: Vec<NodeResponse>,
+    /// `kind=path` nodes not done/archived, newest first.
+    pub paths: Vec<NodeResponse>,
 }

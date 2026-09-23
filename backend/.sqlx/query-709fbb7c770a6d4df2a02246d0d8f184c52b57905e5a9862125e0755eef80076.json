@@ -38,7 +38,8 @@
               "Enum": [
                 "idea",
                 "project",
-                "course"
+                "course",
+                "path"
               ]
             }
           }

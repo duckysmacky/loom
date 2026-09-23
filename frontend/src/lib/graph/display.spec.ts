@@ -2,7 +2,6 @@ import { describe, expect, it } from 'vitest';
 import {
 	accentColor,
 	childrenOf,
-	displayKind,
 	isBacklog,
 	isDashed,
 	notesExcerpt,
@@ -14,11 +13,6 @@ import {
 import { makeEdge, makeNode } from './fixtures';
 
 describe('display helpers', () => {
-	it('shows a container as a path regardless of its stored kind', () => {
-		expect(displayKind(makeNode({ kind: 'idea' }))).toBe('idea');
-		expect(displayKind(makeNode({ container_progress: { done: 1, total: 2 } }))).toBe('path');
-	});
-
 	it('treats only unpromoted ideas as backlog', () => {
 		expect(isBacklog(makeNode({ kind: 'idea', status: 'idea' }))).toBe(true);
 		expect(isBacklog(makeNode({ kind: 'idea', status: 'queued' }))).toBe(false);
@@ -35,9 +29,7 @@ describe('display helpers', () => {
 	it('uses the node color, falling back to the kind default', () => {
 		expect(accentColor(makeNode({ color: '#123456' }))).toBe('#123456');
 		expect(accentColor(makeNode({ kind: 'course' }))).toBe('var(--node-course)');
-		expect(accentColor(makeNode({ kind: 'idea', container_progress: { done: 0, total: 1 } }))).toBe(
-			'var(--node-path)'
-		);
+		expect(accentColor(makeNode({ kind: 'path' }))).toBe('var(--node-path)');
 	});
 
 	it('flags requirements met only when the target is done', () => {

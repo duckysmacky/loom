@@ -45,10 +45,10 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
         .cloned()
         .collect();
 
-    let containers = all_nodes
+    let paths = all_nodes
         .iter()
         .filter(in_play)
-        .filter(|node| node.container_progress.is_some())
+        .filter(|node| node.kind == NodeKind::Path)
         .cloned()
         .collect();
 
@@ -57,7 +57,7 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
         stale,
         primary,
         recent_backlog,
-        containers,
+        paths,
     })
 }
 
@@ -93,6 +93,7 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         idea: 0,
         project: 0,
         course: 0,
+        path: 0,
     };
     let mut total = 0i64;
     let mut backlog = 0i64;
@@ -114,6 +115,7 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
             NodeKind::Idea => by_kind.idea += row.count,
             NodeKind::Project => by_kind.project += row.count,
             NodeKind::Course => by_kind.course += row.count,
+            NodeKind::Path => by_kind.path += row.count,
         }
     }
 

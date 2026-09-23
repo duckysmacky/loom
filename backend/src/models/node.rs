@@ -13,6 +13,7 @@ pub enum NodeKind {
     Idea,
     Project,
     Course,
+    Path,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]

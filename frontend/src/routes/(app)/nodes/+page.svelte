@@ -5,7 +5,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { accentColor, displayKind, isBacklog, notesExcerpt, shortDate } from '$lib/graph/display';
+	import { accentColor, isBacklog, notesExcerpt, shortDate } from '$lib/graph/display';
 	import { openNode, withParam } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -117,6 +117,7 @@
 					<option value="idea">Idea</option>
 					<option value="project">Project</option>
 					<option value="course">Course</option>
+					<option value="path">Path</option>
 				</select>
 			</label>
 			{#if view === 'all'}
@@ -199,7 +200,7 @@
 							<div class="sub">
 								{#if view !== 'backlog'}
 									<span class="kind">
-										{displayKind(node)}{node.status === node.kind ? '' : ` · ${node.status}`}
+										{node.kind}{node.status === node.kind ? '' : ` · ${node.status}`}
 									</span>
 								{/if}
 								{notesExcerpt(node.notes)}

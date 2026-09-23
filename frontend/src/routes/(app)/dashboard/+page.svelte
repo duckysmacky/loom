@@ -153,19 +153,23 @@
 					{/if}
 				</div>
 
-				{#if dashboard.containers.length}
+				{#if dashboard.paths.length}
 					<div class="panel">
 						<h2 class="panel-title">Paths</h2>
 						<ul class="rows">
-							{#each dashboard.containers as node (node.id)}
-								{@const progress = node.container_progress!}
+							{#each dashboard.paths as node (node.id)}
+								{@const progress = node.container_progress}
 								<li>
 									<button type="button" class="path" onclick={() => openNode(node.id)}>
 										<span class="row-title">{node.title}</span>
-										<span class="path-progress">
-											<ProgressBar value={progress.done} total={progress.total} />
-											<span class="row-meta">{progress.done}/{progress.total}</span>
-										</span>
+										{#if progress}
+											<span class="path-progress">
+												<ProgressBar value={progress.done} total={progress.total} />
+												<span class="row-meta">{progress.done}/{progress.total}</span>
+											</span>
+										{:else}
+											<span class="row-meta">no steps yet</span>
+										{/if}
 									</button>
 								</li>
 							{/each}

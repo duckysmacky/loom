@@ -1,12 +1,12 @@
 import type { NodeFocus } from '$lib/types/NodeFocus';
+import type { NodeKind } from '$lib/types/NodeKind';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { NodeStatus } from '$lib/types/NodeStatus';
-import { displayKind, type DisplayKind } from './display';
 
 /** Board filter criteria. Empty lists mean "any". */
 export type FilterCriteria = {
 	search: string;
-	kinds: DisplayKind[];
+	kinds: NodeKind[];
 	statuses: NodeStatus[];
 	focuses: NodeFocus[];
 	topicIds: string[];
@@ -22,7 +22,7 @@ export function nodeMatches(node: NodeResponse, criteria: FilterCriteria): boole
 		!criteria.statuses.includes('archived')
 	)
 		return false;
-	if (criteria.kinds.length && !criteria.kinds.includes(displayKind(node))) return false;
+	if (criteria.kinds.length && !criteria.kinds.includes(node.kind)) return false;
 	if (criteria.statuses.length && !criteria.statuses.includes(node.status)) return false;
 	if (criteria.focuses.length && !criteria.focuses.includes(node.focus)) return false;
 	if (criteria.topicIds.length && !criteria.topicIds.some((id) => node.topic_ids.includes(id)))

@@ -29,10 +29,10 @@ describe('nodeMatches', () => {
 		expect(nodeMatches(node, { ...anything, search: 'vulkan' })).toBe(false);
 	});
 
-	it('filters kinds by display kind, so containers match "path"', () => {
+	it('filters by stored kind - a project with part_of children is still a project', () => {
 		const container = makeNode({ kind: 'project', container_progress: { done: 0, total: 2 } });
-		expect(nodeMatches(container, { ...anything, kinds: ['path'] })).toBe(true);
-		expect(nodeMatches(container, { ...anything, kinds: ['project'] })).toBe(false);
+		expect(nodeMatches(container, { ...anything, kinds: ['project'] })).toBe(true);
+		expect(nodeMatches(container, { ...anything, kinds: ['path'] })).toBe(false);
 	});
 
 	it('ANDs criteria and ORs values within one criterion', () => {

@@ -2,14 +2,14 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { TIER_COLOR, accentColor, displayKind, isDashed, progressPair } from '$lib/graph/display';
+	import { TIER_COLOR, accentColor, isDashed, progressPair } from '$lib/graph/display';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	let { data, selected }: NodeProps & { data: { node: NodeResponse; dimmed: boolean } } = $props();
 
 	const node = $derived(data.node);
-	const kind = $derived(displayKind(node));
+	const kind = $derived(node.kind);
 	const progress = $derived(progressPair(node));
 </script>
 
