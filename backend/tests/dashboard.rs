@@ -270,3 +270,23 @@ async fn dashboard_is_isolated_per_user(pool: PgPool) {
         0
     );
 }
+
+#[sqlx::test]
+async fn missing_or_garbage_token_returns_401(pool: PgPool) {
+    let app = app(pool);
+
+    let (missing_status, _) = send(&app, req("GET", "/api/dashboard", Value::Null, None)).await;
+    assert_eq!(missing_status, StatusCode::UNAUTHORIZED);
+
+    let (garbage_status, _) = send(
+        &app,
+        req(
+            "GET",
+            "/api/dashboard",
+            Value::Null,
+            Some("not-a-real-token"),
+        ),
+    )
+    .await;
+    assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}

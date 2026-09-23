@@ -1,11 +1,9 @@
-use axum::{
-    Json,
-    extract::{Path, State},
-    http::StatusCode,
-};
+use axum::{Json, extract::State, http::StatusCode};
 use uuid::Uuid;
 
 use super::error::ApiError;
+use super::extract::{ApiJson, ApiPath};
+use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
 use crate::models::topic::{CreateTopicRequest, TopicResponse, UpdateTopicRequest};
 use crate::repo::topics;
@@ -22,8 +20,16 @@ pub async fn list(
 pub async fn create(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Json(request): Json<CreateTopicRequest>,
+    ApiJson(mut request): ApiJson<CreateTopicRequest>,
 ) -> Result<(StatusCode, Json<TopicResponse>), ApiError> {
+    request.name = request.name.trim().to_string();
+    if request.name.is_empty() {
+        return Err(ApiError::InvalidInput("name must not be empty"));
+    }
+    if let Some(color) = &request.color {
+        validate_color(color)?;
+    }
+
     let topic = topics::create_topic(user_id, &state.pool, &request)
         .await
         .map_err(map_topic_error)?;
@@ -33,7 +39,7 @@ pub async fn create(
 pub async fn get(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(topic_id): Path<Uuid>,
+    ApiPath(topic_id): ApiPath<Uuid>,
 ) -> Result<Json<TopicResponse>, ApiError> {
     let topic = topics::get_topic(user_id, &state.pool, topic_id)
         .await?
@@ -44,9 +50,19 @@ pub async fn get(
 pub async fn update(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(topic_id): Path<Uuid>,
-    Json(request): Json<UpdateTopicRequest>,
+    ApiPath(topic_id): ApiPath<Uuid>,
+    ApiJson(mut request): ApiJson<UpdateTopicRequest>,
 ) -> Result<Json<TopicResponse>, ApiError> {
+    if let Some(name) = &mut request.name {
+        *name = name.trim().to_string();
+        if name.is_empty() {
+            return Err(ApiError::InvalidInput("name must not be empty"));
+        }
+    }
+    if let Some(Some(color)) = &request.color {
+        validate_color(color)?;
+    }
+
     let topic = topics::update_topic(user_id, &state.pool, topic_id, &request)
         .await
         .map_err(map_topic_error)?
@@ -57,7 +73,7 @@ pub async fn update(
 pub async fn delete(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(topic_id): Path<Uuid>,
+    ApiPath(topic_id): ApiPath<Uuid>,
 ) -> Result<StatusCode, ApiError> {
     let deleted = topics::delete_topic(user_id, &state.pool, topic_id).await?;
     if deleted {

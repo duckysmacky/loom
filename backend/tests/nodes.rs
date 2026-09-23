@@ -529,3 +529,51 @@ async fn view_combines_with_explicit_status_filter(pool: PgPool) {
     .await;
     assert_eq!(list.as_array().unwrap().len(), 0);
 }
+
+#[sqlx::test]
+async fn missing_or_garbage_token_returns_401(pool: PgPool) {
+    let app = app(pool);
+
+    let (missing_status, _) = send(&app, req("GET", "/api/nodes", Value::Null, None)).await;
+    assert_eq!(missing_status, StatusCode::UNAUTHORIZED);
+
+    let (garbage_status, _) = send(
+        &app,
+        req("GET", "/api/nodes", Value::Null, Some("not-a-real-token")),
+    )
+    .await;
+    assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn empty_title_returns_400(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "emptytitle@example.com").await;
+
+    let (create_status, _) = send(
+        &app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "idea", "title": "   "}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(create_status, StatusCode::BAD_REQUEST);
+
+    let node = create_node(&app, &token, json!({"kind": "idea", "title": "real"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    let (update_status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"title": ""}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(update_status, StatusCode::BAD_REQUEST);
+}

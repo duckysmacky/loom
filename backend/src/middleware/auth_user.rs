@@ -6,7 +6,7 @@ use axum_extra::headers::authorization::Bearer;
 use uuid::Uuid;
 
 use crate::auth::jwt;
-use crate::handlers::error::AuthError;
+use crate::handlers::error::ApiError;
 use crate::state::AppState;
 
 /// The `user_id`-extraction middleware every protected route builds on.
@@ -18,7 +18,7 @@ pub struct AuthUser {
 }
 
 impl FromRequestParts<AppState> for AuthUser {
-    type Rejection = AuthError;
+    type Rejection = ApiError;
 
     async fn from_request_parts(
         parts: &mut Parts,
@@ -27,10 +27,10 @@ impl FromRequestParts<AppState> for AuthUser {
         let TypedHeader(Authorization(bearer)) =
             TypedHeader::<Authorization<Bearer>>::from_request_parts(parts, state)
                 .await
-                .map_err(|_| AuthError::MissingToken)?;
+                .map_err(|_| ApiError::MissingToken)?;
 
         let claims = jwt::verify_access_token(bearer.token(), &state.jwt_decoding_key)
-            .map_err(|_| AuthError::InvalidToken)?;
+            .map_err(|_| ApiError::InvalidToken)?;
 
         Ok(AuthUser {
             user_id: claims.sub,

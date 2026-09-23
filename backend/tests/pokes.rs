@@ -206,3 +206,34 @@ async fn deleting_node_cascades_pokes(pool: PgPool) {
     let (poke_status, _) = poke(&app, &token, &node_id).await;
     assert_eq!(poke_status, StatusCode::NOT_FOUND);
 }
+
+#[sqlx::test]
+async fn missing_or_garbage_token_returns_401(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "poke401owner@example.com").await;
+    let node_id = create_node(&app, &token, "N").await;
+
+    let (missing_status, _) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{node_id}/pokes"),
+            Value::Null,
+            None,
+        ),
+    )
+    .await;
+    assert_eq!(missing_status, StatusCode::UNAUTHORIZED);
+
+    let (garbage_status, _) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{node_id}/pokes"),
+            Value::Null,
+            Some("not-a-real-token"),
+        ),
+    )
+    .await;
+    assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}

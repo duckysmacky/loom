@@ -28,7 +28,7 @@ async fn main() -> Result<()> {
         .await
         .context("failed to run database migrations")?;
 
-    let state = AppState::new(pool, &config.jwt_secret);
+    let state = AppState::with_signup_policy(pool, &config.jwt_secret, config.allow_signup);
     let app = app::build_router(state);
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr)

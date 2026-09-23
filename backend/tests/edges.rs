@@ -325,3 +325,55 @@ async fn list_nodes_agrees_with_get_node_on_derived_fields(pool: PgPool) {
         via_list["container_progress"]
     );
 }
+
+#[sqlx::test]
+async fn missing_or_garbage_token_returns_401(pool: PgPool) {
+    let app = app(pool);
+
+    let (missing_status, _) = send(&app, req("GET", "/api/edges", Value::Null, None)).await;
+    assert_eq!(missing_status, StatusCode::UNAUTHORIZED);
+
+    let (garbage_status, _) = send(
+        &app,
+        req("GET", "/api/edges", Value::Null, Some("not-a-real-token")),
+    )
+    .await;
+    assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn delete_edge_ownership_scoping(pool: PgPool) {
+    let app = app(pool);
+    let token_a = signup(&app, "deleteedgeowner@example.com").await;
+    let token_b = signup(&app, "deleteedgeintruder@example.com").await;
+    let a = create_node(&app, &token_a, "A").await;
+    let b = create_node(&app, &token_a, "B").await;
+
+    let (_, edge) = create_edge(&app, &token_a, &a, &b, "related").await;
+    let edge_id = edge["id"].as_str().unwrap();
+
+    let (status, _) = send(
+        &app,
+        req(
+            "DELETE",
+            &format!("/api/edges/{edge_id}"),
+            Value::Null,
+            Some(&token_b),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+
+    // Still there - user A can delete it themselves.
+    let (status, _) = send(
+        &app,
+        req(
+            "DELETE",
+            &format!("/api/edges/{edge_id}"),
+            Value::Null,
+            Some(&token_a),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+}

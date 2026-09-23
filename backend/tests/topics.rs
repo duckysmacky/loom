@@ -195,3 +195,50 @@ async fn ownership_scoping_returns_404_for_another_users_topic(pool: PgPool) {
     let (_, list_b) = send(&app, req("GET", "/api/topics", Value::Null, Some(&token_b))).await;
     assert_eq!(list_b.as_array().unwrap().len(), 0);
 }
+
+#[sqlx::test]
+async fn missing_or_garbage_token_returns_401(pool: PgPool) {
+    let app = app(pool);
+
+    let (missing_status, _) = send(&app, req("GET", "/api/topics", Value::Null, None)).await;
+    assert_eq!(missing_status, StatusCode::UNAUTHORIZED);
+
+    let (garbage_status, _) = send(
+        &app,
+        req("GET", "/api/topics", Value::Null, Some("not-a-real-token")),
+    )
+    .await;
+    assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}
+
+#[sqlx::test]
+async fn empty_name_returns_400(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "emptyname@example.com").await;
+
+    let (create_status, _) = send(
+        &app,
+        req("POST", "/api/topics", json!({"name": "   "}), Some(&token)),
+    )
+    .await;
+    assert_eq!(create_status, StatusCode::BAD_REQUEST);
+
+    let (_, topic) = send(
+        &app,
+        req("POST", "/api/topics", json!({"name": "real"}), Some(&token)),
+    )
+    .await;
+    let topic_id = topic["id"].as_str().unwrap();
+
+    let (update_status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/topics/{topic_id}"),
+            json!({"name": ""}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(update_status, StatusCode::BAD_REQUEST);
+}

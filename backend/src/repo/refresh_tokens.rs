@@ -2,9 +2,16 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-pub struct RefreshTokenRow {
-    pub id: Uuid,
-    pub user_id: Uuid,
+/// Outcome of atomically consuming (single-use rotating) a refresh token.
+pub enum ConsumeOutcome {
+    /// Token was valid and unrevoked - now revoked, safe to issue a new pair for this user.
+    Consumed(Uuid),
+    /// Token hash matches a row that was already revoked or has expired - reuse of a
+    /// rotated-out token, which is a theft signal. Caller should revoke every token for
+    /// this user.
+    Reused(Uuid),
+    /// No row with this hash exists at all.
+    NotFound,
 }
 
 pub async fn insert(
@@ -28,30 +35,46 @@ pub async fn insert(
     Ok(())
 }
 
-/// A row is valid if it exists, hasn't been revoked, and hasn't expired.
-pub async fn find_valid_by_hash(
-    pool: &PgPool,
-    token_hash: &str,
-) -> Result<Option<RefreshTokenRow>, sqlx::Error> {
-    sqlx::query_as!(
-        RefreshTokenRow,
+/// Atomically revokes a refresh token by hash, in one statement so two
+/// concurrent uses of the same token can't both pass (one loses the race
+/// on the `revoked_at IS NULL` predicate). Distinguishes "already used /
+/// expired" from "never existed" so the caller can react to reuse as a
+/// theft signal.
+pub async fn consume(pool: &PgPool, token_hash: &str) -> Result<ConsumeOutcome, sqlx::Error> {
+    let row = sqlx::query!(
         r#"
-        SELECT id, user_id
-        FROM refresh_tokens
+        UPDATE refresh_tokens SET revoked_at = now()
         WHERE token_hash = $1 AND revoked_at IS NULL AND expires_at > now()
+        RETURNING user_id
         "#,
         token_hash,
     )
     .fetch_optional(pool)
-    .await
+    .await?;
+
+    if let Some(row) = row {
+        return Ok(ConsumeOutcome::Consumed(row.user_id));
+    }
+
+    let existing = sqlx::query_scalar!(
+        "SELECT user_id FROM refresh_tokens WHERE token_hash = $1",
+        token_hash,
+    )
+    .fetch_optional(pool)
+    .await?;
+
+    Ok(match existing {
+        Some(user_id) => ConsumeOutcome::Reused(user_id),
+        None => ConsumeOutcome::NotFound,
+    })
 }
 
-pub async fn revoke(pool: &PgPool, id: Uuid) -> Result<(), sqlx::Error> {
+/// Reuse of a rotated-out refresh token is treated as theft - revoke every
+/// token this user has, forcing a fresh login everywhere.
+pub async fn revoke_all_for_user(pool: &PgPool, user_id: Uuid) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        r#"
-        UPDATE refresh_tokens SET revoked_at = now() WHERE id = $1
-        "#,
-        id,
+        "UPDATE refresh_tokens SET revoked_at = now() WHERE user_id = $1 AND revoked_at IS NULL",
+        user_id,
     )
     .execute(pool)
     .await?;

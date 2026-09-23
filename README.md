@@ -42,3 +42,16 @@ Rebuild the compile-time query cache after changing a `query!`/
 cd backend
 cargo sqlx prepare
 ```
+
+## Deployment
+
+The app's compose port is bound to `127.0.0.1` - it's meant to sit behind
+the nginx already running on the host (see `docs/PROJECT_OVERVIEW.md`),
+not to be reachable directly. The `/api/auth/*` rate limiter reads the
+client IP from `X-Forwarded-For`/`X-Real-IP`, so nginx's site config for
+this app must set one of those (e.g. `proxy_set_header X-Real-IP
+$remote_addr;`) - otherwise every request behind the proxy collapses
+into one shared rate-limit bucket.
+
+Set `ALLOW_SIGNUP=false` in `.env` once the owner account exists, so
+`/api/auth/signup` stops accepting new accounts.

@@ -1,11 +1,9 @@
-use axum::{
-    Json,
-    extract::{Path, Query, State},
-    http::StatusCode,
-};
+use axum::{Json, extract::State, http::StatusCode};
 use uuid::Uuid;
 
 use super::error::ApiError;
+use super::extract::{ApiJson, ApiPath, ApiQuery};
+use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
 use crate::models::node::{
     AttachTopicRequest, CreateNodeRequest, NodeListQuery, NodeResponse, UpdateNodeRequest,
@@ -17,7 +15,7 @@ use crate::state::AppState;
 pub async fn list(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Query(filters): Query<NodeListQuery>,
+    ApiQuery(filters): ApiQuery<NodeListQuery>,
 ) -> Result<Json<Vec<NodeResponse>>, ApiError> {
     let nodes = nodes::list_nodes(user_id, &state.pool, &filters).await?;
     Ok(Json(nodes))
@@ -26,8 +24,16 @@ pub async fn list(
 pub async fn create(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Json(request): Json<CreateNodeRequest>,
+    ApiJson(mut request): ApiJson<CreateNodeRequest>,
 ) -> Result<(StatusCode, Json<NodeResponse>), ApiError> {
+    request.title = request.title.trim().to_string();
+    if request.title.is_empty() {
+        return Err(ApiError::InvalidInput("title must not be empty"));
+    }
+    if let Some(color) = &request.color {
+        validate_color(color)?;
+    }
+
     let node = nodes::create_node(user_id, &state.pool, &request)
         .await
         .map_err(map_node_error)?;
@@ -37,7 +43,7 @@ pub async fn create(
 pub async fn get(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(node_id): Path<Uuid>,
+    ApiPath(node_id): ApiPath<Uuid>,
 ) -> Result<Json<NodeResponse>, ApiError> {
     let node = nodes::get_node(user_id, &state.pool, node_id)
         .await?
@@ -48,9 +54,19 @@ pub async fn get(
 pub async fn update(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(node_id): Path<Uuid>,
-    Json(request): Json<UpdateNodeRequest>,
+    ApiPath(node_id): ApiPath<Uuid>,
+    ApiJson(mut request): ApiJson<UpdateNodeRequest>,
 ) -> Result<Json<NodeResponse>, ApiError> {
+    if let Some(title) = &mut request.title {
+        *title = title.trim().to_string();
+        if title.is_empty() {
+            return Err(ApiError::InvalidInput("title must not be empty"));
+        }
+    }
+    if let Some(Some(color)) = &request.color {
+        validate_color(color)?;
+    }
+
     let node = nodes::update_node(user_id, &state.pool, node_id, &request)
         .await
         .map_err(map_node_error)?
@@ -61,7 +77,7 @@ pub async fn update(
 pub async fn delete(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(node_id): Path<Uuid>,
+    ApiPath(node_id): ApiPath<Uuid>,
 ) -> Result<StatusCode, ApiError> {
     let deleted = nodes::delete_node(user_id, &state.pool, node_id).await?;
     if deleted {
@@ -74,8 +90,8 @@ pub async fn delete(
 pub async fn attach_topic(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path(node_id): Path<Uuid>,
-    Json(request): Json<AttachTopicRequest>,
+    ApiPath(node_id): ApiPath<Uuid>,
+    ApiJson(request): ApiJson<AttachTopicRequest>,
 ) -> Result<StatusCode, ApiError> {
     match node_topics::attach_topic(user_id, &state.pool, node_id, request.topic_id).await? {
         AttachOutcome::Attached | AttachOutcome::AlreadyAttached => Ok(StatusCode::NO_CONTENT),
@@ -86,7 +102,7 @@ pub async fn attach_topic(
 pub async fn detach_topic(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    Path((node_id, topic_id)): Path<(Uuid, Uuid)>,
+    ApiPath((node_id, topic_id)): ApiPath<(Uuid, Uuid)>,
 ) -> Result<StatusCode, ApiError> {
     match node_topics::detach_topic(user_id, &state.pool, node_id, topic_id).await? {
         DetachOutcome::Detached => Ok(StatusCode::NO_CONTENT),

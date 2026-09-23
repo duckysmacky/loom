@@ -78,6 +78,29 @@ async fn signup_creates_user_and_returns_tokens(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn signup_rejects_malformed_email(pool: PgPool) {
+    let app = app(pool);
+
+    for email in ["noatsign.example.com", "a@b", "has space@example.com"] {
+        let (status, ..) = send(
+            &app,
+            json_request(
+                "POST",
+                "/api/auth/signup",
+                json!({"email": email, "password": "password123"}),
+                None,
+            ),
+        )
+        .await;
+        assert_eq!(
+            status,
+            StatusCode::BAD_REQUEST,
+            "email {email:?} should be rejected"
+        );
+    }
+}
+
+#[sqlx::test]
 async fn signup_duplicate_email_returns_409(pool: PgPool) {
     let app = app(pool);
     let body = json!({"email": "dup@example.com", "password": "password123"});

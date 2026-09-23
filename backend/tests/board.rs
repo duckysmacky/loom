@@ -105,3 +105,23 @@ async fn canvas_is_isolated_per_user(pool: PgPool) {
     assert_eq!(canvas_b["nodes"].as_array().unwrap().len(), 0);
     assert_eq!(canvas_b["edges"].as_array().unwrap().len(), 0);
 }
+
+#[sqlx::test]
+async fn missing_or_garbage_token_returns_401(pool: PgPool) {
+    let app = app(pool);
+
+    let (missing_status, _) = send(&app, req("GET", "/api/board/canvas", Value::Null, None)).await;
+    assert_eq!(missing_status, StatusCode::UNAUTHORIZED);
+
+    let (garbage_status, _) = send(
+        &app,
+        req(
+            "GET",
+            "/api/board/canvas",
+            Value::Null,
+            Some("not-a-real-token"),
+        ),
+    )
+    .await;
+    assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
+}

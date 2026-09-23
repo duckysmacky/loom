@@ -3,7 +3,8 @@ use axum_extra::extract::cookie::{Cookie, CookieJar, SameSite};
 use chrono::Utc;
 use uuid::Uuid;
 
-use super::error::AuthError;
+use super::error::ApiError;
+use super::extract::ApiJson;
 use crate::auth::{jwt, password, refresh_token};
 use crate::middleware::auth_user::AuthUser;
 use crate::models::auth::{
@@ -18,14 +19,20 @@ const REFRESH_COOKIE_PATH: &str = "/api/auth";
 pub async fn signup(
     State(state): State<AppState>,
     jar: CookieJar,
-    Json(body): Json<SignupRequest>,
-) -> Result<(StatusCode, CookieJar, Json<AuthResponse>), AuthError> {
-    validate_credentials(&body.email, &body.password)?;
+    ApiJson(body): ApiJson<SignupRequest>,
+) -> Result<(StatusCode, CookieJar, Json<AuthResponse>), ApiError> {
+    if !state.allow_signup {
+        return Err(ApiError::Forbidden("signup is disabled"));
+    }
 
-    let password_hash =
-        password::hash_password(&body.password).map_err(|e| AuthError::Internal(e.into()))?;
+    let email = normalize_email(&body.email);
+    validate_credentials(&email, &body.password)?;
 
-    let user = repo::users::create_user(&state.pool, &body.email, &password_hash)
+    let password_hash = password::hash_password_blocking(body.password)
+        .await
+        .map_err(|e| ApiError::Internal(e.into()))?;
+
+    let user = repo::users::create_user(&state.pool, &email, &password_hash)
         .await
         .map_err(map_create_user_error)?;
 
@@ -47,14 +54,21 @@ pub async fn signup(
 pub async fn login(
     State(state): State<AppState>,
     jar: CookieJar,
-    Json(body): Json<LoginRequest>,
-) -> Result<(StatusCode, CookieJar, Json<AuthResponse>), AuthError> {
-    let user = repo::users::find_by_email(&state.pool, &body.email)
-        .await?
-        .ok_or(AuthError::InvalidCredentials)?;
+    ApiJson(body): ApiJson<LoginRequest>,
+) -> Result<(StatusCode, CookieJar, Json<AuthResponse>), ApiError> {
+    let email = normalize_email(&body.email);
+    let user = repo::users::find_by_email(&state.pool, &email).await?;
 
-    if !password::verify_password(&body.password, &user.password_hash) {
-        return Err(AuthError::InvalidCredentials);
+    // Always pay Argon2 cost, known email or not - otherwise an unknown
+    // email returns near-instantly while a known one takes tens of
+    // milliseconds, leaking which emails have accounts via response timing.
+    let Some(user) = user else {
+        password::verify_password_dummy_blocking(body.password).await;
+        return Err(ApiError::InvalidCredentials);
+    };
+
+    if !password::verify_password_blocking(body.password, user.password_hash.clone()).await {
+        return Err(ApiError::InvalidCredentials);
     }
 
     let (access_token, jar) = issue_tokens(&state, jar, user.id).await?;
@@ -75,21 +89,25 @@ pub async fn login(
 pub async fn refresh(
     State(state): State<AppState>,
     jar: CookieJar,
-) -> Result<(CookieJar, Json<RefreshResponse>), AuthError> {
+) -> Result<(CookieJar, Json<RefreshResponse>), ApiError> {
     let raw_token = jar
         .get(REFRESH_COOKIE_NAME)
         .map(|cookie| cookie.value().to_owned())
-        .ok_or(AuthError::InvalidToken)?;
+        .ok_or(ApiError::InvalidToken)?;
 
     let token_hash = refresh_token::hash_token(&raw_token);
-    let row = repo::refresh_tokens::find_valid_by_hash(&state.pool, &token_hash)
-        .await?
-        .ok_or(AuthError::InvalidToken)?;
+    let user_id = match repo::refresh_tokens::consume(&state.pool, &token_hash).await? {
+        repo::refresh_tokens::ConsumeOutcome::Consumed(user_id) => user_id,
+        repo::refresh_tokens::ConsumeOutcome::Reused(user_id) => {
+            // A rotated-out token being presented again is a theft signal -
+            // kill every session for this user, not just this one.
+            repo::refresh_tokens::revoke_all_for_user(&state.pool, user_id).await?;
+            return Err(ApiError::InvalidToken);
+        }
+        repo::refresh_tokens::ConsumeOutcome::NotFound => return Err(ApiError::InvalidToken),
+    };
 
-    // Rotation: the old token is single-use, revoke it before issuing the next one.
-    repo::refresh_tokens::revoke(&state.pool, row.id).await?;
-
-    let (access_token, jar) = issue_tokens(&state, jar, row.user_id).await?;
+    let (access_token, jar) = issue_tokens(&state, jar, user_id).await?;
 
     Ok((jar, Json(RefreshResponse { access_token })))
 }
@@ -97,13 +115,13 @@ pub async fn refresh(
 pub async fn logout(
     State(state): State<AppState>,
     jar: CookieJar,
-) -> Result<(StatusCode, CookieJar), AuthError> {
+) -> Result<(StatusCode, CookieJar), ApiError> {
     if let Some(raw_token) = jar.get(REFRESH_COOKIE_NAME).map(|c| c.value().to_owned()) {
         let token_hash = refresh_token::hash_token(&raw_token);
-        if let Some(row) =
-            repo::refresh_tokens::find_valid_by_hash(&state.pool, &token_hash).await?
+        if let repo::refresh_tokens::ConsumeOutcome::Reused(user_id) =
+            repo::refresh_tokens::consume(&state.pool, &token_hash).await?
         {
-            repo::refresh_tokens::revoke(&state.pool, row.id).await?;
+            repo::refresh_tokens::revoke_all_for_user(&state.pool, user_id).await?;
         }
     }
 
@@ -113,10 +131,10 @@ pub async fn logout(
 pub async fn me(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-) -> Result<Json<AuthUserView>, AuthError> {
+) -> Result<Json<AuthUserView>, ApiError> {
     let user = repo::users::find_by_id(&state.pool, user_id)
         .await?
-        .ok_or(AuthError::InvalidToken)?;
+        .ok_or(ApiError::InvalidToken)?;
 
     Ok(Json(AuthUserView {
         id: user.id,
@@ -130,9 +148,9 @@ async fn issue_tokens(
     state: &AppState,
     jar: CookieJar,
     user_id: Uuid,
-) -> Result<(String, CookieJar), AuthError> {
+) -> Result<(String, CookieJar), ApiError> {
     let access_token = jwt::issue_access_token(user_id, &state.jwt_encoding_key)
-        .map_err(|e| AuthError::Internal(e.into()))?;
+        .map_err(|e| ApiError::Internal(e.into()))?;
 
     let (raw_refresh_token, refresh_token_hash) = refresh_token::generate();
     let expires_at = Utc::now() + refresh_token::REFRESH_TOKEN_TTL;
@@ -165,23 +183,59 @@ fn clear_refresh_cookie() -> Cookie<'static> {
         .into()
 }
 
-fn validate_credentials(email: &str, password: &str) -> Result<(), AuthError> {
-    if !email.contains('@') || email.len() > 254 {
-        return Err(AuthError::InvalidInput("invalid email"));
+/// Trims and lowercases an email for storage/lookup - `Foo@x.com` and
+/// `foo@x.com` are the same account. Applied before every read or write
+/// that touches `users.email`.
+fn normalize_email(email: &str) -> String {
+    email.trim().to_lowercase()
+}
+
+const MIN_PASSWORD_LEN: usize = 8;
+/// Argon2 hashes its whole input regardless of length - an unbounded
+/// password is a cheap way to burn CPU on the hashing step itself.
+const MAX_PASSWORD_LEN: usize = 128;
+
+fn validate_credentials(email: &str, password: &str) -> Result<(), ApiError> {
+    if !is_valid_email(email) {
+        return Err(ApiError::InvalidInput("invalid email"));
     }
-    if password.len() < 8 {
-        return Err(AuthError::InvalidInput(
+    if password.len() < MIN_PASSWORD_LEN {
+        return Err(ApiError::InvalidInput(
             "password must be at least 8 characters",
+        ));
+    }
+    if password.len() > MAX_PASSWORD_LEN {
+        return Err(ApiError::InvalidInput(
+            "password must be at most 128 characters",
         ));
     }
     Ok(())
 }
 
-fn map_create_user_error(error: sqlx::Error) -> AuthError {
+/// Deliberately simple (this is a single-user self-hosted app, not a
+/// public signup form) - just closes the gaps `contains('@')` alone lets
+/// through (`"a@"`, `"@b"`, `"a b@c.d"`), not a full RFC 5322 parser.
+fn is_valid_email(email: &str) -> bool {
+    if email.len() > 254 || email.chars().any(char::is_whitespace) {
+        return false;
+    }
+    let Some((local, domain)) = email.split_once('@') else {
+        return false;
+    };
+    if local.is_empty() || domain.is_empty() {
+        return false;
+    }
+    let Some((_, last_label)) = domain.rsplit_once('.') else {
+        return false;
+    };
+    !last_label.is_empty()
+}
+
+fn map_create_user_error(error: sqlx::Error) -> ApiError {
     if let sqlx::Error::Database(db_error) = &error
         && db_error.is_unique_violation()
     {
-        return AuthError::EmailTaken;
+        return ApiError::EmailTaken;
     }
-    AuthError::Internal(error.into())
+    ApiError::Internal(error.into())
 }
