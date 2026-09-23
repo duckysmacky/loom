@@ -36,7 +36,9 @@
 		requirementsOf(node.id, graph.edges, graph.nodeById).filter((requirement) => !requirement.met)
 	);
 	const progress = $derived(progressPair(node));
-	const pokeable = $derived(showPoke && node.status !== 'done' && node.status !== 'archived');
+	const pokeable = $derived(
+		showPoke && (node.status === 'active' || node.status === 'queued' || node.status === 'paused')
+	);
 
 	async function poke(event: MouseEvent) {
 		event.stopPropagation();
