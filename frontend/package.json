@@ -5,9 +5,12 @@
 	"type": "module",
 	"scripts": {
 		"dev": "vite dev",
+		"types": "cd ../backend && TS_RS_EXPORT_DIR=../frontend/src/lib/types SQLX_OFFLINE=true cargo test --lib --quiet export_bindings",
+		"prebuild": "npm run types",
 		"build": "vite build",
 		"preview": "vite preview",
 		"prepare": "svelte-kit sync || echo ''",
+		"precheck": "npm run types",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
 		"test:unit": "vitest",
@@ -17,7 +20,7 @@
 	},
 	"devDependencies": {
 		"@eslint/js": "^10.0.1",
-		"@sveltejs/adapter-auto": "^7.0.1",
+		"@sveltejs/adapter-static": "^3.0.10",
 		"@sveltejs/kit": "^2.63.0",
 		"@sveltejs/vite-plugin-svelte": "^7.1.2",
 		"@types/node": "^24",
@@ -36,5 +39,9 @@
 		"vite": "^8.0.16",
 		"vitest": "^4.1.8",
 		"vitest-browser-svelte": "^2.1.1"
+	},
+	"dependencies": {
+		"@fontsource/space-grotesk": "^5.3.0",
+		"@fontsource/space-mono": "^5.3.0"
 	}
 }

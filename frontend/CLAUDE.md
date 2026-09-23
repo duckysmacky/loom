@@ -30,6 +30,6 @@ reset what's filtered.
 
 ## Styling
 
-Use the "Blueprint Light" design system throughout the whole project
-for frontend development. It is the main design system for the project.
+Use the "Loom" design system throughout the whole project for frontend
+development. It is the main design system for the application.
 

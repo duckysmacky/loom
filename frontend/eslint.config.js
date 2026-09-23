@@ -34,8 +34,11 @@ export default defineConfig(
 		}
 	},
 	{
-		// Override or add rule settings here, such as:
-		// 'svelte/button-has-type': 'error'
-		rules: {}
+		rules: {
+			// The SPA is always served from the site root by the Axum backend
+			// (no `paths.base`), so wrapping every href/goto in resolve() buys
+			// nothing.
+			'svelte/no-navigation-without-resolve': 'off'
+		}
 	}
 );

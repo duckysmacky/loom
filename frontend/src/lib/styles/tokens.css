@@ -1,0 +1,102 @@
+/*
+ * Loom design system ("Blueprint Light") tokens - values copied exactly from
+ * the design system's tokens.json. The dark block is not part of the design
+ * system (it defines a light theme only); it is derived here to keep the
+ * same navy drafting-sheet feel with inverted ink.
+ */
+:root {
+	--ink: #132339;
+	--ink-2: #5d6f85;
+	--ink-3: #48586d;
+	--line: #c3ccd6;
+	--surface: #ffffff;
+	--surface-2: #eef1f5;
+	--chip: #dfe5ec;
+	--bg: #e9edf1;
+	--accent: #2f6fb0;
+	--on-accent: #ffffff;
+	--on-ink: #ffffff;
+	--ok: #1d7a5f;
+	--on-ok: #ffffff;
+	--warn: #d1642a;
+	--on-warn: #ffffff;
+	--warn-tint: #fbeee6;
+	--hazard: #e6b294;
+	--grid-line: rgba(19, 35, 57, 0.045);
+	--grid-dot: #c6d0db;
+	--scrim: rgba(19, 35, 57, 0.28);
+
+	--side: #132339;
+	--side-ink: #a8bbd0;
+	--side-hi: #ffffff;
+	--side-active: #1d3350;
+	--side-line: #2a3f5a;
+
+	--node-course: #c26b2c;
+	--node-blue: #3f6f8f;
+	--node-idea: #5d6f85;
+	--node-path: #6b7b62;
+	--node-purple: #7a5c8f;
+	--node-teal: #2f6f6a;
+	--node-gold: #b5893a;
+	--node-amber: #c9a13c;
+	--node-mauve: #8a7fa3;
+
+	--font-display: 'Space Grotesk', system-ui, sans-serif;
+	--font-mono: 'Space Mono', ui-monospace, monospace;
+
+	--space-1: 4px;
+	--space-2: 8px;
+	--space-3: 12px;
+	--space-4: 16px;
+	--space-5: 20px;
+	--space-6: 24px;
+	--space-7: 30px;
+	--border-width: 2px;
+	--border-width-hair: 1px;
+	--radius: 0px;
+
+	/* Density-dependent paddings (Settings > Appearance). */
+	--card-pad: 13px 15px;
+	--row-pad: 13px 18px;
+	--page-pad: 20px 22px;
+
+	color-scheme: light;
+}
+
+:root[data-density='compact'] {
+	--card-pad: 9px 11px;
+	--row-pad: 8px 14px;
+	--page-pad: 14px 16px;
+}
+
+:root[data-theme='dark'] {
+	--ink: #e2e9f1;
+	--ink-2: #92a3b7;
+	--ink-3: #b4c1cf;
+	--line: #34475f;
+	--surface: #15223a;
+	--surface-2: #1b2a43;
+	--chip: #25374f;
+	--bg: #0e1828;
+	--accent: #5d9ddd;
+	--on-accent: #08121f;
+	--on-ink: #0e1828;
+	--ok: #3aa983;
+	--on-ok: #06140f;
+	--warn: #e8854c;
+	--on-warn: #1c0d04;
+	--warn-tint: #3a2519;
+	--hazard: #8a5436;
+	--grid-line: rgba(226, 233, 241, 0.04);
+	--grid-dot: #26374e;
+	--scrim: rgba(3, 8, 15, 0.55);
+
+	--side: #0a1322;
+	--side-ink: #92a3b7;
+	--side-hi: #ffffff;
+	--side-active: #1a2b44;
+	--side-line: #22344d;
+
+	color-scheme: dark;
+}
