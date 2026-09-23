@@ -31,10 +31,23 @@
 		!boardFilters.showArchived &&
 		!boardFilters.statuses.includes('archived');
 
+	// Auto-layout depends on which nodes are still unplaced and where the
+	// placed ones sit, so it shifts whenever anything is dragged. Persisting a
+	// node's first auto-laid-out position pins it: after that it only moves
+	// when the user moves it. Plain Set, deliberately not reactive.
+	// eslint-disable-next-line svelte/prefer-svelte-reactivity -- bookkeeping only, must not trigger the effect
+	const pinning = new Set<string>();
+
 	$effect(() => {
 		const shown = graph.nodes.filter((node) => !hidden(node.status));
 		const shownIds = new Set(shown.map((node) => node.id));
 		const positions = layoutPositions(shown, graph.edges);
+
+		for (const node of shown) {
+			if (node.canvas_x !== null || pinning.has(node.id)) continue;
+			pinning.add(node.id);
+			persistPosition(node.id, positions.get(node.id)!).finally(() => pinning.delete(node.id));
+		}
 		const dimmedIds = new Set(
 			shown.filter((node) => !matchesBoardFilters(node)).map((node) => node.id)
 		);
@@ -66,20 +79,22 @@
 			});
 	});
 
-	async function savePositions({ nodes: dragged }: { nodes: LoomFlowNode[] }) {
-		for (const node of dragged) {
-			try {
-				const updated = await nodesApi.update(node.id, {
-					canvas_x: Math.round(node.position.x),
-					canvas_y: Math.round(node.position.y)
-				});
-				// Position changes no derived state - patch the cache in place
-				// instead of refetching the whole graph.
-				graph.replaceNode(updated);
-			} catch (error) {
-				notifyError(error);
-			}
+	async function persistPosition(nodeId: string, position: { x: number; y: number }) {
+		try {
+			const updated = await nodesApi.update(nodeId, {
+				canvas_x: Math.round(position.x),
+				canvas_y: Math.round(position.y)
+			});
+			// Position changes no derived state - patch the cache in place
+			// instead of refetching the whole graph.
+			graph.replaceNode(updated);
+		} catch (error) {
+			notifyError(error);
 		}
+	}
+
+	async function savePositions({ nodes: dragged }: { nodes: LoomFlowNode[] }) {
+		for (const node of dragged) await persistPosition(node.id, node.position);
 	}
 
 	const title = (id: string | undefined) => (id ? graph.nodeById.get(id)?.title : '') ?? '';
