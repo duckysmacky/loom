@@ -73,6 +73,10 @@ pub struct NodeResponse {
     pub updated_at: DateTime<Utc>,
     pub started_at: Option<DateTime<Utc>>,
     pub completed_at: Option<DateTime<Utc>>,
+    /// Last position the node was dragged to on the board canvas; both
+    /// `null` until it's placed by hand (the frontend auto-lays it out).
+    pub canvas_x: Option<f64>,
+    pub canvas_y: Option<f64>,
     pub topic_ids: Vec<Uuid>,
     pub blocked: bool,
     pub container_progress: Option<ContainerProgress>,
@@ -137,6 +141,12 @@ pub struct UpdateNodeRequest {
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
     pub completed_at: Option<Option<DateTime<Utc>>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
+    pub canvas_x: Option<Option<f64>>,
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[ts(optional = nullable)]
+    pub canvas_y: Option<Option<f64>>,
 }
 
 /// A view preset for `GET /api/nodes` - translated into `kind`/`status`

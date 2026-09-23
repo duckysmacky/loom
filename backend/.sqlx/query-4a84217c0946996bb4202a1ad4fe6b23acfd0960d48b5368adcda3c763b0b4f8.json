@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO nodes (user_id, kind, status, focus, title, progress_current, progress_total, color, notes)\n        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
+  "query": "\n        -- Same auto-stamping as update_node: a node created straight into\n        -- `active`/`done` gets started_at/completed_at, not just one that\n        -- transitions there later.\n        INSERT INTO nodes (\n            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,\n            started_at, completed_at\n        )\n        VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9,\n            CASE WHEN $3 = 'active'::node_status THEN now() END,\n            CASE WHEN $3 = 'done'::node_status THEN now() END\n        )\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            canvas_x, canvas_y,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
   "describe": {
     "columns": [
       {
@@ -184,30 +184,52 @@
       },
       {
         "ordinal": 13,
+        "name": "canvas_x",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_x"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "canvas_y",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_y"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
         "name": "topic_ids!: Vec<Uuid>",
         "type_info": "UuidArray",
         "origin": "Expression"
       },
       {
-        "ordinal": 14,
+        "ordinal": 16,
         "name": "blocked!",
         "type_info": "Bool",
         "origin": "Expression"
       },
       {
-        "ordinal": 15,
+        "ordinal": 17,
         "name": "container_total!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 16,
+        "ordinal": 18,
         "name": "container_done!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 17,
+        "ordinal": 19,
         "name": "last_poked_at",
         "type_info": "Timestamptz",
         "origin": "Expression"
@@ -276,6 +298,8 @@
       false,
       true,
       true,
+      true,
+      true,
       null,
       null,
       null,
@@ -283,5 +307,5 @@
       null
     ]
   },
-  "hash": "fed705e054338862b8a96d9e3ecc7d65057a18da30da3df6e1f55bcbbd69d6f4"
+  "hash": "4a84217c0946996bb4202a1ad4fe6b23acfd0960d48b5368adcda3c763b0b4f8"
 }

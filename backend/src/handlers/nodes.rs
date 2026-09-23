@@ -110,13 +110,16 @@ pub async fn detach_topic(
     }
 }
 
-/// Maps the nodes.progress_current/progress_total CHECK constraint to a
-/// 400 instead of falling into the generic 500 path - the DB already
-/// enforces the invariant, this just surfaces it sensibly.
+/// Maps the nodes CHECK constraints (progress pair, canvas position pair)
+/// to a 400 instead of falling into the generic 500 path - the DB already
+/// enforces the invariants, this just surfaces them sensibly.
 fn map_node_error(error: sqlx::Error) -> ApiError {
     if let sqlx::Error::Database(db_error) = &error
         && db_error.is_check_violation()
     {
+        if db_error.constraint() == Some("nodes_canvas_position_pair") {
+            return ApiError::InvalidInput("canvas_x/canvas_y must be set or cleared together");
+        }
         return ApiError::InvalidInput("progress_current/progress_total is invalid");
     }
     ApiError::Internal(error.into())

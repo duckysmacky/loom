@@ -50,6 +50,14 @@ class GraphStore {
 		}
 	}
 
+	/**
+	 * Swaps in one updated node without a full refetch - only for edits that
+	 * can't change any other node's derived state (e.g. a canvas position).
+	 */
+	replaceNode(updated: NodeResponse) {
+		this.nodes = this.nodes.map((node) => (node.id === updated.id ? updated : node));
+	}
+
 	reset() {
 		this.nodes = [];
 		this.edges = [];

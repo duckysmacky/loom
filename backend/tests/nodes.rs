@@ -708,3 +708,111 @@ async fn empty_title_returns_400(pool: PgPool) {
     .await;
     assert_eq!(update_status, StatusCode::BAD_REQUEST);
 }
+
+#[sqlx::test]
+async fn canvas_position_is_null_until_set_and_round_trips(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "canvas@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "idea", "title": "placed"})).await;
+    assert_eq!(node["canvas_x"], Value::Null);
+    assert_eq!(node["canvas_y"], Value::Null);
+    let node_id = node["id"].as_str().unwrap();
+    let uri = format!("/api/nodes/{node_id}");
+
+    let (status, placed) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"canvas_x": 120.5, "canvas_y": -40}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(placed["canvas_x"], 120.5);
+    assert_eq!(placed["canvas_y"], -40.0);
+
+    // A PATCH that doesn't mention the position leaves it alone.
+    let (_, renamed) = send(
+        &app,
+        req("PATCH", &uri, json!({"title": "renamed"}), Some(&token)),
+    )
+    .await;
+    assert_eq!(renamed["canvas_x"], 120.5);
+
+    let (_, canvas) = send(
+        &app,
+        req("GET", "/api/board/canvas", Value::Null, Some(&token)),
+    )
+    .await;
+    assert_eq!(canvas["nodes"][0]["canvas_y"], -40.0);
+
+    let (status, cleared) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"canvas_x": null, "canvas_y": null}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(cleared["canvas_x"], Value::Null);
+}
+
+#[sqlx::test]
+async fn half_set_canvas_position_returns_400(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "halfcanvas@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "idea", "title": "placed"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    let (status, body) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"canvas_x": 10}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        body["error"],
+        "canvas_x/canvas_y must be set or cleared together"
+    );
+}
+
+#[sqlx::test]
+async fn creating_straight_into_active_or_done_stamps_timestamps(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "createstamp@example.com").await;
+
+    let active = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "a", "status": "active"}),
+    )
+    .await;
+    assert!(!active["started_at"].is_null());
+    assert_eq!(active["completed_at"], Value::Null);
+
+    let done = create_node(
+        &app,
+        &token,
+        json!({"kind": "course", "title": "d", "status": "done"}),
+    )
+    .await;
+    assert!(!done["completed_at"].is_null());
+
+    let queued = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "q", "status": "queued"}),
+    )
+    .await;
+    assert_eq!(queued["started_at"], Value::Null);
+}

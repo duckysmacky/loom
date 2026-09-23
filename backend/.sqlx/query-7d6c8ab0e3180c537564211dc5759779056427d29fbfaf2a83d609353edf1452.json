@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND ($2::node_status IS NULL OR n.status = $2)\n          AND ($3::node_focus IS NULL OR n.focus = $3)\n          AND ($4::node_kind IS NULL OR n.kind = $4)\n          AND ($5::node_kind IS NULL OR n.kind = $5)\n          AND ($6::node_status IS NULL OR n.status = $6)\n        GROUP BY n.id\n        ORDER BY n.created_at DESC\n        ",
+  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            status = COALESCE($4, status),\n            focus = COALESCE($5, focus),\n            title = COALESCE($6, title),\n            progress_current = CASE WHEN $7 THEN $8 ELSE progress_current END,\n            progress_total = CASE WHEN $9 THEN $10 ELSE progress_total END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            -- An explicit client value always wins ($15/$17). Otherwise,\n            -- the server tracks these itself: `started_at` is stamped the\n            -- first time status moves to `active` (never overwritten\n            -- again), and `completed_at` the first time it moves to\n            -- `done` - cleared automatically if status later moves away\n            -- from `done`, since it's no longer true.\n            started_at = CASE\n                WHEN $15 THEN $16\n                WHEN COALESCE($4, status) = 'active' AND started_at IS NULL THEN now()\n                ELSE started_at\n            END,\n            completed_at = CASE\n                WHEN $17 THEN $18\n                WHEN COALESCE($4, status) = 'done' AND completed_at IS NULL THEN now()\n                WHEN COALESCE($4, status) <> 'done' THEN NULL\n                ELSE completed_at\n            END,\n            canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,\n            canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, color, notes,\n            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y\n        ",
   "describe": {
     "columns": [
       {
@@ -184,38 +184,43 @@
       },
       {
         "ordinal": 13,
-        "name": "topic_ids!: Vec<Uuid>",
-        "type_info": "UuidArray",
-        "origin": "Expression"
+        "name": "canvas_x",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_x"
+          }
+        }
       },
       {
         "ordinal": 14,
-        "name": "blocked!",
-        "type_info": "Bool",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 15,
-        "name": "container_total!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 16,
-        "name": "container_done!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 17,
-        "name": "last_poked_at",
-        "type_info": "Timestamptz",
-        "origin": "Expression"
+        "name": "canvas_y",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_y"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "course"
+              ]
+            }
+          }
+        },
         {
           "Custom": {
             "name": "node_status",
@@ -243,45 +248,23 @@
             }
           }
         },
-        {
-          "Custom": {
-            "name": "node_kind",
-            "kind": {
-              "Enum": [
-                "idea",
-                "project",
-                "course"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "node_kind",
-            "kind": {
-              "Enum": [
-                "idea",
-                "project",
-                "course"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "node_status",
-            "kind": {
-              "Enum": [
-                "idea",
-                "queued",
-                "active",
-                "paused",
-                "done",
-                "archived"
-              ]
-            }
-          }
-        }
+        "Text",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Text",
+        "Bool",
+        "Text",
+        "Bool",
+        "Timestamptz",
+        "Bool",
+        "Timestamptz",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Float8"
       ]
     },
     "nullable": [
@@ -298,12 +281,9 @@
       false,
       true,
       true,
-      null,
-      null,
-      null,
-      null,
-      null
+      true,
+      true
     ]
   },
-  "hash": "dd5d02fab5c558f5f513f2b73627e2ba82d4e8db2ffffcf3e3df4c0f49b012a8"
+  "hash": "7d6c8ab0e3180c537564211dc5759779056427d29fbfaf2a83d609353edf1452"
 }

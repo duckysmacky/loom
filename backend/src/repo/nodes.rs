@@ -27,6 +27,8 @@ pub(crate) struct NodeRow {
     pub(crate) updated_at: DateTime<Utc>,
     pub(crate) started_at: Option<DateTime<Utc>>,
     pub(crate) completed_at: Option<DateTime<Utc>>,
+    pub(crate) canvas_x: Option<f64>,
+    pub(crate) canvas_y: Option<f64>,
     pub(crate) topic_ids: Vec<Uuid>,
     pub(crate) blocked: bool,
     pub(crate) container_total: i64,
@@ -54,6 +56,8 @@ impl From<NodeRow> for NodeResponse {
             updated_at: row.updated_at,
             started_at: row.started_at,
             completed_at: row.completed_at,
+            canvas_x: row.canvas_x,
+            canvas_y: row.canvas_y,
             topic_ids: row.topic_ids,
             blocked: row.blocked,
             container_progress,
@@ -73,12 +77,23 @@ pub async fn create_node(
     let row = sqlx::query_as!(
         NodeRow,
         r#"
-        INSERT INTO nodes (user_id, kind, status, focus, title, progress_current, progress_total, color, notes)
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
+        -- Same auto-stamping as update_node: a node created straight into
+        -- `active`/`done` gets started_at/completed_at, not just one that
+        -- transitions there later.
+        INSERT INTO nodes (
+            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,
+            started_at, completed_at
+        )
+        VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9,
+            CASE WHEN $3 = 'active'::node_status THEN now() END,
+            CASE WHEN $3 = 'done'::node_status THEN now() END
+        )
         RETURNING
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
             title, progress_current, progress_total, color, notes,
             created_at, updated_at, started_at, completed_at,
+            canvas_x, canvas_y,
             ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
             false AS "blocked!",
             0::bigint AS "container_total!",
@@ -115,6 +130,7 @@ pub async fn list_nodes(
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
+            n.canvas_x, n.canvas_y,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (
@@ -177,6 +193,7 @@ pub async fn get_node(
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
+            n.canvas_x, n.canvas_y,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (
@@ -222,6 +239,10 @@ pub async fn update_node(
     let started_at = request.started_at.flatten();
     let completed_at_set = request.completed_at.is_some();
     let completed_at = request.completed_at.flatten();
+    let canvas_x_set = request.canvas_x.is_some();
+    let canvas_x = request.canvas_x.flatten();
+    let canvas_y_set = request.canvas_y.is_some();
+    let canvas_y = request.canvas_y.flatten();
 
     let row = sqlx::query!(
         r#"
@@ -251,12 +272,14 @@ pub async fn update_node(
                 WHEN COALESCE($4, status) <> 'done' THEN NULL
                 ELSE completed_at
             END,
+            canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,
+            canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
         RETURNING
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
             title, progress_current, progress_total, color, notes,
-            created_at, updated_at, started_at, completed_at
+            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y
         "#,
         user_id,
         node_id,
@@ -276,6 +299,10 @@ pub async fn update_node(
         started_at,
         completed_at_set,
         completed_at,
+        canvas_x_set,
+        canvas_x,
+        canvas_y_set,
+        canvas_y,
     )
     .fetch_optional(pool)
     .await?;
@@ -301,6 +328,8 @@ pub async fn update_node(
         updated_at: row.updated_at,
         started_at: row.started_at,
         completed_at: row.completed_at,
+        canvas_x: row.canvas_x,
+        canvas_y: row.canvas_y,
         topic_ids,
         blocked: derived.blocked,
         container_progress: derived.container_progress,

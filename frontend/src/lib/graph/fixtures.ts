@@ -17,6 +17,8 @@ export function makeNode(overrides: Partial<NodeResponse> = {}): NodeResponse {
 		updated_at: '2026-09-01T00:00:00Z',
 		started_at: null,
 		completed_at: null,
+		canvas_x: null,
+		canvas_y: null,
 		topic_ids: [],
 		blocked: false,
 		container_progress: null,

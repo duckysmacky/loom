@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1 AND n.id = $2\n        GROUP BY n.id\n        ",
+  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            n.canvas_x, n.canvas_y,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1 AND n.id = $2\n        GROUP BY n.id\n        ",
   "describe": {
     "columns": [
       {
@@ -184,30 +184,52 @@
       },
       {
         "ordinal": 13,
+        "name": "canvas_x",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_x"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "canvas_y",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "canvas_y"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
         "name": "topic_ids!: Vec<Uuid>",
         "type_info": "UuidArray",
         "origin": "Expression"
       },
       {
-        "ordinal": 14,
+        "ordinal": 16,
         "name": "blocked!",
         "type_info": "Bool",
         "origin": "Expression"
       },
       {
-        "ordinal": 15,
+        "ordinal": 17,
         "name": "container_total!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 16,
+        "ordinal": 18,
         "name": "container_done!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 17,
+        "ordinal": 19,
         "name": "last_poked_at",
         "type_info": "Timestamptz",
         "origin": "Expression"
@@ -233,6 +255,8 @@
       false,
       true,
       true,
+      true,
+      true,
       null,
       null,
       null,
@@ -240,5 +264,5 @@
       null
     ]
   },
-  "hash": "d38fa38e4ca3b41bb77a85b9ea2de1b83174fbebea71a50b683eecda89eeb23b"
+  "hash": "694b3d9b7f0ade2241e48e7148ad4468b48255cba9bcfd747899aa1b3c148f4d"
 }
