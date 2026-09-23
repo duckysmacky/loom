@@ -56,7 +56,7 @@
 	</ul>
 
 	<div class="hints">
-		<span class="key">⌘K</span> jump to node<br />
+		<span class="key">Ctrl K</span> jump to node<br />
 		<span class="key">N</span> quick capture
 	</div>
 </nav>

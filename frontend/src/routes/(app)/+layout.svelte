@@ -19,12 +19,12 @@
 	});
 
 	function onkeydown(event: KeyboardEvent) {
-		if ((event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'k') {
+		if (event.ctrlKey && event.key.toLowerCase() === 'k') {
 			event.preventDefault();
 			overlays.paletteOpen = !overlays.paletteOpen;
 			return;
 		}
-		// Plain "N" opens quick capture - ⌘N is reserved by browsers.
+		// Plain "N" opens quick capture - Ctrl+N is reserved by browsers.
 		const target = event.target as HTMLElement;
 		const typing = target.isContentEditable || target.matches('input, textarea, select');
 		const modified = event.metaKey || event.ctrlKey || event.altKey;

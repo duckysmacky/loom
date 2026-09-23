@@ -15,7 +15,7 @@
 	<button type="button" class="search" onclick={() => (overlays.paletteOpen = true)}>
 		<span class="lens"></span>
 		<span class="placeholder">Search nodes…</span>
-		<span class="key">⌘K</span>
+		<span class="key">Ctrl K</span>
 	</button>
 
 	<div class="actions">

@@ -37,14 +37,14 @@
 			aria-label="Notes (markdown)"
 			bind:value={draft}
 			onkeydown={(event) => {
-				if (event.key === 'Enter' && (event.metaKey || event.ctrlKey)) save();
+				if (event.key === 'Enter' && event.ctrlKey) save();
 				if (event.key === 'Escape') {
 					event.stopPropagation();
 					editing = false;
 				}
 			}}></textarea>
 		<div class="actions">
-			<span class="hint">⌘↵ to save</span>
+			<span class="hint">Ctrl ↵ to save</span>
 			<Button variant="quiet" onclick={() => (editing = false)}>Cancel</Button>
 			<Button variant="primary" onclick={save}>Save</Button>
 		</div>
