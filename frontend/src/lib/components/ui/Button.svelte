@@ -31,6 +31,10 @@ accent, top-bar calls to action), quiet (hairline, ink-3 text). -->
 		border: var(--border-width) solid var(--ink);
 		background: var(--surface);
 		color: var(--ink);
+		transition:
+			opacity var(--fast) var(--ease),
+			transform var(--fast) var(--ease),
+			border-color var(--fast) var(--ease);
 	}
 
 	.button:not(:disabled):hover {

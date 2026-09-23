@@ -153,6 +153,7 @@
 	}
 
 	.options {
+		animation: drop-in var(--fast) var(--ease);
 		position: absolute;
 		top: calc(100% + 4px);
 		left: 0;

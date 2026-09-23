@@ -2,6 +2,8 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import { logout, session } from '$lib/stores/session.svelte';
 	import { overlays } from '$lib/stores/ui.svelte';
+	import { fly } from 'svelte/transition';
+	import { ms } from '$lib/motion';
 
 	let { title }: { title: string } = $props();
 
@@ -31,7 +33,7 @@
 				onclick={() => (menuOpen = !menuOpen)}>{initial}</button
 			>
 			{#if menuOpen}
-				<div class="menu">
+				<div class="menu" transition:fly={{ y: -6, duration: ms(140) }}>
 					<div class="email">{session.user?.email}</div>
 					<a href="/settings" onclick={() => (menuOpen = false)}>Settings</a>
 					<button type="button" onclick={logout}>Sign out</button>

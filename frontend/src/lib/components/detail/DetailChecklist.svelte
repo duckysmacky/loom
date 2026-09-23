@@ -1,5 +1,7 @@
 <script lang="ts">
+	import { slide } from 'svelte/transition';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
+	import { ms } from '$lib/motion';
 	import { checklistApi } from '$lib/api/endpoints';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
@@ -56,7 +58,7 @@
 
 	<ul class="items">
 		{#each items as item (item.id)}
-			<li class="item" class:done={item.done}>
+			<li class="item" class:done={item.done} transition:slide={{ duration: ms(160) }}>
 				<input
 					type="checkbox"
 					checked={item.done}
@@ -160,6 +162,10 @@
 		font: 500 14px/1.35 var(--font-display);
 		color: var(--ink);
 		overflow-wrap: anywhere;
+	}
+
+	.title {
+		transition: color var(--normal) var(--ease);
 	}
 
 	.done .title {

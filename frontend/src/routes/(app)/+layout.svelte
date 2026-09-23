@@ -6,6 +6,8 @@
 	import QuickCapture from '$lib/components/QuickCapture.svelte';
 	import Toaster from '$lib/components/Toaster.svelte';
 	import { overlays } from '$lib/stores/ui.svelte';
+	import { fade } from 'svelte/transition';
+	import { ms } from '$lib/motion';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import Sidebar from './Sidebar.svelte';
@@ -45,6 +47,7 @@
 		['/nodes', 'Nodes'],
 		['/settings', 'Settings']
 	];
+	const section = $derived(page.url.pathname.split('/')[1]);
 	const title = $derived(
 		pageTitles.find(([prefix]) => page.url.pathname.startsWith(prefix))?.[1] ?? 'Loom'
 	);
@@ -58,7 +61,13 @@
 		<Sidebar />
 		<div class="main">
 			<TopBar {title} />
-			<main class="content">{@render children()}</main>
+			<main class="content">
+				<!-- A quick fade between pages; board views share one key so
+				     switching Organized/Canvas/Timeline doesn't flash the toolbar. -->
+				{#key section}
+					<div class="page-fade" in:fade={{ duration: ms(160) }}>{@render children()}</div>
+				{/key}
+			</main>
 		</div>
 	</div>
 	<NodeDetail />
@@ -81,6 +90,13 @@
 	}
 
 	.content {
+		flex: 1;
+		min-height: 0;
+		display: flex;
+		flex-direction: column;
+	}
+
+	.page-fade {
 		flex: 1;
 		min-height: 0;
 		display: flex;

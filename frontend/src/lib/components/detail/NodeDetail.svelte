@@ -1,5 +1,8 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { cubicOut } from 'svelte/easing';
+	import { fade, fly } from 'svelte/transition';
+	import { ms } from '$lib/motion';
 	import { page } from '$app/state';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -123,8 +126,15 @@
 
 {#if nodeId}
 	<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
-	<div class="scrim" onclick={closeNode}></div>
-	<div class="detail" role="dialog" aria-modal="true" aria-label="Node detail">
+	<div class="scrim" onclick={closeNode} transition:fade={{ duration: ms(160) }}></div>
+	<div
+		class="detail"
+		role="dialog"
+		aria-modal="true"
+		aria-label="Node detail"
+		in:fly={{ y: 14, duration: ms(220), easing: cubicOut }}
+		out:fade={{ duration: ms(120) }}
+	>
 		{#if !node}
 			<div class="missing">
 				<p>{graph.loaded ? 'This node no longer exists.' : 'Loading…'}</p>

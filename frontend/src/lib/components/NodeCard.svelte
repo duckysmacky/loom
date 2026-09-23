@@ -53,10 +53,16 @@
 		}
 	}
 
+	let pulsing = $state(false);
+
 	async function poke(event: MouseEvent) {
 		event.stopPropagation();
 		const poked = await graph.mutate(() => nodesApi.poke(node.id));
-		if (poked) notify(`Poked “${node.title}”`);
+		if (poked) {
+			notify(`Poked “${node.title}”`);
+			pulsing = true;
+			setTimeout(() => (pulsing = false), 400);
+		}
 	}
 </script>
 
@@ -115,7 +121,9 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 
 	{#if pokeable}
 		<div class="actions">
-			<Button variant="poke" onclick={poke} title="Log that you worked on this">Poke</Button>
+			<span class:pulse={pulsing}>
+				<Button variant="poke" onclick={poke} title="Log that you worked on this">Poke</Button>
+			</span>
 		</div>
 	{/if}
 </div>
@@ -131,10 +139,23 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 		min-width: 0;
 		/* Fills its grid cell, so cards in a row line up. */
 		height: 100%;
+		transition:
+			transform var(--fast) var(--ease),
+			border-color var(--fast) var(--ease);
 	}
 
+	/* A small lift on hover (no shadows in this system - the move is the cue). */
 	.card:hover {
 		border-color: var(--accent);
+		transform: translateY(-2px);
+	}
+
+	.card:active {
+		transform: translateY(0);
+	}
+
+	.pulse {
+		animation: pulse 380ms var(--ease);
 	}
 
 	.card.line-dashed {

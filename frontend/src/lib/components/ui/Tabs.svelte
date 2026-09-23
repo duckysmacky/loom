@@ -41,6 +41,9 @@
 		background: none;
 		padding: 12px 0;
 		border-bottom: var(--border-width) solid transparent;
+		transition:
+			border-color var(--normal) var(--ease),
+			color var(--normal) var(--ease);
 		font: 600 13.5px/1 var(--font-display);
 		color: var(--ink-2);
 		white-space: nowrap;

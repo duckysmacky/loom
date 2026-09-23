@@ -1,10 +1,19 @@
 <script lang="ts">
+	import { flip } from 'svelte/animate';
+	import { fade, fly } from 'svelte/transition';
+	import { ms } from '$lib/motion';
 	import { dismiss, toasts } from '$lib/stores/toasts.svelte';
 </script>
 
 <div class="toaster" aria-live="polite">
 	{#each toasts as toast (toast.id)}
-		<div class="toast {toast.tone}" role={toast.tone === 'error' ? 'alert' : 'status'}>
+		<div
+			class="toast {toast.tone}"
+			role={toast.tone === 'error' ? 'alert' : 'status'}
+			in:fly={{ x: 24, duration: ms(200) }}
+			out:fade={{ duration: ms(150) }}
+			animate:flip={{ duration: ms(200) }}
+		>
 			<span>{toast.message}</span>
 			{#if toast.action}
 				<button

@@ -28,5 +28,6 @@ readout, the bar alone doesn't carry the count. -->
 	.fill {
 		height: 100%;
 		background: var(--accent);
+		transition: width 400ms var(--ease);
 	}
 </style>

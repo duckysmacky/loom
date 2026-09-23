@@ -1,5 +1,6 @@
 <script lang="ts">
 	import NodeCard from '$lib/components/NodeCard.svelte';
+	import AnimatedNumber from '$lib/components/ui/AnimatedNumber.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { dashboardApi, nodesApi } from '$lib/api/endpoints';
@@ -70,7 +71,7 @@
 		<div class="tiles">
 			{#each tiles as tile (tile.label)}
 				<div class="tile">
-					<div class="value {tile.tone}">{tile.value}</div>
+					<div class="value {tile.tone}"><AnimatedNumber value={tile.value} /></div>
 					<div class="label">{tile.label}</div>
 				</div>
 			{/each}

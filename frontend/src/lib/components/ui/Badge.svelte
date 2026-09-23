@@ -19,6 +19,9 @@
 		white-space: nowrap;
 		border: var(--border-width-hair) solid var(--line);
 		color: var(--ink-2);
+		transition:
+			background-color var(--normal) var(--ease),
+			color var(--normal) var(--ease);
 	}
 
 	.active {

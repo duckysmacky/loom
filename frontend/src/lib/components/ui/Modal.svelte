@@ -44,7 +44,12 @@
 		margin-top: 12vh;
 	}
 
+	dialog[open] {
+		animation: rise-in var(--normal) var(--ease);
+	}
+
 	dialog::backdrop {
 		background: var(--scrim);
+		animation: fade-in var(--normal) var(--ease);
 	}
 </style>

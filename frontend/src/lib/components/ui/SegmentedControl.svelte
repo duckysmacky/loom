@@ -37,6 +37,9 @@
 		padding: 7px 13px;
 		font: 600 12px/1 var(--font-display);
 		color: var(--ink-2);
+		transition:
+			background-color var(--fast) var(--ease),
+			color var(--fast) var(--ease);
 	}
 
 	.selected {
