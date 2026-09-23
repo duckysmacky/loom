@@ -28,6 +28,11 @@ async fn main() -> Result<()> {
         .await
         .context("failed to connect to database")?;
 
+    sqlx::migrate!()
+        .run(&pool)
+        .await
+        .context("failed to run database migrations")?;
+
     let app = Router::new()
         .nest("/api", Router::new().route("/health", get(health)))
         .with_state(pool)

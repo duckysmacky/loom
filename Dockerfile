@@ -1,8 +1,19 @@
-FROM rust:1-slim-trixie AS builder
+FROM rust:1-slim-trixie AS chef
 WORKDIR /build
+RUN cargo install cargo-chef --locked
+
+FROM chef AS planner
+COPY backend/Cargo.toml backend/Cargo.lock ./
+COPY backend/src ./src
+RUN cargo chef prepare --recipe-path recipe.json
+
+FROM chef AS builder
+COPY --from=planner /build/recipe.json recipe.json
+RUN cargo chef cook --release --recipe-path recipe.json
 
 COPY backend/Cargo.toml backend/Cargo.lock ./
 COPY backend/src ./src
+COPY backend/migrations ./migrations
 
 ENV SQLX_OFFLINE=true
 RUN cargo build --release

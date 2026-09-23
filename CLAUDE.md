@@ -9,8 +9,8 @@ starting any work.
 Follow `docs/BUILD_PLAN.md` phase by phase, in order. Do not start
 frontend phases before every backend phase is checked off - the frontend
 is built against a working API, not alongside it. After finishing a
-phase, check it off in `docs/BUILD_PLAN.md`, commit the changes and start
-the next phase.
+phase, check it off in `docs/BUILD_PLAN.md`, commit that change, and
+stop for review before starting the next phase.
 
 ## Commits
 
