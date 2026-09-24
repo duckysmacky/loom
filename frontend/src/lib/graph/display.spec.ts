@@ -16,10 +16,10 @@ import {
 import { makeEdge, makeNode } from './fixtures';
 
 describe('display helpers', () => {
-	it('treats only unpromoted ideas as backlog', () => {
+	it('treats every status-idea node as backlog, whatever its kind', () => {
 		expect(isBacklog(makeNode({ kind: 'idea', status: 'idea' }))).toBe(true);
+		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(true);
 		expect(isBacklog(makeNode({ kind: 'idea', status: 'queued' }))).toBe(false);
-		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(false);
 	});
 
 	it('picks the border line from kind and status', () => {

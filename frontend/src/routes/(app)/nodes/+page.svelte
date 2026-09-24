@@ -34,11 +34,11 @@
 	// whenever the graph cache reloads after a mutation.
 	$effect(() => {
 		void graph.version;
-		// Filters hidden on the current tab don't apply (backlog fixes kind and
-		// status; archived fixes status).
+		// Filters hidden on the current tab don't apply (backlog and archived
+		// fix the status).
 		const query = {
 			view,
-			kind: view === 'backlog' ? null : kind || null,
+			kind: kind || null,
 			status: view === 'all' ? status || null : null,
 			focus: focus || null
 		};
@@ -94,7 +94,7 @@
 
 	const footer = $derived(
 		view === 'backlog'
-			? `${visibleRows.length} ideas · promoting sets a kind, status and focus tier`
+			? `${visibleRows.length} in the backlog · moving to the board sets a kind, status and focus tier`
 			: view === 'archived'
 				? `${visibleRows.length} archived · restoring moves a node back to queued`
 				: `${visibleRows.length} nodes`
@@ -109,28 +109,26 @@
 
 <div class="page">
 	<div class="filters">
-		{#if view !== 'backlog'}
+		<label class="filter">
+			<span>Kind</span>
+			<select bind:value={kind}>
+				<option value="">Any</option>
+				<option value="idea">Idea</option>
+				<option value="project">Project</option>
+				<option value="study">Study</option>
+				<option value="path">Path</option>
+			</select>
+		</label>
+		{#if view === 'all'}
 			<label class="filter">
-				<span>Kind</span>
-				<select bind:value={kind}>
+				<span>Status</span>
+				<select bind:value={status}>
 					<option value="">Any</option>
-					<option value="idea">Idea</option>
-					<option value="project">Project</option>
-					<option value="study">Study</option>
-					<option value="path">Path</option>
+					{#each ['idea', 'queued', 'active', 'paused', 'done', 'archived'] as option (option)}
+						<option value={option}>{option[0].toUpperCase() + option.slice(1)}</option>
+					{/each}
 				</select>
 			</label>
-			{#if view === 'all'}
-				<label class="filter">
-					<span>Status</span>
-					<select bind:value={status}>
-						<option value="">Any</option>
-						{#each ['idea', 'queued', 'active', 'paused', 'done', 'archived'] as option (option)}
-							<option value={option}>{option[0].toUpperCase() + option.slice(1)}</option>
-						{/each}
-					</select>
-				</label>
-			{/if}
 		{/if}
 		<label class="filter">
 			<span>Focus</span>
@@ -179,7 +177,7 @@
 					<tr>
 						<td colspan="6" class="empty">
 							{view === 'backlog'
-								? 'No unpromoted ideas. Press N to capture one.'
+								? 'Backlog is empty. Press N to capture an idea.'
 								: view === 'archived'
 									? 'Nothing archived.'
 									: 'No nodes match these filters.'}
@@ -198,11 +196,9 @@
 								{node.title}
 							</button>
 							<div class="sub">
-								{#if view !== 'backlog'}
-									<span class="kind">
-										{node.kind}{node.status === node.kind ? '' : ` · ${node.status}`}
-									</span>
-								{/if}
+								<span class="kind">
+									{node.kind}{node.status === node.kind ? '' : ` · ${node.status}`}
+								</span>
 								{notesExcerpt(node.notes)}
 							</div>
 						</td>
@@ -228,7 +224,7 @@
 							<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 							<span onclick={(event) => event.stopPropagation()}>
 								{#if isBacklog(node)}
-									<Button variant="poke" onclick={() => (promoting = node)}>Promote</Button>
+									<Button variant="poke" onclick={() => (promoting = node)}>To board</Button>
 								{:else if node.status === 'archived'}
 									<Button variant="poke" onclick={() => restore(node)}>Restore</Button>
 								{/if}

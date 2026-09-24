@@ -38,11 +38,11 @@ export const TIER_COLOR: Record<NodeResponse['focus'], string> = {
 };
 
 /**
- * An unpromoted idea sitting in the backlog. These stay out of the board
- * views - they're waiting to be picked up, not part of the working graph.
+ * A backlog node: anything still at status `idea`, whatever its kind. These
+ * stay out of the board views - captured, but not picked up yet.
  */
 export function isBacklog(node: NodeResponse): boolean {
-	return node.kind === 'idea' && node.status === 'idea';
+	return node.status === 'idea';
 }
 
 export type BorderStyle = { line: 'solid' | 'dashed' | 'dotted'; tone: 'frame' | 'warn' | 'ok' };

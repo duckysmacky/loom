@@ -291,7 +291,7 @@ async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) 
 }
 
 #[sqlx::test]
-async fn backlog_count_and_recent_backlog_cover_only_unpromoted_ideas(pool: PgPool) {
+async fn backlog_count_and_recent_backlog_cover_every_status_idea_node(pool: PgPool) {
     let app = app(pool.clone());
     let token = signup(&app, "backlog@example.com").await;
 
@@ -303,7 +303,7 @@ async fn backlog_count_and_recent_backlog_cover_only_unpromoted_ideas(pool: PgPo
         )
         .await;
     }
-    // A queued idea and a project at status=idea are not backlog.
+    // A queued idea is out of the backlog; a project at status=idea is in it.
     create_node(
         &app,
         &token,
@@ -318,10 +318,10 @@ async fn backlog_count_and_recent_backlog_cover_only_unpromoted_ideas(pool: PgPo
     )
     .await;
 
-    assert_eq!(dashboard["counts"]["backlog"], 7);
+    assert_eq!(dashboard["counts"]["backlog"], 8);
     assert_eq!(
         titles(&dashboard["recent_backlog"]),
-        vec!["idea-6", "idea-5", "idea-4", "idea-3", "idea-2"]
+        vec!["project", "idea-6", "idea-5", "idea-4", "idea-3"]
     );
 }
 

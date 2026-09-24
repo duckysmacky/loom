@@ -128,7 +128,7 @@
 				<div class="panel">
 					<div class="panel-head">
 						<h2 class="panel-title">Backlog</h2>
-						<a class="more" href="/nodes">{dashboard.counts.backlog} ideas →</a>
+						<a class="more" href="/nodes">{dashboard.counts.backlog} in backlog →</a>
 					</div>
 					<form class="capture" onsubmit={captureIdea}>
 						<input

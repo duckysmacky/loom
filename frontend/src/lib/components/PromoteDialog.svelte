@@ -5,19 +5,33 @@
 	import { nodesApi } from '$lib/api/endpoints';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
+	import { kindChangeLosses } from '$lib/graph/display';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
+	import type { NodeKind } from '$lib/types/NodeKind';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	/**
-	 * Promotes a backlog idea in place - same row, same id, same edges - by
-	 * setting its kind, status and focus tier in one PATCH.
+	 * Takes a node out of the backlog in place - same row, same id, same
+	 * edges - by setting its kind, status (queued/active) and focus tier in
+	 * one PATCH. Backlog = status idea, so any kind can be promoted; an idea
+	 * may stay an idea.
 	 */
 	let { node, onclose }: { node: NodeResponse | null; onclose: () => void } = $props();
 
-	let kind = $state<'project' | 'study' | 'path'>('project');
+	let kind = $state<NodeKind>('project');
 	let status = $state<'queued' | 'active'>('queued');
 	let focus = $state<NodeFocus>('secondary');
 	let saving = $state(false);
+
+	// Start from the node's own kind and focus each time the dialog opens.
+	$effect(() => {
+		if (!node) return;
+		kind = node.kind;
+		focus = node.focus;
+		status = 'queued';
+	});
+
+	const losses = $derived(node ? kindChangeLosses(node, kind) : []);
 
 	async function promote() {
 		if (!node) return;
@@ -25,15 +39,15 @@
 		const updated = await graph.mutate(() => nodesApi.update(node!.id, { kind, status, focus }));
 		saving = false;
 		if (updated) {
-			notify(`Promoted “${updated.title}” to ${kind}`);
+			notify(`Moved “${updated.title}” out of the backlog as ${kind}`);
 			onclose();
 		}
 	}
 </script>
 
-<Modal open={node !== null} {onclose} label="Promote idea" width={420}>
+<Modal open={node !== null} {onclose} label="Take out of backlog" width={460}>
 	<div class="dialog">
-		<div class="label">Promote idea</div>
+		<div class="label">Take out of backlog</div>
 		<div class="title">{node?.title}</div>
 
 		<div class="field-group">
@@ -43,12 +57,16 @@
 				value={kind}
 				onchange={(value) => (kind = value)}
 				options={[
+					{ value: 'idea', label: 'Idea' },
 					{ value: 'project', label: 'Project' },
 					{ value: 'study', label: 'Study' },
 					{ value: 'path', label: 'Path' }
 				]}
 			/>
 		</div>
+		{#if losses.length}
+			<p class="losses">Switching kind removes {losses.join(' and ')}.</p>
+		{/if}
 		<div class="field-group">
 			<span class="label">Status</span>
 			<SegmentedControl
@@ -77,7 +95,7 @@
 
 		<div class="actions">
 			<Button variant="quiet" onclick={onclose}>Cancel</Button>
-			<Button variant="primary" onclick={promote} disabled={saving}>Promote</Button>
+			<Button variant="primary" onclick={promote} disabled={saving}>Move to board</Button>
 		</div>
 	</div>
 </Modal>
@@ -100,6 +118,12 @@
 		flex-direction: column;
 		gap: 8px;
 		align-items: flex-start;
+	}
+
+	.losses {
+		margin: -6px 0 0;
+		font: 600 12px/1.4 var(--font-display);
+		color: var(--warn);
 	}
 
 	.actions {

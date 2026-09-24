@@ -190,13 +190,12 @@ pub async fn list_nodes(
 }
 
 /// Translates `view` into the effective (kind, status) constraint it
-/// implies. `backlog` = unpromoted ideas: kind=idea AND status=idea, since
-/// promoting to project/study changes `kind` - an idea still at
-/// kind='idea'/status='idea' has never been promoted. `archived` =
-/// status=archived. `all`/`None` = no extra constraint.
+/// implies. `backlog` = everything still at status=idea, whatever its kind:
+/// captured but not yet picked up (moving it to queued/active takes it out).
+/// `archived` = status=archived. `all`/`None` = no extra constraint.
 fn view_predicates(view: Option<NodeView>) -> (Option<NodeKind>, Option<NodeStatus>) {
     match view {
-        Some(NodeView::Backlog) => (Some(NodeKind::Idea), Some(NodeStatus::Idea)),
+        Some(NodeView::Backlog) => (None, Some(NodeStatus::Idea)),
         Some(NodeView::Archived) => (None, Some(NodeStatus::Archived)),
         Some(NodeView::All) | None => (None, None),
     }

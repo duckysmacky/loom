@@ -331,8 +331,8 @@
 						<span class="label">Actions</span>
 						{#if blocked}
 							<span class="not-actionable">Not actionable yet</span>
-						{:else if node.kind === 'idea' && node.status === 'idea'}
-							<Button variant="poke" onclick={() => (promoting = node)}>Promote</Button>
+						{:else if node.status === 'idea'}
+							<Button variant="poke" onclick={() => (promoting = node)}>Move to board</Button>
 						{:else if ['active', 'queued', 'paused'].includes(node.status)}
 							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
 						{/if}

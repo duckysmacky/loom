@@ -498,7 +498,7 @@ async fn attach_and_detach_topic_on_another_users_node_returns_404(pool: PgPool)
 }
 
 #[sqlx::test]
-async fn view_backlog_includes_only_unpromoted_ideas(pool: PgPool) {
+async fn view_backlog_includes_every_status_idea_node(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "viewbacklog@example.com").await;
 
@@ -527,7 +527,9 @@ async fn view_backlog_includes_only_unpromoted_ideas(pool: PgPool) {
         .iter()
         .map(|n| n["title"].as_str().unwrap().to_owned())
         .collect();
-    assert_eq!(titles, vec!["backlog".to_string()]);
+    // The project was created at the default status (idea), so it's backlog
+    // too; the queued idea isn't.
+    assert_eq!(titles, vec!["promoted".to_string(), "backlog".to_string()]);
 }
 
 #[sqlx::test]

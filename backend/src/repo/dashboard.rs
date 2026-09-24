@@ -40,7 +40,7 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
 
     let recent_backlog = all_nodes
         .iter()
-        .filter(|node| node.kind == NodeKind::Idea && node.status == NodeStatus::Idea)
+        .filter(|node| node.status == NodeStatus::Idea)
         .take(RECENT_BACKLOG_LIMIT)
         .cloned()
         .collect();
@@ -100,7 +100,8 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
 
     for row in rows {
         total += row.count;
-        if row.kind == NodeKind::Idea && row.status == NodeStatus::Idea {
+        // Backlog = still at status idea, whatever the kind.
+        if row.status == NodeStatus::Idea {
             backlog += row.count;
         }
         match row.status {
