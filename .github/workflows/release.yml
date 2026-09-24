@@ -39,7 +39,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:latest
+          tags: ghcr.io/duckysmacky/${{ matrix.image }}:latest
 
   build-release:
     needs: test
@@ -69,7 +69,7 @@ jobs:
           context: ${{ matrix.context }}
           file: ${{ matrix.dockerfile }}
           push: true
-          tags: ghcr.io/${{ github.repository_owner }}/${{ matrix.image }}:${{ steps.version.outputs.version }}
+          tags: ghcr.io/duckysmacky/${{ matrix.image }}:${{ steps.version.outputs.version }}
 
   draft-release:
     needs: build-release
