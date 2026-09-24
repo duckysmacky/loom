@@ -1,8 +1,7 @@
 # CLAUDE.md - backend
 
-Rust/Axum API. See the root `CLAUDE.md` for commit and sequencing
-conventions, and `docs/PROJECT_OVERVIEW.md` for the domain model this
-implements.
+Rust/Axum API. See the root `CLAUDE.md` for commit conventions and the
+domain model this implements.
 
 ## Structure
 
