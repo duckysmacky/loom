@@ -1,13 +1,9 @@
 # Loom
 
-A self-hosted graph for everything you're building, studying, and dreaming up.
+A flexible manager for everything you're building, studying, and dreaming up.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-![Rust](https://img.shields.io/badge/backend-Rust%20%2F%20Axum-orange)
-![SvelteKit](https://img.shields.io/badge/frontend-SvelteKit-ff3e00)
-![PostgreSQL](https://img.shields.io/badge/database-PostgreSQL-336791)
-![Docker](https://img.shields.io/badge/deploy-Docker-2496ed)
-![Self-hosted](https://img.shields.io/badge/self--hosted-yes-success)
+![version](https://img.shields.io/badge/version-1.0.0-blue)
 
 ## Table of contents
 
@@ -42,19 +38,19 @@ once.
 It isn't a kanban board or a task manager, on purpose:
 
 - **Nodes are things you pursue, not tasks to check off.** A project, a
-  course, or a raw idea — each with its own progress, not a checklist
+  course, or a raw idea - each with its own progress, not a checklist
   item lost among a hundred others.
 - **Dependencies decide what's blocked.** Draw a `requires` edge between
   two nodes and the dependent one is automatically marked blocked until
-  the other is done — no manual "waiting on" label to keep in sync.
+  the other is done - no manual "waiting on" label to keep in sync.
 - **Working on something is a deliberate signal, not an edit.** "Poking"
   a node logs that you touched it today, separate from whatever field you
-  changed — so "last touched" actually means something.
+  changed - so "last touched" actually means something.
 - **Staleness nudges you back.** Anything active that hasn't been poked
   in two weeks quietly surfaces on the dashboard instead of getting
   lost.
-- **Ideas get promoted, not recreated.** Jot something down as a loose
-  idea, then commit to it later in place — same node, same connections,
+- **Ideas get promoted, not recreated.** Write something down as a loose
+  idea, then commit to it later in place - same node, same connections,
   now tracked for real.
 
 ## Features
@@ -66,16 +62,16 @@ can't:
 
 | Kind | For | Can track |
 |---|---|---|
-| **Idea** | A loosely captured, uncommitted thought | — |
+| **Idea** | A loosely captured, uncommitted thought | - |
 | **Project** | Something being actively built | A checklist |
-| **Study** | A course, book, or topic | A progress counter (e.g. "15 of 30 videos") |
+| **Study** | A course, book, or topic | A progress counter (e.g. "15 of 30 chapters") |
 | **Path** | A learning path or roadmap | Other nodes nested inside it (paths can nest too) |
 
-Promoting an idea to project/study/path changes its kind in place — same
-node, same connections — and drops only what the new kind genuinely can't
+Promoting an idea to project/study/path changes its kind in place - same
+node, same connections - and drops only what the new kind genuinely can't
 hold (leaving a project behind drops its checklist, for instance).
 
-Every node also has a **status** (idea → queued → active → paused → done,
+Every node also has a **status** (idea -> queued -> active -> paused -> done,
 plus archived) and a **focus** tier (primary / secondary / background,
 independent of status) that decides what surfaces on the dashboard, plus
 notes, an accent color, and free-form topics.
@@ -84,15 +80,15 @@ notes, an accent color, and free-form topics.
 
 Nodes connect with directed edges:
 
-- **Requires** — a hard dependency. The dependent node shows as
+- **Requires** - a hard dependency. The dependent node shows as
   **blocked** until the required one is done.
-- **Inside a path** — nests a node inside a path/roadmap container. A
+- **Inside a path** - nests a node inside a path/roadmap container. A
   node lives in only one path at a time.
-- **Related** — a soft, non-blocking association.
+- **Related** - a soft, non-blocking association.
 
 ### Topics
 
-Free-form tags for filtering, coloring, and grouping nodes — kept
+Free-form tags for filtering, coloring, and grouping nodes - kept
 separate from the dependency graph so tagging never clutters what
 actually blocks what.
 
@@ -105,14 +101,14 @@ going stale, with a poke button right there.
 
 ### Views
 
-- **Dashboard** — your primary-focus nodes (actionable first, blocked
+- **Dashboard** - your primary-focus nodes (actionable first, blocked
   after), what's going stale, your backlog, and your paths, at a glance.
-- **Board · Organized** — a card grid, grouped by focus, kind, status,
+- **Organized board** - a card grid, grouped by focus, kind, status,
   or tag.
-- **Board · Canvas** — a draggable node graph (`@xyflow/svelte`):
-  position and path membership persist, path boxes resize, and dragging
-  between handles creates connections.
-- **Board · Timeline** — bars from started to completed (or to now),
+- **Canvas board** - a draggable node graph: position and path 
+  membership persist, path boxes resize, and dragging between handles
+  creates connections.
+- **Timeline board** - bars from started to completed (or to now),
   with a marker for the last time you poked each one.
 
 All three board views share one filter/search bar (kind, status, focus,
@@ -120,7 +116,7 @@ topic, search), so switching views never resets what you're looking at.
 
 ### Backlog & promoting
 
-Anything with status "idea" — whatever its kind — lives in the Backlog
+Anything with status "idea" - whatever its kind - lives in the Backlog
 tab of the Nodes page, out of the way of the board. Promoting it opens a
 dialog to set its real kind, status, and focus in one step.
 
@@ -131,7 +127,7 @@ dialog to set its real kind, status, and focus in one step.
 - Press **Ctrl+K** for a command palette: fuzzy node search plus
   navigation, capture, and sign-out commands.
 - Click any node to open its detail panel as a deep-linkable slide-over
-  — notes, progress, connections, checklist, pokes, and history, all in
+  - notes, progress, connections, checklist, pokes, and history, all in
   one place.
 
 ### Settings
@@ -146,7 +142,7 @@ poke-from-cards).
 
 - Docker and Docker Compose
 - A domain and reverse proxy (nginx, Caddy, etc.) if self-hosting
-  publicly — see [Self-hosting on a VPS](#self-hosting-on-a-vps)
+  publicly - see [Self-hosting on a VPS](#self-hosting-on-a-vps)
 
 ### Quick start
 
@@ -163,13 +159,7 @@ Edit `.env`: at minimum, set `JWT_SECRET` to a real secret
 docker compose up -d
 ```
 
-Open `http://localhost:8081`, sign up for the (only) account, then lock
-signup back down:
-
-```sh
-# in .env: ALLOW_SIGNUP=false
-docker compose up -d
-```
+Open `http://localhost:8081` to access the app
 
 ### Configuration
 
@@ -177,23 +167,23 @@ All variables live in `.env` (see `.env.example`):
 
 | Variable | Default | Description |
 |---|---|---|
-| `DB_HOST` | `database` | Postgres host — `database` for the bundled container, or an external host |
+| `DB_HOST` | `database` | Postgres host - `database` for the bundled container, or an external host |
 | `DB_PORT` | `5432` | Postgres port |
 | `DB_NAME` | `loom` | Postgres database name |
 | `DB_USER` | `loom` | Postgres user |
-| `DB_PASSWORD` | — | Postgres password — change this |
-| `DATABASE_URL` | — | Only used for compile-time query checks; keep in sync with the `DB_*` vars above |
+| `DB_PASSWORD` | - | Postgres password - change this |
+| `DATABASE_URL` | - | Only used for compile-time query checks; keep in sync with the `DB_*` vars above |
 | `BACKEND_PORT` | `8080` | Host port the API is published on |
 | `FRONTEND_PORT` | `8081` | Host port the web UI is published on |
-| `LOOM_VERSION` | `latest` | Image tag `docker compose up` pulls — pin to a release (e.g. `0.1.0`) for a stable deploy |
-| `BIND_ADDR` | `0.0.0.0:8080` | Address the backend binds to inside its container — only change if running the binary directly, outside Docker |
+| `LOOM_VERSION` | `latest` | Image tag `docker compose up` pulls - pin to a release (e.g. `1.0.0`) for a stable deploy |
+| `BIND_ADDR` | `0.0.0.0:8080` | Address the backend binds to inside its container - only change if running the binary directly, outside Docker |
 | `RUST_LOG` | `info` | Backend log level |
-| `JWT_SECRET` | — | Signs/verifies JWT access tokens. Generate with `openssl rand -hex 32`. Must be at least 32 bytes — the app refuses to start otherwise |
-| `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. Leave `true` for the first run, then set `false` once your account exists — single-user app, no reason to leave account creation open |
+| `JWT_SECRET` | - | Signs/verifies JWT access tokens. Generate with `openssl rand -hex 32`. Must be at least 32 bytes - the app refuses to start otherwise |
+| `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. Leave `true` for the first run, then set `false` once your account exists - single-user app, no reason to leave account creation open |
 
 ### Self-hosting on a VPS
 
-Both compose ports are bound to `127.0.0.1` — they're meant to sit behind
+Both compose ports are bound to `127.0.0.1` - they're meant to sit behind
 a reverse proxy, not be reachable directly. The frontend container
 already proxies `/api/` to the backend internally, so your reverse proxy
 only needs one upstream. An nginx example:
@@ -206,12 +196,12 @@ location / {
 ```
 
 The `/api/auth/*` rate limiter reads the client IP from
-`X-Forwarded-For`/`X-Real-IP`, so this block must set one of those —
+`X-Forwarded-For`/`X-Real-IP`, so this block must set one of those -
 otherwise every request behind the proxy collapses into one shared
 rate-limit bucket. nginx forwards that header through to the backend
 unless something overrides it, which nothing here does.
 
-**HTTPS is required** — the refresh-token cookie is marked `Secure`, so
+**HTTPS is required** - the refresh-token cookie is marked `Secure`, so
 login won't work over plain HTTP through a public proxy. Get a
 certificate with [certbot](https://certbot.eff.org/) (or your proxy's
 built-in ACME support) and point your reverse proxy at 443.

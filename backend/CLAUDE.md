@@ -39,3 +39,4 @@ Derive `ts-rs`'s `TS` trait on every request/response struct that
 crosses the API boundary, and regenerate the frontend's type files as
 part of the build - the frontend should never hand-declare an interface
 that duplicates a Rust struct.
+
