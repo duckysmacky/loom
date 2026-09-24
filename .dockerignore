@@ -1,5 +1,7 @@
 **/target
 **/node_modules
+frontend/build
+frontend/.svelte-kit
 .env
 .git
 .context

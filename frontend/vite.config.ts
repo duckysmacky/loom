@@ -12,8 +12,9 @@ export default defineConfig({
 					filename.split(/[/\\]/).includes('node_modules') ? undefined : true
 			},
 
-			// Plain static SPA served by the Axum backend - every unknown path
-			// falls back to index.html and client-side routing takes over.
+			// Plain static SPA served by its own nginx container - every
+			// unknown path falls back to index.html and client-side routing
+			// takes over.
 			adapter: adapter({ fallback: 'index.html' })
 		})
 	],

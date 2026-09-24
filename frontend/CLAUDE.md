@@ -1,9 +1,9 @@
 # CLAUDE.md - frontend
 
-SvelteKit + TypeScript, built with `adapter-static` and served by the
-Axum backend as static files - not deployed as its own server. See the
-root `CLAUDE.md` for commit conventions and `docs/PROJECT_OVERVIEW.md`
-for the domain model.
+SvelteKit + TypeScript, built with `adapter-static` and served as static
+files by its own nginx container (`frontend/Dockerfile`) - not by the
+Axum backend. See the root `CLAUDE.md` for commit conventions and
+`docs/PROJECT_OVERVIEW.md` for the domain model.
 
 ## Types
 

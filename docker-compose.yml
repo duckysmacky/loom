@@ -1,17 +1,21 @@
 services:
-  app:
-    build: .
+  backend:
+    build: ./backend
     env_file: .env
     ports:
-      # Bound to loopback: nginx (already on the host, per
-      # docs/PROJECT_OVERVIEW.md) is the trusted party the rate limiter's
-      # SmartIpKeyExtractor reads X-Forwarded-For/X-Real-IP from - nothing
-      # else should be able to reach this port directly and spoof them.
-      - "127.0.0.1:${APP_PORT:-8080}:8080"
+      - "127.0.0.1:${BACKEND_PORT:-8080}:8080"
     restart: unless-stopped
 
-  postgres:
-    image: postgres:18-alpine
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT:-8081}:80"
+    restart: unless-stopped
+
+  database:
+    image: postgres:18
     environment:
       POSTGRES_USER: ${DB_USER}
       POSTGRES_PASSWORD: ${DB_PASSWORD}
