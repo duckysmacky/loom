@@ -46,7 +46,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	class:selected
 	style:border-top-color={TIER_COLOR[node.focus]}
 >
-	<div class="head">
+	<div class="head path-head" title="Open path">
 		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
 		<Badge status={node.status} blocked={node.blocked} />
 		<span class="title">{node.title}</span>
@@ -79,6 +79,12 @@ move with it. The fill is translucent so nested paths read as depth. -->
 		align-items: center;
 		gap: 8px;
 		padding: 10px 12px;
+		cursor: pointer;
+	}
+
+	.head:hover .title {
+		text-decoration: underline;
+		text-underline-offset: 3px;
 	}
 
 	.head :global(.badge) {

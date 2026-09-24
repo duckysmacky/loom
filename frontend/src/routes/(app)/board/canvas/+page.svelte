@@ -256,7 +256,12 @@
 		maxZoom={2}
 		deleteKey={['Delete', 'Backspace']}
 		proOptions={{ hideAttribution: true }}
-		onnodeclick={({ node }) => openNode(node.id)}
+		onnodeclick={({ node, event }) => {
+			// A path box opens only from its header; clicking the body just
+			// selects it (for resizing) without popping the detail view.
+			const onHeader = (event.target as Element | null)?.closest('.path-head');
+			if (node.type !== 'loomPath' || onHeader) openNode(node.id);
+		}}
 		onnodedragstop={settleDrag}
 		onbeforeconnect={(connection) => {
 			pendingConnection = connection;
