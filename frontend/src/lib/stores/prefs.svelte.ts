@@ -1,3 +1,4 @@
+import type { Grouping } from '$lib/graph/grouping';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeKind } from '$lib/types/NodeKind';
 
@@ -12,6 +13,7 @@ export type Prefs = {
 	captureKind: NodeKind;
 	captureFocus: NodeFocus;
 	pokeFromCards: boolean;
+	organizedGrouping: Grouping;
 };
 
 export const PREFS_STORAGE_KEY = 'loom.prefs';
@@ -22,7 +24,8 @@ const DEFAULTS: Prefs = {
 	defaultBoardView: 'organized',
 	captureKind: 'idea',
 	captureFocus: 'secondary',
-	pokeFromCards: true
+	pokeFromCards: true,
+	organizedGrouping: 'focus'
 };
 
 function loadPrefs(): Prefs {

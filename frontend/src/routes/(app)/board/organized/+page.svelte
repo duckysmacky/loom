@@ -1,11 +1,13 @@
 <script lang="ts">
 	import { flip } from 'svelte/animate';
 	import NodeCard from '$lib/components/NodeCard.svelte';
-	import { TIER_COLOR } from '$lib/graph/display';
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	import { groupNodes } from '$lib/graph/grouping';
 	import { dependencyOrder } from '$lib/graph/order';
 	import { matchesOrContainsMatch, parentPathOf } from '$lib/graph/paths';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import type { NodeStatus } from '$lib/types/NodeStatus';
 	import PathBox from './PathBox.svelte';
@@ -26,19 +28,31 @@
 	const childrenOf = (pathId: string) =>
 		ordered.filter((node) => parentOf.get(node.id) === pathId && isShown(node));
 
-	// Nodes inside a path render only inside its box; paths sit among the
-	// other cards of their tier.
+	// Nodes inside a path render only inside its box; top-level nodes (paths
+	// included) are grouped into sections by the chosen attribute.
 	const topLevel = $derived(ordered.filter((node) => !parentOf.has(node.id) && isShown(node)));
-	const tier = (focus: NodeResponse['focus']) => topLevel.filter((node) => node.focus === focus);
-
-	const sections = $derived([
-		{ id: 'primary', title: 'Primary', bar: TIER_COLOR.primary, nodes: tier('primary') },
-		{ id: 'secondary', title: 'Secondary', bar: TIER_COLOR.secondary, nodes: tier('secondary') },
-		{ id: 'background', title: 'Background', bar: TIER_COLOR.background, nodes: tier('background') }
-	]);
+	const sections = $derived(groupNodes(topLevel, prefs.organizedGrouping, graph.topics));
 </script>
 
 <div class="page">
+	<div class="group-by">
+		<span class="label">Group by</span>
+		<SegmentedControl
+			label="Group by"
+			value={prefs.organizedGrouping}
+			onchange={(grouping) => {
+				prefs.organizedGrouping = grouping;
+				savePrefs();
+			}}
+			options={[
+				{ value: 'focus', label: 'Focus' },
+				{ value: 'kind', label: 'Kind' },
+				{ value: 'status', label: 'Status' },
+				{ value: 'tag', label: 'Tag' }
+			]}
+		/>
+	</div>
+
 	{#if !graph.loaded}
 		<p class="muted">Loading…</p>
 	{:else if !topLevel.length}
@@ -92,6 +106,13 @@
 
 	h2 {
 		margin: 0;
+	}
+
+	.group-by {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+		margin-bottom: -8px;
 	}
 
 	/* Cards and path boxes flow side by side; a path box is as wide as its
