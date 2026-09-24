@@ -5,7 +5,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { accentColor, isBacklog, notesExcerpt, shortDate } from '$lib/graph/display';
+	import { KIND_GLYPH, accentColor, isBacklog, notesExcerpt, shortDate } from '$lib/graph/display';
 	import { openNode, withParam } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -197,6 +197,7 @@
 							</button>
 							<div class="sub">
 								<span class="kind">
+									{KIND_GLYPH[node.kind]}
 									{node.kind}{node.status === node.kind ? '' : ` · ${node.status}`}
 								</span>
 								{notesExcerpt(node.notes)}

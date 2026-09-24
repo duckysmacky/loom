@@ -45,24 +45,44 @@ export function isBacklog(node: NodeResponse): boolean {
 	return node.status === 'idea';
 }
 
-export type BorderStyle = { line: 'solid' | 'dashed' | 'dotted'; tone: 'frame' | 'warn' | 'ok' };
+export type BorderStyle = {
+	line: 'solid' | 'dashed' | 'dotted';
+	tone: 'frame' | 'warn' | 'ok' | 'muted' | 'faded';
+};
 
 /**
- * Card border language. Line: dotted for ideas (kind), dashed for anything
- * not being worked on yet (queued/paused/idea status), solid otherwise.
- * Tone: warn while blocked, green once done, the plain frame otherwise.
+ * Card border language. The line says what a node is (solid project/study,
+ * dashed idea/path); only "paused" overrides it, with a dotted line. The
+ * colour says how it's doing: warn while blocked, green once done, faded
+ * while hidden (backlog/archived), muted grey while queued.
  */
 export function borderStyle(node: NodeResponse): BorderStyle {
 	const line =
-		node.kind === 'idea'
+		node.status === 'paused'
 			? 'dotted'
-			: node.status === 'queued' || node.status === 'paused' || node.status === 'idea'
+			: node.kind === 'idea' || node.kind === 'path'
 				? 'dashed'
 				: 'solid';
 	const tone =
-		node.blocked && node.status !== 'done' ? 'warn' : node.status === 'done' ? 'ok' : 'frame';
+		node.blocked && node.status !== 'done'
+			? 'warn'
+			: node.status === 'done'
+				? 'ok'
+				: node.status === 'archived' || node.status === 'idea'
+					? 'faded'
+					: node.status === 'queued'
+						? 'muted'
+						: 'frame';
 	return { line, tone };
 }
+
+/** Typographic kind marks (the design system uses glyphs, never icons). */
+export const KIND_GLYPH: Record<NodeResponse['kind'], string> = {
+	project: '■',
+	study: '◆',
+	idea: '○',
+	path: '▭'
+};
 
 export type Requirement = { node: NodeResponse; met: boolean };
 

@@ -3,7 +3,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { TIER_COLOR } from '$lib/graph/display';
+	import { KIND_GLYPH, TIER_COLOR, borderStyle } from '$lib/graph/display';
 	import { openNode } from '$lib/navigation';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import PathBox from './PathBox.svelte';
@@ -19,13 +19,17 @@
 
 	const inside = $derived(childrenOf(path.id));
 	const progress = $derived(path.container_progress);
+	const border = $derived(borderStyle(path));
 </script>
 
 <!-- A path is a box its nodes sit inside; sub-paths nest as boxes within it.
 The translucent fill stacks, so deeper nesting reads darker. -->
-<section class="path-box" style:border-top-color={TIER_COLOR[path.focus]}>
+<section
+	class="path-box line-{border.line} tone-{border.tone}"
+	style:border-top-color={TIER_COLOR[path.focus]}
+>
 	<button type="button" class="head" onclick={() => openNode(path.id)}>
-		<span class="kind">path</span>
+		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
 		<Badge status={path.status} blocked={path.blocked} />
 		<span class="title">{path.title}</span>
 		{#if progress}
@@ -118,5 +122,36 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		border: var(--border-width-hair) dashed var(--node-path);
 		font: 500 12.5px/1.4 var(--font-display);
 		color: var(--ink-2);
+	}
+
+	/* Same border language as cards: dotted when paused, status colours. */
+	.path-box.line-dotted {
+		border-style: dotted;
+		border-top-style: solid;
+	}
+
+	.path-box.tone-warn {
+		border-color: var(--warn);
+	}
+
+	.path-box.tone-ok {
+		border-color: var(--ok);
+	}
+
+	.path-box.tone-muted {
+		border-color: var(--ink-2);
+	}
+
+	.path-box.tone-faded {
+		border-color: var(--line);
+		opacity: 0.7;
+	}
+
+	.glyph {
+		font-size: 13px;
+	}
+
+	.kind {
+		white-space: nowrap;
 	}
 </style>

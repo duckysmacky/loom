@@ -22,18 +22,22 @@ describe('display helpers', () => {
 		expect(isBacklog(makeNode({ kind: 'idea', status: 'queued' }))).toBe(false);
 	});
 
-	it('picks the border line from kind and status', () => {
-		expect(borderStyle(makeNode({ kind: 'idea', status: 'queued' })).line).toBe('dotted');
-		expect(borderStyle(makeNode({ status: 'queued' })).line).toBe('dashed');
-		expect(borderStyle(makeNode({ status: 'paused' })).line).toBe('dashed');
-		expect(borderStyle(makeNode({ status: 'active' })).line).toBe('solid');
+	it('picks the border line from the kind, with paused as the one override', () => {
+		expect(borderStyle(makeNode({ kind: 'project', status: 'queued' })).line).toBe('solid');
+		expect(borderStyle(makeNode({ kind: 'study' })).line).toBe('solid');
+		expect(borderStyle(makeNode({ kind: 'idea', status: 'queued' })).line).toBe('dashed');
+		expect(borderStyle(makeNode({ kind: 'path' })).line).toBe('dashed');
+		expect(borderStyle(makeNode({ kind: 'idea', status: 'paused' })).line).toBe('dotted');
 	});
 
-	it('tones the border warn while blocked and green once done', () => {
+	it('colours the border by status', () => {
 		expect(borderStyle(makeNode({ blocked: true })).tone).toBe('warn');
 		expect(borderStyle(makeNode({ status: 'done', blocked: true })).tone).toBe('ok');
-		expect(borderStyle(makeNode({ status: 'done' })).tone).toBe('ok');
-		expect(borderStyle(makeNode()).tone).toBe('frame');
+		expect(borderStyle(makeNode({ status: 'archived' })).tone).toBe('faded');
+		expect(borderStyle(makeNode({ status: 'idea' })).tone).toBe('faded');
+		expect(borderStyle(makeNode({ status: 'queued' })).tone).toBe('muted');
+		expect(borderStyle(makeNode({ status: 'paused' })).tone).toBe('frame');
+		expect(borderStyle(makeNode({ status: 'active' })).tone).toBe('frame');
 	});
 
 	it('uses the node color, falling back to the kind default', () => {

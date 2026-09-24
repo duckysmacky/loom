@@ -5,6 +5,7 @@
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
 		accentColor,
+		KIND_GLYPH,
 		borderStyle,
 		incrementedProgress,
 		notesExcerpt,
@@ -66,8 +67,8 @@
 	}
 </script>
 
-<!-- NodeCard: 2px border, squared, no shadow. The border carries state - see
-borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
+<!-- NodeCard: 2px border, squared, no shadow. The border carries meaning - see
+borderStyle(): line = kind (dotted when paused), colour = status. -->
 <div
 	class="card line-{border.line} tone-{border.tone}"
 	class:feature
@@ -82,7 +83,9 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 	}}
 >
 	<div class="head">
-		<span class="accent" style:background={accentColor(node)}></span>
+		<!-- The kind glyph doubles as the accent swatch. -->
+		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
+		>
 		<span class="kind">{kind}</span>
 		<Badge status={node.status} blocked={node.blocked} />
 		{#if feature}
@@ -174,6 +177,15 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 		border-color: var(--ok);
 	}
 
+	.card.tone-muted {
+		border-color: var(--ink-2);
+	}
+
+	.card.tone-faded {
+		border-color: var(--line);
+		opacity: 0.7;
+	}
+
 	.feature {
 		padding: 16px 17px;
 	}
@@ -186,9 +198,9 @@ borderStyle(): dotted idea, dashed not-started, warn blocked, green done. -->
 	}
 
 	.accent {
-		width: 9px;
-		height: 9px;
 		flex: none;
+		font-size: 13px;
+		line-height: 1;
 	}
 
 	.kind {

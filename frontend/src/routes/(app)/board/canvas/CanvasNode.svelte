@@ -5,6 +5,7 @@
 	import {
 		TIER_COLOR,
 		accentColor,
+		KIND_GLYPH,
 		borderStyle,
 		progressPair,
 		progressText
@@ -31,7 +32,9 @@
 	style:border-top-color={TIER_COLOR[node.focus]}
 >
 	<div class="head">
-		<span class="accent" style:background={accentColor(node)}></span>
+		<!-- The kind glyph doubles as the accent swatch. -->
+		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
+		>
 		<span class="kind">{kind}</span>
 		<Badge status={node.status} blocked={node.blocked} />
 	</div>
@@ -85,6 +88,15 @@
 		border-color: var(--ok);
 	}
 
+	.tone-muted {
+		border-color: var(--ink-2);
+	}
+
+	.tone-faded {
+		border-color: var(--line);
+		opacity: 0.7;
+	}
+
 	.selected {
 		outline: 2px solid var(--accent);
 		outline-offset: 2px;
@@ -107,9 +119,9 @@
 	}
 
 	.accent {
-		width: 8px;
-		height: 8px;
 		flex: none;
+		font-size: 12px;
+		line-height: 1;
 	}
 
 	.kind {

@@ -2,7 +2,7 @@
 	import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { TIER_COLOR, progressText } from '$lib/graph/display';
+	import { KIND_GLYPH, TIER_COLOR, borderStyle, progressText } from '$lib/graph/display';
 	import { PATH_MIN_HEIGHT, PATH_MIN_WIDTH } from '$lib/graph/layout';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
@@ -11,6 +11,7 @@
 	let { data, selected }: NodeProps<LoomFlowNode> = $props();
 
 	const node = $derived(data.node);
+	const border = $derived(borderStyle(node));
 
 	// Saving the size pins the box; position too, since dragging a top or
 	// left handle moves the box's origin.
@@ -40,13 +41,13 @@ move with it. The fill is translucent so nested paths read as depth. -->
 />
 <Handle type="target" position={Position.Left} />
 <div
-	class="path-box"
+	class="path-box line-{border.line} tone-{border.tone}"
 	class:dimmed={data.dimmed}
 	class:selected
 	style:border-top-color={TIER_COLOR[node.focus]}
 >
 	<div class="head">
-		<span class="kind">path</span>
+		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
 		<Badge status={node.status} blocked={node.blocked} />
 		<span class="title">{node.title}</span>
 		{#if progressText(node)}<span class="count">{progressText(node)}</span>{/if}
@@ -103,6 +104,37 @@ move with it. The fill is translucent so nested paths read as depth. -->
 		margin-left: auto;
 		font: 600 11px/1 var(--font-mono);
 		color: var(--ink-2);
+		white-space: nowrap;
+	}
+
+	/* Same border language as cards: dotted when paused, status colours. */
+	.path-box.line-dotted {
+		border-style: dotted;
+		border-top-style: solid;
+	}
+
+	.path-box.tone-warn {
+		border-color: var(--warn);
+	}
+
+	.path-box.tone-ok {
+		border-color: var(--ok);
+	}
+
+	.path-box.tone-muted {
+		border-color: var(--ink-2);
+	}
+
+	.path-box.tone-faded {
+		border-color: var(--line);
+		opacity: 0.7;
+	}
+
+	.glyph {
+		font-size: 13px;
+	}
+
+	.kind {
 		white-space: nowrap;
 	}
 </style>
