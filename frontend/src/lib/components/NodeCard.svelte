@@ -140,8 +140,9 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 		display: flex;
 		flex-direction: column;
 		min-width: 0;
-		/* Fills its grid cell, so cards in a row line up. */
+		/* Fills its slot, so cards line up; long content is clamped. */
 		height: 100%;
+		overflow: hidden;
 		transition:
 			transform var(--fast) var(--ease),
 			border-color var(--fast) var(--ease);

@@ -26,18 +26,16 @@
 	const childrenOf = (pathId: string) =>
 		ordered.filter((node) => parentOf.get(node.id) === pathId && isShown(node));
 
-	// Nodes inside a path render only inside its box; top-level paths get
-	// their own section.
+	// Nodes inside a path render only inside its box; paths sit among the
+	// other cards of their tier.
 	const topLevel = $derived(ordered.filter((node) => !parentOf.has(node.id) && isShown(node)));
-	const tier = (focus: NodeResponse['focus']) =>
-		topLevel.filter((node) => node.kind !== 'path' && node.focus === focus);
+	const tier = (focus: NodeResponse['focus']) => topLevel.filter((node) => node.focus === focus);
 
 	const sections = $derived([
 		{ id: 'primary', title: 'Primary', bar: TIER_COLOR.primary, nodes: tier('primary') },
 		{ id: 'secondary', title: 'Secondary', bar: TIER_COLOR.secondary, nodes: tier('secondary') },
 		{ id: 'background', title: 'Background', bar: TIER_COLOR.background, nodes: tier('background') }
 	]);
-	const paths = $derived(topLevel.filter((node) => node.kind === 'path'));
 </script>
 
 <div class="page">
@@ -62,33 +60,30 @@
 						{section.nodes.length === 1 ? 'node' : 'nodes'}
 					</span>
 				</div>
-				<div class="grid">
+				<div class="row">
 					{#each section.nodes as node (node.id)}
-						<div class="cell" animate:flip={{ duration: 200 }}><NodeCard {node} /></div>
+						<div
+							class={node.kind === 'path' ? 'path-slot' : 'card-slot'}
+							animate:flip={{ duration: 200 }}
+						>
+							{#if node.kind === 'path'}
+								<PathBox path={node} {childrenOf} />
+							{:else}
+								<NodeCard {node} />
+							{/if}
+						</div>
 					{/each}
 				</div>
 			</section>
 		{/if}
 	{/each}
-
-	{#if paths.length}
-		<section aria-labelledby="tier-paths">
-			<div class="section-head">
-				<span class="bar" style:background="var(--node-path)"></span>
-				<h2 class="title" id="tier-paths">Paths</h2>
-				<span class="meta">{paths.length} {paths.length === 1 ? 'path' : 'paths'}</span>
-			</div>
-			<div class="paths">
-				{#each paths as path (path.id)}
-					<div animate:flip={{ duration: 200 }}><PathBox {path} {childrenOf} /></div>
-				{/each}
-			</div>
-		</section>
-	{/if}
 </div>
 
 <style>
 	.page {
+		/* One card footprint for the whole view, path contents included. */
+		--card-w: 260px;
+		--card-h: 212px;
 		padding: var(--page-pad);
 		display: flex;
 		flex-direction: column;
@@ -99,14 +94,14 @@
 		margin: 0;
 	}
 
-	.grid {
+	/* Cards and path boxes flow side by side; a path box is as wide as its
+	   contents, so rows mix fixed-size cards and content-sized boxes. */
+	.row {
 		margin-top: 12px;
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-		/* Every card in a section gets the same width and height. */
-		grid-auto-rows: 1fr;
+		display: flex;
+		flex-wrap: wrap;
 		gap: 12px;
-		align-items: stretch;
+		align-items: flex-start;
 	}
 
 	.empty {
@@ -117,15 +112,12 @@
 		color: var(--ink-2);
 	}
 
-	.cell {
-		display: flex;
-		flex-direction: column;
+	.card-slot {
+		width: var(--card-w);
+		height: var(--card-h);
 	}
 
-	.paths {
-		margin-top: 12px;
-		display: flex;
-		flex-direction: column;
-		gap: 16px;
+	.path-slot {
+		max-width: 100%;
 	}
 </style>

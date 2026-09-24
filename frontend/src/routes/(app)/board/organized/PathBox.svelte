@@ -43,7 +43,10 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 	{#if inside.length}
 		<div class="inside">
 			{#each inside as node (node.id)}
-				<div class="slot" class:nested={node.kind === 'path'} animate:flip={{ duration: 200 }}>
+				<div
+					class={node.kind === 'path' ? 'path-slot' : 'card-slot'}
+					animate:flip={{ duration: 200 }}
+				>
 					{#if node.kind === 'path'}
 						<PathBox path={node} {childrenOf} />
 					{:else}
@@ -54,13 +57,17 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		</div>
 	{:else}
 		<p class="empty">
-			Empty path. Add nodes from the node's detail view, or drag them into this box on the canvas.
+			Empty path. Add nodes from its detail view, or drag them into this box on the canvas.
 		</p>
 	{/if}
 </section>
 
 <style>
+	/* Only as wide as its contents (cards wrap once it reaches the page edge). */
 	.path-box {
+		width: fit-content;
+		max-width: 100%;
+		min-width: var(--card-w);
 		background: var(--path-fill);
 		border: var(--border-width) dashed var(--node-path);
 		border-top: 5px solid;
@@ -72,6 +79,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		align-items: center;
 		gap: 10px;
 		width: 100%;
+		min-width: 0;
 		padding: 12px 0;
 		border: none;
 		background: none;
@@ -92,6 +100,9 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 
 	.title {
 		font: 700 17px/1.2 var(--font-display);
+		white-space: nowrap;
+		overflow: hidden;
+		text-overflow: ellipsis;
 	}
 
 	.progress {
@@ -99,25 +110,33 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		display: flex;
 		align-items: center;
 		gap: 10px;
-		width: min(260px, 40%);
+		flex: 0 1 180px;
+		min-width: 110px;
 		font: 600 11.5px/1 var(--font-mono);
 		color: var(--ink-2);
 		white-space: nowrap;
 	}
 
 	.inside {
-		display: grid;
-		grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+		display: flex;
+		flex-wrap: wrap;
 		gap: 12px;
-		align-items: stretch;
+		align-items: flex-start;
 	}
 
-	.nested {
-		grid-column: 1 / -1;
+	/* Fixed card footprint shared with the Organized page (--card-w/--card-h). */
+	.card-slot {
+		width: var(--card-w);
+		height: var(--card-h);
+	}
+
+	.path-slot {
+		max-width: 100%;
 	}
 
 	.empty {
 		margin: 0;
+		width: var(--card-w);
 		padding: 14px;
 		border: var(--border-width-hair) dashed var(--node-path);
 		font: 500 12.5px/1.4 var(--font-display);
