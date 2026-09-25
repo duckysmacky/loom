@@ -12,6 +12,8 @@ pub struct Config {
     pub bind_addr: String,
     pub jwt_secret: String,
     pub allow_signup: bool,
+    /// `Some(PUBLIC_URL)` when `MCP_ENABLED=true`, `None` otherwise.
+    pub mcp_public_url: Option<String>,
 }
 
 impl Config {
@@ -31,8 +33,32 @@ impl Config {
             allow_signup: env::var("ALLOW_SIGNUP")
                 .map(|v| v != "false")
                 .unwrap_or(true),
+            mcp_public_url: require_mcp_public_url()?,
         })
     }
+}
+
+/// The MCP server is opt-in. When on, it needs the public origin it's
+/// served from: it's the OAuth issuer, the canonical resource URI agents
+/// get tokens for, and the only Host the MCP transport accepts.
+fn require_mcp_public_url() -> Result<Option<String>> {
+    if env::var("MCP_ENABLED").map(|v| v != "true").unwrap_or(true) {
+        return Ok(None);
+    }
+    let url = require_env("PUBLIC_URL").context("PUBLIC_URL is required when MCP_ENABLED=true")?;
+    validate_public_url(&url)?;
+    Ok(Some(url.trim_end_matches('/').to_string()))
+}
+
+fn validate_public_url(url: &str) -> Result<()> {
+    let rest = url
+        .strip_prefix("https://")
+        .or_else(|| url.strip_prefix("http://"))
+        .context("PUBLIC_URL must start with https:// (or http:// for local testing)")?;
+    if rest.trim_end_matches('/').contains('/') {
+        anyhow::bail!("PUBLIC_URL must be an origin with no path, e.g. https://loom.example.com");
+    }
+    Ok(())
 }
 
 /// HS256 signing strength is bounded by key length - a short secret (e.g.
@@ -68,6 +94,15 @@ mod tests {
     #[test]
     fn rejects_short_jwt_secret() {
         assert!(validate_jwt_secret("too-short").is_err());
+    }
+
+    #[test]
+    fn public_url_must_be_a_bare_origin() {
+        assert!(validate_public_url("https://loom.example.com").is_ok());
+        assert!(validate_public_url("https://loom.example.com/").is_ok());
+        assert!(validate_public_url("http://localhost:8081").is_ok());
+        assert!(validate_public_url("loom.example.com").is_err());
+        assert!(validate_public_url("https://example.com/loom").is_err());
     }
 
     #[test]

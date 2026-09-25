@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE mcp_tokens SET last_used_at = now()\n        WHERE token_hash = $1\n          AND kind IN ('personal', 'access')\n          AND (expires_at IS NULL OR expires_at > now())\n        RETURNING user_id\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "mcp_tokens",
+            "name": "user_id"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text"
+      ]
+    },
+    "nullable": [
+      false
+    ]
+  },
+  "hash": "1ea68877990f6601a94b4ad9486394e28c977826db7904781d0f94f2711249eb"
+}

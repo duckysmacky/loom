@@ -3,6 +3,7 @@ pub mod board;
 pub mod checklist;
 pub mod dashboard;
 pub mod edges;
+pub mod mcp_tokens;
 pub mod node_topics;
 pub mod nodes;
 pub mod pokes;

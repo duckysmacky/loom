@@ -28,7 +28,11 @@ async fn main() -> Result<()> {
         .await
         .context("failed to run database migrations")?;
 
-    let state = AppState::with_signup_policy(pool, &config.jwt_secret, config.allow_signup);
+    let mut state = AppState::with_signup_policy(pool, &config.jwt_secret, config.allow_signup);
+    if let Some(public_url) = &config.mcp_public_url {
+        tracing::info!("MCP server enabled at {public_url}/mcp");
+        state = state.with_mcp(public_url);
+    }
     let app = app::build_router(state);
 
     let listener = tokio::net::TcpListener::bind(&config.bind_addr)

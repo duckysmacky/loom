@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "DELETE FROM mcp_tokens WHERE id = $1 AND user_id = $2 AND kind = 'personal'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "7ae2d18fd2d307e55577a6d5ec318304042af6552a5a9594a1c33b458aebf0ea"
+}

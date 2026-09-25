@@ -127,6 +127,14 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/{id}", delete(handlers::edges::delete));
 
+    let mcp_routes = Router::new()
+        .route("/info", get(handlers::mcp_tokens::info))
+        .route(
+            "/tokens",
+            get(handlers::mcp_tokens::list).post(handlers::mcp_tokens::create),
+        )
+        .route("/tokens/{id}", delete(handlers::mcp_tokens::delete));
+
     Router::new()
         .nest(
             "/api",
@@ -140,7 +148,8 @@ pub fn build_router(state: AppState) -> Router {
                 .nest("/topics", topic_routes)
                 .nest("/edges", edge_routes)
                 .nest("/checklist", checklist_routes)
-                .nest("/periods", period_routes),
+                .nest("/periods", period_routes)
+                .nest("/mcp", mcp_routes),
         )
         .with_state(state)
         .layer(TraceLayer::new_for_http())

@@ -4,6 +4,7 @@ pub mod board;
 pub mod checklist;
 pub mod dashboard;
 pub mod edge;
+pub mod mcp_token;
 pub mod node;
 pub mod poke;
 pub mod topic;
