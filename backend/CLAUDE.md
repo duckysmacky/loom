@@ -14,6 +14,16 @@ the repository layer is the only place that touches `sqlx` directly.
 - `sqlx` with compile-time-checked queries (`query!`/`query_as!`). Check
   the `.sqlx` query cache into the repo so CI doesn't need a live
   database to build.
+- After adding or changing any `query!`/`query_as!` call - including in
+  `tests/*.rs`, not just `src/` - run
+  `cargo sqlx prepare -- --tests` (with `DATABASE_URL` set to a live
+  Postgres) and commit the updated `.sqlx/` files. Plain
+  `cargo sqlx prepare` (no `-- --tests`) only scans lib/bin targets and
+  will silently *delete* cache entries that test files still need, since
+  it treats them as stale - CI then fails offline with "no cached data
+  for this query" on the very next PR that touches `tests/`, even one
+  that changes nothing else. `cargo sqlx prepare --check -- --tests`
+  verifies the cache is complete without regenerating it.
 - Migrations live in `migrations/`, run automatically on boot via
   `sqlx::migrate!`.
 - `blocked` status and `part_of` container progress are computed in
