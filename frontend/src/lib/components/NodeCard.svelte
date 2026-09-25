@@ -12,7 +12,8 @@
 		progressPair,
 		progressText,
 		relativeDays,
-		requirementsOf
+		requirementsOf,
+		tierBorderWidth
 	} from '$lib/graph/display';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { prefs } from '$lib/stores/prefs.svelte';
@@ -72,6 +73,7 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 <div
 	class="card line-{border.line} tone-{border.tone}"
 	class:feature
+	style:border-width={tierBorderWidth(node.focus)}
 	role="button"
 	tabindex="0"
 	onclick={() => openNode(node.id)}

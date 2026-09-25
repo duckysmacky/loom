@@ -8,7 +8,8 @@
 		KIND_GLYPH,
 		borderStyle,
 		progressPair,
-		progressText
+		progressText,
+		tierBorderWidth
 	} from '$lib/graph/display';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -30,6 +31,9 @@
 	class:selected
 	style:width="{CANVAS_NODE_WIDTH}px"
 	style:border-top-color={TIER_COLOR[node.focus]}
+	style:border-left-width={tierBorderWidth(node.focus)}
+	style:border-right-width={tierBorderWidth(node.focus)}
+	style:border-bottom-width={tierBorderWidth(node.focus)}
 >
 	<div class="head">
 		<!-- The kind glyph doubles as the accent swatch. -->

@@ -3,7 +3,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { KIND_GLYPH, TIER_COLOR, borderStyle } from '$lib/graph/display';
+	import { KIND_GLYPH, TIER_COLOR, borderStyle, tierBorderWidth } from '$lib/graph/display';
 	import { openNode } from '$lib/navigation';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import {
@@ -39,6 +39,9 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 	class="path-box line-{border.line} tone-{border.tone}"
 	class:drop-target={dragState.draggedId && dragState.draggedId !== path.id}
 	style:border-top-color={TIER_COLOR[path.focus]}
+	style:border-left-width={tierBorderWidth(path.focus)}
+	style:border-right-width={tierBorderWidth(path.focus)}
+	style:border-bottom-width={tierBorderWidth(path.focus)}
 	ondragover={(event) => dragState.draggedId && event.preventDefault()}
 	ondrop={(event) => {
 		event.preventDefault();

@@ -77,6 +77,19 @@ export function borderStyle(node: NodeResponse): BorderStyle {
 	return { line, tone };
 }
 
+/**
+ * Border thickness by focus tier - width only, never color (that stays
+ * `borderStyle`'s kind/status-driven `tone`), so tier reads as an
+ * at-a-glance weight difference without competing with the status color.
+ */
+export function tierBorderWidth(focus: NodeResponse['focus']): string {
+	return {
+		primary: '3px',
+		secondary: 'var(--border-width)',
+		background: 'var(--border-width-hair)'
+	}[focus];
+}
+
 /** Typographic kind marks (the design system uses glyphs, never icons). */
 export const KIND_GLYPH: Record<NodeResponse['kind'], string> = {
 	project: '■',
