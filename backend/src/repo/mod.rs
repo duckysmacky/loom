@@ -1,3 +1,4 @@
+pub mod active_periods;
 pub mod board;
 pub mod checklist;
 pub mod dashboard;

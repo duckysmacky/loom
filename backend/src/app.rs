@@ -92,11 +92,20 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/{id}/checklist",
             get(handlers::checklist::list).post(handlers::checklist::create),
+        )
+        .route(
+            "/{id}/periods",
+            get(handlers::active_periods::list).post(handlers::active_periods::create),
         );
 
     let checklist_routes = Router::new().route(
         "/{id}",
         patch(handlers::checklist::update).delete(handlers::checklist::delete),
+    );
+
+    let period_routes = Router::new().route(
+        "/{id}",
+        patch(handlers::active_periods::update).delete(handlers::active_periods::delete),
     );
 
     let topic_routes = Router::new()
@@ -124,12 +133,14 @@ pub fn build_router(state: AppState) -> Router {
             Router::new()
                 .route("/health", get(health))
                 .route("/board/canvas", get(handlers::board::canvas))
+                .route("/board/timeline", get(handlers::board::timeline))
                 .route("/dashboard", get(handlers::dashboard::get))
                 .nest("/auth", auth_routes)
                 .nest("/nodes", node_routes)
                 .nest("/topics", topic_routes)
                 .nest("/edges", edge_routes)
-                .nest("/checklist", checklist_routes),
+                .nest("/checklist", checklist_routes)
+                .nest("/periods", period_routes),
         )
         .with_state(state)
         .layer(TraceLayer::new_for_http())

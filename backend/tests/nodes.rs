@@ -1086,3 +1086,172 @@ async fn kind_change_clears_data_the_new_kind_cannot_have(pool: PgPool) {
     assert_eq!(status, StatusCode::BAD_REQUEST);
     assert_eq!(body["error"], "only projects have a checklist");
 }
+
+async fn patch_status(
+    app: &axum::Router,
+    token: &str,
+    node_id: &str,
+    status: &str,
+    track: bool,
+) -> Value {
+    let (_, body) = send(
+        app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"status": status, "track_active_periods": track}),
+            Some(token),
+        ),
+    )
+    .await;
+    body
+}
+
+async fn list_periods(app: &axum::Router, token: &str, node_id: &str) -> Vec<Value> {
+    let (_, body) = send(
+        app,
+        req(
+            "GET",
+            &format!("/api/nodes/{node_id}/periods"),
+            Value::Null,
+            Some(token),
+        ),
+    )
+    .await;
+    body.as_array().unwrap().clone()
+}
+
+#[sqlx::test]
+async fn continuous_active_to_done_creates_zero_periods(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "continuous@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    patch_status(&app, &token, node_id, "active", true).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+
+    let done = patch_status(&app, &token, node_id, "done", true).await;
+    assert!(!done["completed_at"].is_null());
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+}
+
+#[sqlx::test]
+async fn pause_then_reactivate_materializes_then_opens_new_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pausecycle@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    let active = patch_status(&app, &token, node_id, "active", true).await;
+    let started_at = active["started_at"].clone();
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+
+    // First pause: no periods existed yet, so period #1 is materialized
+    // from the node's own started_at.
+    patch_status(&app, &token, node_id, "paused", true).await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert_eq!(periods[0]["started_at"], started_at);
+    assert!(!periods[0]["ended_at"].is_null());
+
+    // Reactivating opens a second, open-ended period.
+    patch_status(&app, &token, node_id, "active", true).await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    let open_count = periods.iter().filter(|p| p["ended_at"].is_null()).count();
+    assert_eq!(open_count, 1);
+
+    // Pausing again closes #2; no #3 is created.
+    patch_status(&app, &token, node_id, "paused", true).await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    assert!(periods.iter().all(|p| !p["ended_at"].is_null()));
+}
+
+#[sqlx::test]
+async fn archived_from_active_closes_period_but_leaves_completed_at_null(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "archivecycle@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    patch_status(&app, &token, node_id, "active", true).await;
+    let archived = patch_status(&app, &token, node_id, "archived", true).await;
+
+    assert_eq!(archived["completed_at"], Value::Null);
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert!(!periods[0]["ended_at"].is_null());
+}
+
+#[sqlx::test]
+async fn queued_and_idea_transitions_never_touch_periods(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "neutraltransitions@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    patch_status(&app, &token, node_id, "active", true).await;
+    // active -> queued isn't a recognized closing transition.
+    patch_status(&app, &token, node_id, "queued", true).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+
+    // queued -> archived: old status isn't active, so nothing closes.
+    patch_status(&app, &token, node_id, "archived", true).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+}
+
+#[sqlx::test]
+async fn track_active_periods_false_is_fully_inert(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "inertsetting@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    patch_status(&app, &token, node_id, "active", false).await;
+    patch_status(&app, &token, node_id, "paused", false).await;
+    patch_status(&app, &token, node_id, "active", false).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+}
+
+#[sqlx::test]
+async fn first_activation_never_opens_a_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "firstactivation@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    patch_status(&app, &token, node_id, "active", true).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+}
+
+#[sqlx::test]
+async fn reactivating_a_single_run_done_node_migrates_first_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "reactivatedone@example.com").await;
+    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
+    let node_id = node["id"].as_str().unwrap();
+
+    let active = patch_status(&app, &token, node_id, "active", true).await;
+    let started_at = active["started_at"].clone();
+    let done = patch_status(&app, &token, node_id, "done", true).await;
+    let completed_at = done["completed_at"].clone();
+    assert!(!completed_at.is_null());
+    // Finished in one continuous run: still zero periods.
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+
+    // Reactivating migrates the started_at/completed_at span into period #1
+    // and opens a fresh, open-ended period #2.
+    let reactivated = patch_status(&app, &token, node_id, "active", true).await;
+    assert_eq!(reactivated["completed_at"], Value::Null); // existing behavior, unchanged
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    let migrated = periods
+        .iter()
+        .find(|p| p["started_at"] == started_at)
+        .expect("migrated period #1 present");
+    assert_eq!(migrated["ended_at"], completed_at);
+    let open_count = periods.iter().filter(|p| p["ended_at"].is_null()).count();
+    assert_eq!(open_count, 1);
+}

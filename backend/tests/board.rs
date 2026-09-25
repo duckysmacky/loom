@@ -118,6 +118,66 @@ async fn canvas_is_isolated_per_user(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn timeline_returns_only_the_callers_pokes_and_periods(pool: PgPool) {
+    let app = app(pool);
+    let token_a = signup(&app, "timelineowner@example.com").await;
+    let token_b = signup(&app, "timelineintruder@example.com").await;
+    let node_a = create_node(&app, &token_a, "mine").await;
+    let node_b = create_node(&app, &token_b, "theirs").await;
+
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            &format!("/api/nodes/{node_a}/pokes"),
+            Value::Null,
+            Some(&token_a),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            &format!("/api/nodes/{node_a}/periods"),
+            json!({"started_at": "2026-09-01T00:00:00Z"}),
+            Some(&token_a),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    send(
+        &app,
+        req(
+            "POST",
+            &format!("/api/nodes/{node_b}/pokes"),
+            Value::Null,
+            Some(&token_b),
+        ),
+    )
+    .await;
+
+    let (status, timeline_a) = send(
+        &app,
+        req("GET", "/api/board/timeline", Value::Null, Some(&token_a)),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(timeline_a["pokes"].as_array().unwrap().len(), 1);
+    assert_eq!(timeline_a["periods"].as_array().unwrap().len(), 1);
+    assert_eq!(timeline_a["pokes"][0]["node_id"], node_a);
+
+    let (_, timeline_b) = send(
+        &app,
+        req("GET", "/api/board/timeline", Value::Null, Some(&token_b)),
+    )
+    .await;
+    assert_eq!(timeline_b["pokes"].as_array().unwrap().len(), 1);
+    assert_eq!(timeline_b["periods"].as_array().unwrap().len(), 0);
+}
+
+#[sqlx::test]
 async fn missing_or_garbage_token_returns_401(pool: PgPool) {
     let app = app(pool);
 

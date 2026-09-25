@@ -2,7 +2,7 @@ use axum::{Json, extract::State};
 
 use super::error::ApiError;
 use crate::middleware::auth_user::AuthUser;
-use crate::models::board::CanvasResponse;
+use crate::models::board::{CanvasResponse, TimelineResponse};
 use crate::repo::board;
 use crate::state::AppState;
 
@@ -12,4 +12,12 @@ pub async fn canvas(
 ) -> Result<Json<CanvasResponse>, ApiError> {
     let canvas = board::get_canvas(user_id, &state.pool).await?;
     Ok(Json(canvas))
+}
+
+pub async fn timeline(
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
+) -> Result<Json<TimelineResponse>, ApiError> {
+    let timeline = board::get_timeline(user_id, &state.pool).await?;
+    Ok(Json(timeline))
 }

@@ -6,7 +6,7 @@ use crate::models::node::{
     CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
     Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
-use crate::repo::{checklist, edges, node_topics, pokes};
+use crate::repo::{active_periods, checklist, edges, node_topics, pokes};
 
 /// Query target for every node-returning query - flat fields only, since
 /// `query!`/`query_as!` map one SQL column to one struct field.
@@ -279,6 +279,21 @@ pub async fn update_node(
 
     let mut tx = pool.begin().await?;
 
+    // Captured before the update, in the same transaction, only when the
+    // client opted into period tracking - `apply_status_transition` below
+    // needs the pre-update status/started_at to detect the transition.
+    let old = if request.track_active_periods {
+        sqlx::query!(
+            r#"SELECT status AS "status: NodeStatus", started_at, completed_at FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
+            node_id,
+            user_id,
+        )
+        .fetch_optional(&mut *tx)
+        .await?
+    } else {
+        None
+    };
+
     let row = sqlx::query!(
         r#"
         UPDATE nodes SET
@@ -366,6 +381,17 @@ pub async fn update_node(
     let Some(row) = row else {
         return Ok(None);
     };
+    if let (true, Some(old)) = (request.track_active_periods, &old) {
+        active_periods::apply_status_transition(
+            &mut tx,
+            row.id,
+            old.status,
+            row.status,
+            old.started_at,
+            old.completed_at,
+        )
+        .await?;
+    }
     // Checklists belong to projects only - same kind-change rule as the
     // progress columns above, in the same transaction.
     if row.kind != NodeKind::Project {

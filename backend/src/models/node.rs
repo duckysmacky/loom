@@ -169,6 +169,12 @@ pub struct UpdateNodeRequest {
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
     pub canvas_height: Option<Option<f64>>,
+    /// Client preference (not stored server-side), carried on every PATCH:
+    /// when true, a status transition that crosses into/out of `active`
+    /// also opens/closes an `active_periods` row. Never affects
+    /// started_at/completed_at, which stamp themselves regardless.
+    #[serde(default)]
+    pub track_active_periods: bool,
 }
 
 /// A view preset for `GET /api/nodes` - translated into `kind`/`status`

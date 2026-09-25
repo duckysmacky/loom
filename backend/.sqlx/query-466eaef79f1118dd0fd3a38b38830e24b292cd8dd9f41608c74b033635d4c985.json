@@ -1,0 +1,67 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO active_periods (node_id, started_at, ended_at)\n        SELECT n.id, $3, $4\n        FROM nodes n\n        WHERE n.id = $2 AND n.user_id = $1\n        RETURNING id, node_id, started_at, ended_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "active_periods",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "node_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "active_periods",
+            "name": "node_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "active_periods",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "ended_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "active_periods",
+            "name": "ended_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz",
+        "Timestamptz"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      true
+    ]
+  },
+  "hash": "466eaef79f1118dd0fd3a38b38830e24b292cd8dd9f41608c74b033635d4c985"
+}
