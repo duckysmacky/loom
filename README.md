@@ -17,6 +17,7 @@ A flexible manager for everything you're building, studying, and dreaming up.
   - [Backlog & promoting](#backlog--promoting)
   - [Quick capture, command palette, and detail panel](#quick-capture-command-palette-and-detail-panel)
   - [Settings](#settings)
+  - [AI agents (MCP)](#ai-agents-mcp)
 - [Installation](#installation)
   - [Requirements](#requirements)
   - [Quick start](#quick-start)
@@ -25,6 +26,13 @@ A flexible manager for everything you're building, studying, and dreaming up.
   - [Updating](#updating)
   - [Using an external Postgres](#using-an-external-postgres)
   - [Backups](#backups)
+- [MCP server (optional)](#mcp-server-optional)
+  - [Enabling it](#enabling-it)
+  - [Reverse proxy](#reverse-proxy)
+  - [Connecting Claude](#connecting-claude)
+  - [Connecting other agents](#connecting-other-agents)
+  - [What agents can do](#what-agents-can-do)
+  - [Security](#security)
 - [Development](#development)
 - [License](#license)
 
@@ -133,8 +141,20 @@ dialog to set its real kind, status, and focus in one step.
 ### Settings
 
 Account (email, password), appearance (theme, density), topics & tags,
-and functionality defaults (default board view, quick-capture defaults,
-poke-from-cards).
+functionality defaults (default board view, quick-capture defaults,
+poke-from-cards), and connections (MCP server URL, access tokens,
+connected apps).
+
+### AI agents (MCP)
+
+An optional, built-in [MCP](https://modelcontextprotocol.io) server lets
+AI agents - Claude (chat, Cowork, Code) or any other MCP client - read
+and edit your graph. Ask an agent to "build me a learning path for
+async Rust" and it creates the path, its study and project nodes with
+notes, checklists and progress units, and the `part_of`/`requires` edges
+between them, in one go. Connectors sign in through Loom's own consent
+page; a Claude plugin with a Loom skill is included. Off by default - see
+[MCP server (optional)](#mcp-server-optional).
 
 ## Installation
 
@@ -180,6 +200,8 @@ All variables live in `.env` (see `.env.example`):
 | `RUST_LOG` | `info` | Backend log level |
 | `JWT_SECRET` | - | Signs/verifies JWT access tokens. Generate with `openssl rand -hex 32`. Must be at least 32 bytes - the app refuses to start otherwise |
 | `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. Leave `true` for the first run, then set `false` once your account exists - single-user app, no reason to leave account creation open |
+| `MCP_ENABLED` | `false` | Turns on the [MCP server](#mcp-server-optional) for AI agents |
+| `PUBLIC_URL` | - | Public origin Loom is served at, e.g. `https://loom.example.com` (no path, no trailing slash). Required when `MCP_ENABLED=true` |
 
 ### Self-hosting on a VPS
 
@@ -230,12 +252,166 @@ docker compose up -d backend frontend
 docker compose exec database pg_dump -U loom loom > backup.sql
 ```
 
+## MCP server (optional)
+
+Loom can expose your graph to AI agents over the
+[Model Context Protocol](https://modelcontextprotocol.io). It's part of
+the backend - no extra container - and stays switched off unless you
+enable it. Skip this section if you don't use AI agents.
+
+### Enabling it
+
+Add to `.env`:
+
+```sh
+MCP_ENABLED=true
+PUBLIC_URL=https://loom.example.com   # exactly the address you open Loom at
+```
+
+and restart: `docker compose up -d`. The server is then at
+`https://loom.example.com/mcp`, and **Settings → Connections** in Loom
+shows that URL, lets you create access tokens, and lists connected apps.
+
+`PUBLIC_URL` matters: it's the OAuth issuer agents sign in against, and
+the MCP endpoint only answers requests whose `Host` is that domain (or
+`localhost`/`127.0.0.1`).
+
+Check it's up - this should return `401` with a `WWW-Authenticate`
+header, not `404`:
+
+```sh
+curl -i -X POST https://loom.example.com/mcp
+```
+
+### Reverse proxy
+
+Everything MCP-related (`/mcp`, `/.well-known/oauth-*`, `/oauth/authorize`,
+`/api/oauth/*`) goes through the same frontend container as the rest of
+the app, so the single upstream from
+[Self-hosting on a VPS](#self-hosting-on-a-vps) still covers it. Two
+additions are recommended:
+
+- `proxy_set_header Host $host;` - so the backend sees your real domain.
+- a `location = /mcp` block with buffering off and a long read timeout,
+  since MCP responses can stream.
+
+A complete host nginx config:
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name loom.example.com;
+    # ssl_certificate / ssl_certificate_key - e.g. managed by certbot
+
+    location / {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+    }
+
+    location = /mcp {
+        proxy_pass http://127.0.0.1:8081;
+        proxy_http_version 1.1;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_buffering off;
+        proxy_read_timeout 1h;
+    }
+}
+```
+
+HTTPS is required in practice: Claude's connectors only talk to `https`
+servers. If you already route `/.well-known/` somewhere else (e.g. a
+certbot `/.well-known/acme-challenge/` block), make sure
+`/.well-known/oauth-*` still reaches Loom.
+
+### Connecting Claude
+
+**Claude (claude.ai, Desktop, Cowork)** - add Loom as a custom connector:
+
+1. Settings → Connectors → **Add custom connector**.
+2. URL: `https://loom.example.com/mcp`. Leave the OAuth fields empty -
+   Claude registers itself.
+3. Claude opens Loom's consent page (sign in first if asked) - check
+   the app name and click **Approve**.
+
+**Claude Code** - install the bundled plugin, which adds the server and
+the `loom` skill (domain model, tool guide, learning-path recipe):
+
+```sh
+/plugin marketplace add duckysmacky/skills
+/plugin install loom@duckysmacky     # asks for your Loom URL
+```
+
+then run `/mcp`, pick `loom`, and authenticate in the browser. Or add
+just the server by hand:
+
+```sh
+claude mcp add --transport http loom https://loom.example.com/mcp
+# then /mcp inside Claude Code to sign in
+```
+
+On a headless machine, use an access token instead (Settings →
+Connections → Access tokens):
+
+```sh
+claude mcp add --transport http loom https://loom.example.com/mcp \
+  --header "Authorization: Bearer loom_..."
+```
+
+The skill also works in claude.ai/Cowork: zip
+[`claude-plugin/skills/loom`](claude-plugin/skills/loom) and upload it in
+Claude's skill settings. See [`claude-plugin/`](claude-plugin) for
+details.
+
+### Connecting other agents
+
+Any MCP client that speaks Streamable HTTP works. Point it at
+`https://loom.example.com/mcp` and either let it do the OAuth flow
+(discovery via `/.well-known/oauth-protected-resource/mcp`, dynamic
+client registration, PKCE) or send a personal access token as
+`Authorization: Bearer loom_...`.
+
+To poke at it by hand, the MCP Inspector works well:
+
+```sh
+npx @modelcontextprotocol/inspector
+```
+
+### What agents can do
+
+The tools map one-to-one onto what the web app can do - same
+validation, same rules:
+
+| Area | Tools |
+|---|---|
+| Read | `loom_get_overview`, `loom_get_graph`, `loom_list_nodes`, `loom_get_node` |
+| Nodes | `loom_create_node`, `loom_update_node` (incl. promoting), `loom_delete_node`, `loom_poke_node` |
+| Build in bulk | `loom_create_subgraph` - many nodes plus their edges in one all-or-nothing call |
+| Edges | `loom_create_edge`, `loom_delete_edge` |
+| Checklists | `loom_add_checklist_items`, `loom_update_checklist_item`, `loom_delete_checklist_item` |
+| Topics | `loom_list_topics`, `loom_create_topic`, `loom_update_topic`, `loom_delete_topic`, `loom_attach_topic`, `loom_detach_topic` |
+
+### Security
+
+- Anything you connect gets **full access to your graph** - it can
+  delete as well as create. Only approve apps you recognise.
+- Access tokens and app connections are separate from your login
+  session and can be revoked any time in **Settings → Connections**;
+  changing your password does not revoke them.
+- Tokens are stored hashed. OAuth access tokens expire after an hour
+  and are refreshed by the client; personal tokens last until revoked.
+- The OAuth consent page only redirects to `https` URLs (or `http` on
+  localhost) that the app registered.
+- Turning `MCP_ENABLED` off removes the endpoint and the OAuth routes
+  entirely; existing tokens stop working until it's turned back on.
+
 ## Development
 
 ```sh
 docker compose up -d database        # just the database
 cd backend && cargo run              # needs .env with DB_HOST=localhost
-cd frontend && npm run dev           # proxies /api to :8080
+cd frontend && npm run dev           # proxies /api (and /mcp) to :8080
 ```
 
 ```sh
