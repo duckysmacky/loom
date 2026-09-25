@@ -1,0 +1,28 @@
+{
+  "name": "loom",
+  "displayName": "Loom",
+  "version": "1.0.0",
+  "description": "Connect Claude to your self-hosted Loom graph of projects, studies and ideas: read it, plan learning paths, create and update nodes, and log progress.",
+  "author": {
+    "name": "duckysmacky",
+    "url": "https://github.com/duckysmacky"
+  },
+  "homepage": "https://github.com/duckysmacky/loom",
+  "repository": "https://github.com/duckysmacky/loom",
+  "license": "AGPL-3.0",
+  "keywords": ["loom", "mcp", "projects", "learning", "knowledge-graph"],
+  "mcpServers": {
+    "loom": {
+      "type": "http",
+      "url": "${user_config.loom_url}/mcp"
+    }
+  },
+  "userConfig": {
+    "loom_url": {
+      "type": "string",
+      "title": "Loom URL",
+      "description": "Your Loom instance's public address, without a trailing slash - the same value as PUBLIC_URL on the server, e.g. https://loom.example.com",
+      "required": true
+    }
+  }
+}

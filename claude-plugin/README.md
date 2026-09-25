@@ -1,0 +1,68 @@
+# Loom plugin for Claude
+
+This plugin connects Claude to a self-hosted [Loom](https://github.com/duckysmacky/loom)
+instance. It includes:
+
+- **the `loom` MCP server config**: `<your Loom URL>/mcp`, signed in through Loom's own OAuth
+  consent page. There's no token to paste.
+- **the `loom` skill**: Loom's domain model, the tool set, and recipes such as building a
+  complete learning path in one call.
+
+The instance must have its MCP server switched on (`MCP_ENABLED=true` and `PUBLIC_URL`). See
+the main README's **MCP server** section.
+
+## Install (Claude Code)
+
+The plugin is published through the
+[duckysmacky marketplace](https://github.com/duckysmacky/skills):
+
+```sh
+/plugin marketplace add duckysmacky/skills
+/plugin install loom@duckysmacky
+```
+
+1. When asked, enter your Loom URL, e.g. `https://loom.example.com`.
+2. Run `/mcp`, select `loom` and authenticate.
+3. Approve the connection in the browser window that opens.
+
+To try it from a local checkout instead:
+
+```sh
+claude --plugin-dir ./claude-plugin
+```
+
+### Marketplace entry
+
+This is the entry in `duckysmacky/skills` → `.claude-plugin/marketplace.json`:
+
+```json
+{
+  "name": "loom",
+  "source": {
+    "source": "git-subdir",
+    "url": "https://github.com/duckysmacky/loom.git",
+    "path": "claude-plugin"
+  },
+  "description": "Drive your self-hosted Loom graph (projects, studies, ideas) from Claude",
+  "category": "productivity",
+  "tags": ["loom", "mcp", "projects", "learning"]
+}
+```
+
+## Claude.ai, Desktop and Cowork
+
+Those apps don't install Claude Code plugins, but both parts work there:
+
+- **MCP server:** go to Settings → Connectors → *Add custom connector*, then enter
+  `https://loom.example.com/mcp`.
+- **Skill:** zip `skills/loom` and upload it in Claude's skill settings.
+
+## Contents
+
+```
+claude-plugin/
+├── .claude-plugin/plugin.json      # manifest: MCP server + Loom URL prompt
+└── skills/loom/
+    ├── SKILL.md                    # how to work with Loom
+    └── references/setup.md         # connecting & troubleshooting
+```
