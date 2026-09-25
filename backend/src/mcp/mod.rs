@@ -17,6 +17,7 @@ use serde_json::json;
 
 use crate::auth::refresh_token::hash_token;
 use crate::handlers::error::ApiError;
+use crate::handlers::oauth::protected_resource_metadata_url;
 use crate::middleware::auth_user::AuthUser;
 use crate::repo::mcp_tokens;
 use crate::state::AppState;
@@ -72,15 +73,21 @@ async fn authenticate(State(state): State<AppState>, mut request: Request, next:
             request.extensions_mut().insert(AuthUser { user_id });
             next.run(request).await
         }
-        Ok(None) => unauthorized(),
+        Ok(None) => unauthorized(state.mcp_public_url.as_deref().unwrap_or_default()),
         Err(error) => ApiError::from(error).into_response(),
     }
 }
 
-fn unauthorized() -> Response {
+/// The 401 points OAuth-capable clients at the resource metadata, which
+/// is how they discover where to sign in (MCP authorization spec).
+fn unauthorized(public_url: &str) -> Response {
+    let challenge = format!(
+        r#"Bearer resource_metadata="{}""#,
+        protected_resource_metadata_url(public_url)
+    );
     (
         StatusCode::UNAUTHORIZED,
-        [(header::WWW_AUTHENTICATE, "Bearer".to_string())],
+        [(header::WWW_AUTHENTICATE, challenge)],
         Json(json!({ "error": "invalid or missing token" })),
     )
         .into_response()

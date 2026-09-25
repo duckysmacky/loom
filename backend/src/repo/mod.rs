@@ -6,6 +6,7 @@ pub mod edges;
 pub mod mcp_tokens;
 pub mod node_topics;
 pub mod nodes;
+pub mod oauth;
 pub mod pokes;
 pub mod refresh_tokens;
 pub mod topics;

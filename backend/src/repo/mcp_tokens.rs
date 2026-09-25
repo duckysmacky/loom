@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -74,4 +75,62 @@ pub async fn authenticate(pool: &PgPool, token_hash: &str) -> Result<Option<Uuid
     )
     .fetch_optional(pool)
     .await
+}
+
+pub struct IssuedTokenHashes<'a> {
+    pub access: &'a str,
+    pub access_expires_at: DateTime<Utc>,
+    pub refresh: &'a str,
+    pub refresh_expires_at: DateTime<Utc>,
+}
+
+/// Stores a fresh OAuth access/refresh pair for `client_id`, clearing this
+/// user's expired tokens on the way (access tokens are hourly - without
+/// this they'd pile up forever).
+pub async fn insert_oauth_pair(
+    user_id: Uuid,
+    pool: &PgPool,
+    client_id: &str,
+    hashes: &IssuedTokenHashes<'_>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "DELETE FROM mcp_tokens WHERE user_id = $1 AND expires_at <= now()",
+        user_id,
+    )
+    .execute(pool)
+    .await?;
+    sqlx::query!(
+        r#"
+        INSERT INTO mcp_tokens (user_id, kind, client_id, token_hash, expires_at)
+        VALUES ($1, 'access', $2, $3, $4), ($1, 'refresh', $2, $5, $6)
+        "#,
+        user_id,
+        client_id,
+        hashes.access,
+        hashes.access_expires_at,
+        hashes.refresh,
+        hashes.refresh_expires_at,
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
+/// Deletes and returns an unexpired refresh token's owner and client in
+/// one statement - rotation: each refresh token works exactly once.
+pub async fn consume_refresh(
+    pool: &PgPool,
+    token_hash: &str,
+) -> Result<Option<(Uuid, String)>, sqlx::Error> {
+    let row = sqlx::query!(
+        r#"
+        DELETE FROM mcp_tokens
+        WHERE token_hash = $1 AND kind = 'refresh' AND expires_at > now()
+        RETURNING user_id, client_id AS "client_id!"
+        "#,
+        token_hash,
+    )
+    .fetch_optional(pool)
+    .await?;
+    Ok(row.map(|row| (row.user_id, row.client_id)))
 }

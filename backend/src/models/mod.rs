@@ -6,6 +6,7 @@ pub mod dashboard;
 pub mod edge;
 pub mod mcp_token;
 pub mod node;
+pub mod oauth;
 pub mod poke;
 pub mod topic;
 pub mod user;

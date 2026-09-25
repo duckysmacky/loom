@@ -136,29 +136,75 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/tokens/{id}", delete(handlers::mcp_tokens::delete));
 
-    let mcp_router = state
-        .mcp_public_url
-        .clone()
-        .map(|public_url| mcp::router(state.clone(), &public_url));
+    let mut api_routes = Router::new()
+        .route("/health", get(health))
+        .route("/board/canvas", get(handlers::board::canvas))
+        .route("/board/timeline", get(handlers::board::timeline))
+        .route("/dashboard", get(handlers::dashboard::get))
+        .nest("/auth", auth_routes)
+        .nest("/nodes", node_routes)
+        .nest("/topics", topic_routes)
+        .nest("/edges", edge_routes)
+        .nest("/checklist", checklist_routes)
+        .nest("/periods", period_routes)
+        .nest("/mcp", mcp_routes);
+    let mut app = Router::new();
+    let mut mcp_router = None;
 
-    let app = Router::new()
-        .nest(
-            "/api",
-            Router::new()
-                .route("/health", get(health))
-                .route("/board/canvas", get(handlers::board::canvas))
-                .route("/board/timeline", get(handlers::board::timeline))
-                .route("/dashboard", get(handlers::dashboard::get))
-                .nest("/auth", auth_routes)
-                .nest("/nodes", node_routes)
-                .nest("/topics", topic_routes)
-                .nest("/edges", edge_routes)
-                .nest("/checklist", checklist_routes)
-                .nest("/periods", period_routes)
-                .nest("/mcp", mcp_routes),
-        )
-        .with_state(state);
+    // The MCP server and the OAuth flow its connector clients sign in
+    // through only exist when MCP_ENABLED=true.
+    if let Some(public_url) = &state.mcp_public_url {
+        // Registration and token exchange are unauthenticated DB writes, so
+        // they're throttled per IP too - but in their own, roomier bucket:
+        // no Argon2 behind them, and a connector signing in (or refreshing
+        // hourly) mustn't eat into the login budget.
+        let oauth_governor_config = GovernorConfigBuilder::default()
+            .key_extractor(SmartIpKeyExtractor)
+            .per_second(2)
+            .burst_size(20)
+            .finish()
+            .expect("valid governor config");
+        let oauth_limiter = oauth_governor_config.limiter().clone();
+        std::thread::spawn(move || {
+            loop {
+                std::thread::sleep(Duration::from_secs(300));
+                oauth_limiter.retain_recent();
+            }
+        });
+        let throttled_oauth_routes = Router::new()
+            .route("/register", post(handlers::oauth::register))
+            .route("/token", post(handlers::oauth::token))
+            .route_layer(
+                GovernorLayer::new(oauth_governor_config).error_handler(governor_error_response),
+            );
+        let oauth_routes = throttled_oauth_routes
+            .route(
+                "/authorize",
+                get(handlers::oauth::preview).post(handlers::oauth::decide),
+            )
+            .route("/clients", get(handlers::oauth::list_clients))
+            .route(
+                "/clients/{client_id}",
+                delete(handlers::oauth::revoke_client),
+            );
+        api_routes = api_routes.nest("/oauth", oauth_routes);
+        app = app
+            .route(
+                "/.well-known/oauth-protected-resource",
+                get(handlers::oauth::protected_resource_metadata),
+            )
+            .route(
+                "/.well-known/oauth-protected-resource/mcp",
+                get(handlers::oauth::protected_resource_metadata),
+            )
+            .route(
+                "/.well-known/oauth-authorization-server",
+                get(handlers::oauth::authorization_server_metadata),
+            );
+        mcp_router = Some(mcp::router(state.clone(), public_url));
+    }
 
+    let app = app.nest("/api", api_routes).with_state(state);
     match mcp_router {
         Some(mcp_router) => app.merge(mcp_router),
         None => app,
