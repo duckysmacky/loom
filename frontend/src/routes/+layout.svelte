@@ -7,6 +7,7 @@
 	import '@fontsource/ibm-plex-mono/500.css';
 	import '@fontsource/ibm-plex-mono/600.css';
 	import '@fontsource/ibm-plex-mono/700.css';
+	import '@fontsource/jetbrains-mono/400.css';
 	import '$lib/styles/global.css';
 	import favicon from '$lib/assets/favicon.svg';
 	import { applyAppearance } from '$lib/stores/prefs.svelte';

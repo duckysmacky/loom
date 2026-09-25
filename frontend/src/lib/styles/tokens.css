@@ -52,6 +52,9 @@
 	/* Deviation from the design system (Space Mono): IBM Plex Mono holds up
 	   far better at the 9-11px label sizes used everywhere. */
 	--font-mono: 'IBM Plex Mono', ui-monospace, monospace;
+	/* The markdown notes editor only: IBM Plex Mono's tighter spacing reads as
+	   cramped/pixelated in a multi-line textarea at editing size. */
+	--font-editor: 'JetBrains Mono', ui-monospace, monospace;
 
 	--space-1: 4px;
 	--space-2: 8px;

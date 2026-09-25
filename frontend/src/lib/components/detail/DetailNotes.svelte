@@ -78,7 +78,7 @@
 	.editor {
 		margin-top: 10px;
 		resize: vertical;
-		font: 400 12.5px/1.55 var(--font-mono);
+		font: 400 12.5px/1.55 var(--font-editor);
 	}
 
 	.actions {
