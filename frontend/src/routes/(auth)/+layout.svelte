@@ -1,11 +1,17 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
+	import { nextPath } from '$lib/navigation';
 	import { session } from '$lib/stores/session.svelte';
 
 	let { children } = $props();
 
+	// The OAuth consent page lives here for the sheet layout, but it's the
+	// one auth page meant for signed-in users.
+	const forSignedIn = $derived(page.route.id === '/(auth)/oauth/authorize');
+
 	$effect(() => {
-		if (session.user) goto('/dashboard', { replaceState: true });
+		if (session.user && !forSignedIn) goto(nextPath(page.url.search), { replaceState: true });
 	});
 </script>
 

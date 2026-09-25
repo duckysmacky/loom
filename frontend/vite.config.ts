@@ -20,7 +20,13 @@ export default defineConfig({
 	],
 	server: {
 		// Dev only: the backend runs separately on :8080 (`cargo run`).
-		proxy: { '/api': 'http://localhost:8080' }
+		// `changeOrigin: false` keeps the Host header, which the MCP
+		// endpoint checks against PUBLIC_URL.
+		proxy: {
+			'/api': 'http://localhost:8080',
+			'/mcp': { target: 'http://localhost:8080', changeOrigin: false },
+			'/.well-known/oauth-': 'http://localhost:8080'
+		}
 	},
 	test: {
 		expect: { requireAssertions: true },

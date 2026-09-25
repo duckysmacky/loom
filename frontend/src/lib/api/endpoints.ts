@@ -2,10 +2,14 @@ import { queryString, request } from './client';
 import { prefs } from '$lib/stores/prefs.svelte';
 import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 import type { AuthResponse } from '$lib/types/AuthResponse';
+import type { AuthorizeDecision } from '$lib/types/AuthorizeDecision';
+import type { AuthorizePreview } from '$lib/types/AuthorizePreview';
+import type { AuthorizeRedirect } from '$lib/types/AuthorizeRedirect';
 import type { AuthUserView } from '$lib/types/AuthUserView';
 import type { CanvasResponse } from '$lib/types/CanvasResponse';
 import type { ChecklistItemResponse } from '$lib/types/ChecklistItemResponse';
 import type { ChangePasswordRequest } from '$lib/types/ChangePasswordRequest';
+import type { ConnectedClientResponse } from '$lib/types/ConnectedClientResponse';
 import type { CreateActivePeriodRequest } from '$lib/types/CreateActivePeriodRequest';
 import type { CreatedMcpTokenResponse } from '$lib/types/CreatedMcpTokenResponse';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
@@ -116,6 +120,15 @@ export const mcpApi = {
 	createToken: (body: CreateMcpTokenRequest) =>
 		request<CreatedMcpTokenResponse>('POST', '/mcp/tokens', body),
 	removeToken: (tokenId: string) => request<void>('DELETE', `/mcp/tokens/${tokenId}`)
+};
+
+export const oauthApi = {
+	// The consent page forwards the client's authorization request verbatim.
+	preview: (search: string) => request<AuthorizePreview>('GET', `/oauth/authorize${search}`),
+	decide: (body: AuthorizeDecision) => request<AuthorizeRedirect>('POST', '/oauth/authorize', body),
+	clients: () => request<ConnectedClientResponse[]>('GET', '/oauth/clients'),
+	revokeClient: (clientId: string) =>
+		request<void>('DELETE', `/oauth/clients/${encodeURIComponent(clientId)}`)
 };
 
 export const dashboardApi = {

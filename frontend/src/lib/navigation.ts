@@ -18,3 +18,14 @@ export function openNode(nodeId: string) {
 export function closeNode() {
 	goto(withParam('node', null), { noScroll: true, keepFocus: true });
 }
+
+/**
+ * The `?next=` path to land on after signing in. Same-origin paths only -
+ * `//evil.example` and `/\evil.example` are protocol-relative to browsers,
+ * so a crafted login link could otherwise bounce the user off-site.
+ */
+export function nextPath(search: string, fallback = '/dashboard'): string {
+	const next = new URLSearchParams(search).get('next');
+	const sameOrigin = next?.startsWith('/') && !next.startsWith('//') && !next.startsWith('/\\');
+	return sameOrigin ? next! : fallback;
+}

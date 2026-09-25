@@ -1,14 +1,16 @@
 <script lang="ts">
 	import './settings.css';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { mcpApi } from '$lib/api/endpoints';
+	import { mcpApi, oauthApi } from '$lib/api/endpoints';
 	import { relativeDays, shortDate } from '$lib/graph/display';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
+	import type { ConnectedClientResponse } from '$lib/types/ConnectedClientResponse';
 	import type { McpInfoResponse } from '$lib/types/McpInfoResponse';
 	import type { McpTokenResponse } from '$lib/types/McpTokenResponse';
 
 	let info = $state<McpInfoResponse | null>(null);
 	let tokens = $state<McpTokenResponse[]>([]);
+	let clients = $state<ConnectedClientResponse[]>([]);
 	let newName = $state('');
 	let revealed = $state<string | null>(null);
 	let revokingId = $state<string | null>(null);
@@ -16,6 +18,8 @@
 	async function load() {
 		try {
 			[info, tokens] = await Promise.all([mcpApi.info(), mcpApi.tokens()]);
+			// The OAuth routes only exist while the MCP server is on.
+			if (info.enabled) clients = await oauthApi.clients();
 		} catch (error) {
 			notifyError(error);
 		}
@@ -41,6 +45,17 @@
 			tokens = [created.token, ...tokens];
 			revealed = created.raw_token;
 			newName = '';
+		} catch (error) {
+			notifyError(error);
+		}
+	}
+
+	async function disconnect(client: ConnectedClientResponse) {
+		revokingId = null;
+		try {
+			await oauthApi.revokeClient(client.client_id);
+			clients = clients.filter((candidate) => candidate.client_id !== client.client_id);
+			notify(`Disconnected “${client.client_name}”`);
 		} catch (error) {
 			notifyError(error);
 		}
@@ -87,6 +102,35 @@
 		</p>
 	{/if}
 </section>
+
+{#if info?.enabled}
+	<section class="settings-section">
+		<h2>Connected apps</h2>
+		<p class="explain">Apps you approved through Loom's sign-in page, like Claude connectors.</p>
+		<ul class="tokens">
+			{#each clients as client (client.client_id)}
+				<li class="token">
+					<span class="name">{client.client_name}</span>
+					<span class="meta">
+						connected {shortDate(client.connected_at)} · {client.last_used_at
+							? `used ${relativeDays(client.last_used_at)}`
+							: 'never used'}
+					</span>
+					{#if revokingId === client.client_id}
+						<Button variant="quiet" onclick={() => (revokingId = null)}>Keep</Button>
+						<Button variant="primary" onclick={() => disconnect(client)}>Disconnect</Button>
+					{:else}
+						<Button variant="quiet" onclick={() => (revokingId = client.client_id)}
+							>Disconnect</Button
+						>
+					{/if}
+				</li>
+			{:else}
+				<li class="empty">No connected apps.</li>
+			{/each}
+		</ul>
+	</section>
+{/if}
 
 <section class="settings-section">
 	<h2>Access tokens</h2>

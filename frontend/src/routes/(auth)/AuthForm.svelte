@@ -1,7 +1,9 @@
 <script lang="ts">
 	import { goto } from '$app/navigation';
+	import { page } from '$app/state';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { ApiError } from '$lib/api/client';
+	import { nextPath } from '$lib/navigation';
 
 	let {
 		heading,
@@ -28,7 +30,7 @@
 		submitting = true;
 		try {
 			await onsubmit(email, password);
-			await goto('/dashboard');
+			await goto(nextPath(page.url.search));
 		} catch (caught) {
 			error = caught instanceof ApiError ? caught.message : 'Could not reach the server';
 		} finally {
