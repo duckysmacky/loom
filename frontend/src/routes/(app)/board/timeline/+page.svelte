@@ -501,14 +501,14 @@
 		text-align: left;
 		font: 700 9.5px/14px var(--font-mono);
 		white-space: nowrap;
-		background: var(--ok);
-		color: var(--on-ok);
+		background: var(--ink);
+		color: var(--on-ink);
 		cursor: pointer;
 	}
 
 	.bar.done {
-		background: var(--ink);
-		color: var(--on-ink);
+		background: var(--ok);
+		color: var(--on-ok);
 	}
 
 	.bar.blocked {
@@ -573,7 +573,7 @@
 		width: 18px;
 		height: 9px;
 		display: inline-block;
-		background: var(--ok);
+		background: var(--ink);
 	}
 
 	.swatch.blocked {
@@ -586,7 +586,7 @@
 	}
 
 	.swatch.done {
-		background: var(--ink);
+		background: var(--ok);
 	}
 
 	.tick,
