@@ -32,12 +32,12 @@
 	let zoom = $state(1);
 	let pendingConnection = $state<Connection | null>(null);
 
-	// Backlog ideas never appear on the board, and archived nodes leave the
-	// canvas unless the filters ask for them. Every other non-matching node
-	// stays in place, dimmed, so the graph's shape doesn't jump around while
-	// filtering.
+	// Backlog ideas leave the canvas unless "Show backlog" is on, and archived
+	// nodes leave it unless the filters ask for them. Every other
+	// non-matching node stays in place, dimmed, so the graph's shape doesn't
+	// jump around while filtering.
 	const hidden = (node: NodeResponse) =>
-		isBacklog(node) ||
+		(isBacklog(node) && !boardFilters.showBacklog) ||
 		(node.status === 'archived' &&
 			!boardFilters.showArchived &&
 			!boardFilters.statuses.includes('archived'));

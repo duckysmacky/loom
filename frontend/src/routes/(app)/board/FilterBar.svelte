@@ -56,7 +56,10 @@
 		)
 	);
 	const anyActive = $derived(
-		activeChips.length > 0 || boardFilters.search !== '' || boardFilters.showArchived
+		activeChips.length > 0 ||
+			boardFilters.search !== '' ||
+			boardFilters.showArchived ||
+			boardFilters.showBacklog
 	);
 </script>
 
@@ -89,6 +92,10 @@
 			</div>
 		</details>
 	{/each}
+
+	<label class="archived">
+		<input type="checkbox" bind:checked={boardFilters.showBacklog} /> Show backlog
+	</label>
 
 	<label class="archived">
 		<input type="checkbox" bind:checked={boardFilters.showArchived} /> Show archived
