@@ -1,11 +1,12 @@
 <script lang="ts">
+	import { boardApi } from '$lib/api/endpoints';
 	import { accentColor, shortDate } from '$lib/graph/display';
 	import {
 		DAY_MS,
 		DEFAULT_PX_PER_DAY,
-		barSpan,
 		clampZoom,
-		pokeOffset,
+		nodeBarSpans,
+		pokeOffsets,
 		rangeWidth,
 		scrollAfterZoom,
 		timelineRange,
@@ -15,7 +16,10 @@
 	import { openNode } from '$lib/navigation';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { notifyError } from '$lib/stores/toasts.svelte';
+	import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
+	import type { TimelinePokeResponse } from '$lib/types/TimelinePokeResponse';
 
 	/** Width of the node-name column, which stays fixed while the time axis scrolls. */
 	const NAME_COLUMN = 240;
@@ -30,6 +34,35 @@
 	const notStarted = $derived(visible.filter((node) => !node.started_at));
 	const range = $derived(timelineRange(started));
 	const now = Date.now();
+
+	// Every poke and active period the caller owns, refetched whenever the
+	// graph reloads after a mutation (same trigger `DetailChecklist.svelte`
+	// uses) - grouped by node for O(1) lookup per row.
+	let pokesByNode = $state(new Map<string, TimelinePokeResponse[]>());
+	let periodsByNode = $state(new Map<string, ActivePeriodResponse[]>());
+	$effect(() => {
+		void graph.version;
+		boardApi
+			.timeline()
+			.then((timeline) => {
+				// Plain Maps, built once then assigned wholesale to the $state
+				// variables above - not mutated in place, so reactivity doesn't
+				// need SvelteMap here.
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity
+				const pokes = new Map<string, TimelinePokeResponse[]>();
+				for (const poke of timeline.pokes) {
+					pokes.set(poke.node_id, [...(pokes.get(poke.node_id) ?? []), poke]);
+				}
+				// eslint-disable-next-line svelte/prefer-svelte-reactivity
+				const periods = new Map<string, ActivePeriodResponse[]>();
+				for (const period of timeline.periods) {
+					periods.set(period.node_id, [...(periods.get(period.node_id) ?? []), period]);
+				}
+				pokesByNode = pokes;
+				periodsByNode = periods;
+			})
+			.catch(notifyError);
+	});
 
 	let pxPerDay = $state(DEFAULT_PX_PER_DAY);
 	let viewport: HTMLDivElement | undefined = $state();
@@ -134,6 +167,11 @@
 		return node.completed_at ? `${from} – ${shortDate(node.completed_at)}` : `since ${from}`;
 	}
 
+	function periodCaption(period: ActivePeriodResponse): string {
+		const from = shortDate(period.started_at);
+		return period.ended_at ? `${from} – ${shortDate(period.ended_at)}` : `since ${from}`;
+	}
+
 	const dayLabel = (time: number) => new Date(time).getDate();
 </script>
 
@@ -192,8 +230,13 @@
 			</div>
 
 			{#each started as node (node.id)}
-				{@const span = barSpan(node, range, pxPerDay, now)!}
-				{@const poke = pokeOffset(node, range, pxPerDay)}
+				{@const periods = periodsByNode.get(node.id) ?? []}
+				{@const spans = nodeBarSpans(node, periods, range, pxPerDay, now)}
+				{@const pokeXs = pokeOffsets(
+					(pokesByNode.get(node.id) ?? []).map((poke) => poke.poked_at),
+					range,
+					pxPerDay
+				)}
 				<div class="row">
 					<button type="button" class="name" onclick={() => openNode(node.id)}>
 						<span class="dot" style:background={accentColor(node)}></span>
@@ -203,19 +246,22 @@
 						</span>
 					</button>
 					<div class="track" class:days={showDays} style:width="{axisWidth}px">
-						<button
-							type="button"
-							class="bar {barTone(node)}"
-							style:left="{span.left}px"
-							style:width="{span.width}px"
-							title="{node.title} · {node.status} · {barCaption(node)}"
-							onclick={() => openNode(node.id)}
-						>
-							<span>{barTone(node)}</span>
-						</button>
-						{#if poke !== null}
-							<span class="poke" style:left="{poke}px" title="Last poked"></span>
-						{/if}
+						{#each spans as span, index (index)}
+							{@const caption = periods[index] ? periodCaption(periods[index]) : barCaption(node)}
+							<button
+								type="button"
+								class="bar {barTone(node)}"
+								style:left="{span.left}px"
+								style:width="{span.width}px"
+								title="{node.title} · {node.status} · {caption}"
+								onclick={() => openNode(node.id)}
+							>
+								<span>{barTone(node)}</span>
+							</button>
+						{/each}
+						{#each pokeXs as x, index (index)}
+							<span class="poke" style:left="{x}px" title="Poked"></span>
+						{/each}
 					</div>
 				</div>
 			{:else}
@@ -234,9 +280,11 @@
 		<span><span class="swatch blocked"></span>blocked — waiting on a requirement</span>
 		<span><span class="swatch paused"></span>paused / queued</span>
 		<span><span class="swatch done"></span>done</span>
-		<span><span class="tick"></span>last poke</span>
+		<span><span class="tick"></span>poke</span>
 		<span><span class="today-mark"></span>today</span>
-		<span class="note">actual history: started → completed, or today</span>
+		<span class="note"
+			>actual history: started → completed, or today - active periods, when tracked</span
+		>
 	</div>
 
 	{#if notStarted.length}

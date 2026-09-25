@@ -1,3 +1,4 @@
+import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
 export const DAY_MS = 86_400_000;
@@ -54,7 +55,7 @@ export function barSpan(
 	range: TimelineRange,
 	pxPerDay: number,
 	now = Date.now()
-): { left: number; width: number } | null {
+): Span | null {
 	if (!node.started_at) return null;
 	const start = Date.parse(node.started_at);
 	const finish = node.completed_at ? Date.parse(node.completed_at) : now;
@@ -62,15 +63,46 @@ export function barSpan(
 	return { left, width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4) };
 }
 
-/** Pixel offset of the node's last poke, or null when it has none in range. */
-export function pokeOffset(
-	node: NodeResponse,
+export type Span = { left: number; width: number };
+
+/** One span per active period - an open one (`ended_at` null) runs to `now`. */
+export function periodSpans(
+	periods: ActivePeriodResponse[],
 	range: TimelineRange,
-	pxPerDay: number
-): number | null {
-	if (!node.last_poked_at) return null;
-	const time = Date.parse(node.last_poked_at);
-	return time >= range.start && time <= range.end ? xOf(time, range, pxPerDay) : null;
+	pxPerDay: number,
+	now = Date.now()
+): Span[] {
+	return periods.map((period) => {
+		const start = Date.parse(period.started_at);
+		const finish = period.ended_at ? Date.parse(period.ended_at) : now;
+		const left = xOf(start, range, pxPerDay);
+		return { left, width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4) };
+	});
+}
+
+/**
+ * The spans to draw for one node: its active periods when it has any (the
+ * fine-grained truth), else the classic single started_at->completed_at
+ * bar - which itself is `[]` for a never-started node.
+ */
+export function nodeBarSpans(
+	node: NodeResponse,
+	periods: ActivePeriodResponse[],
+	range: TimelineRange,
+	pxPerDay: number,
+	now = Date.now()
+): Span[] {
+	if (periods.length) return periodSpans(periods, range, pxPerDay, now);
+	const classic = barSpan(node, range, pxPerDay, now);
+	return classic ? [classic] : [];
+}
+
+/** Pixel offset of every in-range poke, not just the latest. */
+export function pokeOffsets(pokedAts: string[], range: TimelineRange, pxPerDay: number): number[] {
+	return pokedAts
+		.map((iso) => Date.parse(iso))
+		.filter((time) => time >= range.start && time <= range.end)
+		.map((time) => xOf(time, range, pxPerDay));
 }
 
 export function clampZoom(pxPerDay: number): number {

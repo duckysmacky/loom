@@ -1,3 +1,4 @@
+import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -28,6 +29,16 @@ export function makeNode(overrides: Partial<NodeResponse> = {}): NodeResponse {
 		container_progress: null,
 		checklist_progress: null,
 		last_poked_at: null,
+		...overrides
+	};
+}
+
+export function makePeriod(overrides: Partial<ActivePeriodResponse> = {}): ActivePeriodResponse {
+	return {
+		id: 'period',
+		node_id: 'node',
+		started_at: '2026-09-01T00:00:00Z',
+		ended_at: null,
 		...overrides
 	};
 }
