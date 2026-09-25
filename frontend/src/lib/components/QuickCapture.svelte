@@ -10,22 +10,26 @@
 	import { overlays } from '$lib/stores/ui.svelte';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeKind } from '$lib/types/NodeKind';
+	import type { NodeStatus } from '$lib/types/NodeStatus';
 
 	let title = $state('');
 	let kind = $state<NodeKind>('idea');
 	let focus = $state<NodeFocus>('secondary');
-	let startNow = $state(false);
+	// Only these three make sense straight out of quick capture; anything
+	// else (paused/done/archived) is a status change made later.
+	let status = $state<Extract<NodeStatus, 'idea' | 'queued' | 'active'>>('idea');
 	let topicIds = $state<string[]>([]);
 	let saving = $state(false);
 
 	// Fresh form with the configured defaults (Settings > Functionality)
-	// every time it opens.
+	// every time it opens. Backlog = status idea, for any kind - an idea
+	// defaults there, everything else defaults to queued.
 	$effect(() => {
 		if (!overlays.captureOpen) return;
 		title = '';
 		kind = prefs.captureKind;
 		focus = prefs.captureFocus;
-		startNow = false;
+		status = kind === 'idea' ? 'idea' : 'queued';
 		topicIds = [];
 	});
 
@@ -40,9 +44,6 @@
 		const trimmed = title.trim();
 		if (!trimmed) return;
 		saving = true;
-		// An idea stays at status "idea" (it lands in the backlog); a project or
-		// study is queued unless it's being started right away.
-		const status = kind === 'idea' ? 'idea' : startNow ? 'active' : 'queued';
 		const created = await graph.mutate(async () => {
 			const node = await nodesApi.create({ kind, title: trimmed, focus, status });
 			for (const topicId of topicIds) await nodesApi.attachTopic(node.id, topicId);
@@ -104,13 +105,20 @@
 					]}
 				/>
 			</div>
+			<div class="group">
+				<span class="label">Status</span>
+				<SegmentedControl
+					label="Status"
+					value={status}
+					onchange={(value) => (status = value)}
+					options={[
+						{ value: 'idea', label: 'Backlog' },
+						{ value: 'queued', label: 'Queued' },
+						{ value: 'active', label: 'Active' }
+					]}
+				/>
+			</div>
 		</div>
-
-		{#if kind !== 'idea'}
-			<label class="check">
-				<input type="checkbox" bind:checked={startNow} /> Start now (active instead of queued)
-			</label>
-		{/if}
 
 		{#if graph.topics.length}
 			<div class="group">
@@ -172,19 +180,6 @@
 		flex-direction: column;
 		gap: 8px;
 		align-items: flex-start;
-	}
-
-	.check {
-		display: flex;
-		align-items: center;
-		gap: 8px;
-		font: 600 12.5px/1 var(--font-display);
-		color: var(--ink-3);
-	}
-
-	.check input {
-		accent-color: var(--accent);
-		margin: 0;
 	}
 
 	.topics {
