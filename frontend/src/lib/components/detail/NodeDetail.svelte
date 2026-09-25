@@ -4,6 +4,7 @@
 	import { fade, fly } from 'svelte/transition';
 	import { ms } from '$lib/motion';
 	import { page } from '$app/state';
+	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
@@ -11,7 +12,6 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
-		ACCENT_PALETTE,
 		accentColor,
 		fromDateInput,
 		incrementedProgress,
@@ -272,19 +272,7 @@
 					</div>
 					<div class="control">
 						<span class="label">Accent</span>
-						<div class="swatches">
-							{#each ACCENT_PALETTE as color (color)}
-								<button
-									type="button"
-									class="swatch"
-									class:chosen={node.color === color}
-									style:background={color}
-									aria-label="Accent {color}"
-									aria-pressed={node.color === color}
-									onclick={() => update(node, { color: node.color === color ? null : color })}
-								></button>
-							{/each}
-						</div>
+						<AccentPicker value={node.color} onchange={(color) => update(node, { color })} />
 					</div>
 
 					<DetailTopics {node} />
@@ -509,25 +497,6 @@
 	.control :global(.segmented button) {
 		flex: 1;
 		padding: 8px 4px;
-	}
-
-	.swatches {
-		display: flex;
-		gap: 5px;
-		flex-wrap: wrap;
-	}
-
-	.swatch {
-		width: 20px;
-		height: 20px;
-		border: var(--border-width) solid transparent;
-		padding: 0;
-	}
-
-	.swatch.chosen {
-		border-color: var(--ink);
-		outline: 1px solid var(--surface);
-		outline-offset: -4px;
 	}
 
 	.progress {

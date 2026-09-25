@@ -14,9 +14,12 @@ export type Prefs = {
 	captureFocus: NodeFocus;
 	pokeFromCards: boolean;
 	organizedGrouping: Grouping;
+	/** Custom colors picked via the native color input, most recent first. */
+	recentColors: string[];
 };
 
 export const PREFS_STORAGE_KEY = 'loom.prefs';
+const MAX_RECENT_COLORS = 8;
 
 const DEFAULTS: Prefs = {
 	theme: 'system',
@@ -25,7 +28,8 @@ const DEFAULTS: Prefs = {
 	captureKind: 'idea',
 	captureFocus: 'secondary',
 	pokeFromCards: true,
-	organizedGrouping: 'focus'
+	organizedGrouping: 'focus',
+	recentColors: []
 };
 
 function loadPrefs(): Prefs {
@@ -38,6 +42,15 @@ function loadPrefs(): Prefs {
 }
 
 export const prefs = $state<Prefs>(loadPrefs());
+
+/** Records a color picked via the native picker - most-recent-first, deduped, capped. */
+export function addRecentColor(color: string) {
+	prefs.recentColors = [
+		color,
+		...prefs.recentColors.filter((existing) => existing !== color)
+	].slice(0, MAX_RECENT_COLORS);
+	savePrefs();
+}
 
 export function savePrefs() {
 	try {

@@ -14,7 +14,8 @@ export const ACCENT_PALETTE = [
 	'#c9a13c',
 	'#8a7fa3',
 	'#6b7b62',
-	'#5d6f85'
+	'#5d6f85',
+	'#b0483f'
 ] as const;
 
 const DEFAULT_ACCENT: Record<NodeResponse['kind'], string> = {

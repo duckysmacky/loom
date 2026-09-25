@@ -1,8 +1,8 @@
 <script lang="ts">
 	import './settings.css';
+	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { topicsApi } from '$lib/api/endpoints';
-	import { ACCENT_PALETTE } from '$lib/graph/display';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
 
@@ -58,19 +58,7 @@
 			aria-label="New topic name"
 			bind:value={newName}
 		/>
-		<div class="swatches">
-			{#each ACCENT_PALETTE as color (color)}
-				<button
-					type="button"
-					class="swatch"
-					class:chosen={newColor === color}
-					style:background={color}
-					aria-label="Color {color}"
-					aria-pressed={newColor === color}
-					onclick={() => (newColor = newColor === color ? null : color)}
-				></button>
-			{/each}
-		</div>
+		<AccentPicker value={newColor} onchange={(color) => (newColor = color)} />
 		<Button type="submit" variant="primary" disabled={!newName.trim()}>Add</Button>
 	</form>
 
@@ -96,19 +84,11 @@
 				{/if}
 				<span class="count">{nodeCounts.get(topic.id)} nodes</span>
 				<div class="colors">
-					{#each ACCENT_PALETTE as color (color)}
-						<button
-							type="button"
-							class="swatch small"
-							class:chosen={topic.color === color}
-							style:background={color}
-							aria-label="Set {topic.name} color {color}"
-							onclick={() =>
-								graph.mutate(() =>
-									topicsApi.update(topic.id, { color: topic.color === color ? null : color })
-								)}
-						></button>
-					{/each}
+					<AccentPicker
+						value={topic.color}
+						size="small"
+						onchange={(color) => graph.mutate(() => topicsApi.update(topic.id, { color }))}
+					/>
 				</div>
 				{#if deletingId === topic.id}
 					<Button variant="quiet" onclick={() => (deletingId = null)}>Keep</Button>
@@ -143,27 +123,8 @@
 		min-width: 180px;
 	}
 
-	.swatches,
 	.colors {
 		display: flex;
-		gap: 4px;
-	}
-
-	.swatch {
-		width: 18px;
-		height: 18px;
-		padding: 0;
-		border: var(--border-width) solid transparent;
-	}
-
-	.swatch.small {
-		width: 13px;
-		height: 13px;
-		border-width: 1.5px;
-	}
-
-	.swatch.chosen {
-		border-color: var(--ink);
 	}
 
 	.topics {
