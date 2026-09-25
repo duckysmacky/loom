@@ -29,7 +29,7 @@
 		title = '';
 		kind = prefs.captureKind;
 		focus = prefs.captureFocus;
-		status = kind === 'idea' ? 'idea' : 'queued';
+		status = prefs.captureKind === 'idea' ? 'idea' : 'queued';
 		topicIds = [];
 	});
 
