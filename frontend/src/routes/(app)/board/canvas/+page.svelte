@@ -32,6 +32,18 @@
 	let zoom = $state(1);
 	let pendingConnection = $state<Connection | null>(null);
 
+	// Shared by the layout effect and settleDrag, instead of each recomputing
+	// its own from graph.edges.
+	const parentOf = $derived(parentPathOf(graph.edges));
+
+	// Plain bookkeeping (not reactive - reading `nodes`/`edges` here would make
+	// the effect below depend on the very state it writes, looping forever).
+	// Lets a drag-stop reuse the exact previous flow node/edge object for
+	// everything that didn't change, instead of allocating fresh objects for
+	// the whole canvas - see the effect below.
+	let previousNodes = new Map<string, LoomFlowNode>();
+	let previousEdges = new Map<string, LoomFlowEdge>();
+
 	// Backlog ideas leave the canvas unless "Show backlog" is on, and archived
 	// nodes leave it unless the filters ask for them. Every other
 	// non-matching node stays in place, dimmed, so the graph's shape doesn't
@@ -66,13 +78,29 @@
 		);
 
 		// xyflow needs a parent listed before its children.
-		const parentOf = parentPathOf(graph.edges);
 		const parentsFirst = shown.toSorted(
 			(left, right) => nestingDepth(left.id, parentOf) - nestingDepth(right.id, parentOf)
 		);
+		// Reuse a node's exact previous object when nothing about it changed
+		// (same underlying NodeResponse, position, size, parent, dimmed state) -
+		// a single dragged node shouldn't force every other CanvasNode to
+		// re-render on drag-stop.
 		nodes = parentsFirst.map((node) => {
 			const { position, size, parentId } = placements.get(node.id)!;
 			const isPath = node.kind === 'path';
+			const dimmed = dimmedIds.has(node.id);
+			const previous = previousNodes.get(node.id);
+			if (
+				previous &&
+				previous.data.node === node &&
+				previous.data.dimmed === dimmed &&
+				previous.parentId === parentId &&
+				previous.position.x === position.x &&
+				previous.position.y === position.y &&
+				(!isPath || (previous.width === size.width && previous.height === size.height))
+			) {
+				return previous;
+			}
 			return {
 				id: node.id,
 				type: isPath ? ('loomPath' as const) : ('loom' as const),
@@ -80,10 +108,12 @@
 				parentId,
 				// Path boxes have an explicit size (resizable); cards size themselves.
 				...(isPath ? { width: size.width, height: size.height } : {}),
-				data: { node, dimmed: dimmedIds.has(node.id) },
+				data: { node, dimmed },
 				deletable: false
 			};
 		});
+		previousNodes = new Map(nodes.map((flowNode) => [flowNode.id, flowNode]));
+
 		// part_of is drawn as containment (the box), not as a line.
 		edges = graph.edges
 			.filter((edge) => edge.kind !== 'part_of')
@@ -92,19 +122,28 @@
 				const { source, target } = flowDirection(edge);
 				const unmet =
 					edge.kind === 'requires' && graph.nodeById.get(edge.to_node_id)?.status !== 'done';
+				const dimmed = dimmedIds.has(edge.from_node_id) || dimmedIds.has(edge.to_node_id);
+				const previous = previousEdges.get(edge.id);
+				if (
+					previous &&
+					previous.source === source &&
+					previous.target === target &&
+					previous.data?.kind === edge.kind &&
+					previous.data?.unmet === unmet &&
+					previous.data?.dimmed === dimmed
+				) {
+					return previous;
+				}
 				return {
 					id: edge.id,
 					source,
 					target,
 					type: 'loom' as const,
 					zIndex: 1,
-					data: {
-						kind: edge.kind,
-						unmet,
-						dimmed: dimmedIds.has(edge.from_node_id) || dimmedIds.has(edge.to_node_id)
-					}
+					data: { kind: edge.kind, unmet, dimmed }
 				};
 			});
+		previousEdges = new Map(edges.map((flowEdge) => [flowEdge.id, flowEdge]));
 	});
 
 	async function persistPosition(nodeId: string, position: { x: number; y: number }) {
@@ -142,7 +181,6 @@
 			}
 			return point;
 		};
-		const parentOf = parentPathOf(graph.edges);
 		const draggedIds = new Set(dragged.map((flowNode) => flowNode.id));
 		let membershipChanged = false;
 
@@ -254,6 +292,7 @@
 		fitView
 		minZoom={0.2}
 		maxZoom={2}
+		onlyRenderVisibleElements
 		deleteKey={['Delete', 'Backspace']}
 		proOptions={{ hideAttribution: true }}
 		onnodeclick={({ node, event }) => {
