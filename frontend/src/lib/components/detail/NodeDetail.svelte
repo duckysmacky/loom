@@ -25,6 +25,7 @@
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
+	import DetailActivePeriods from './DetailActivePeriods.svelte';
 	import DetailChecklist from './DetailChecklist.svelte';
 	import DetailConnections from './DetailConnections.svelte';
 	import DetailContains from './DetailContains.svelte';
@@ -217,6 +218,7 @@
 					{/if}
 
 					<DetailNotes {node} />
+					<DetailActivePeriods {node} />
 					{#if node.kind === 'path'}
 						<DetailContains {node} />
 					{/if}
