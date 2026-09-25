@@ -63,7 +63,7 @@
 			.catch(() => (pokeCount = null));
 	});
 
-	const update = (current: NodeResponse, patch: UpdateNodeRequest) =>
+	const update = (current: NodeResponse, patch: Omit<UpdateNodeRequest, 'track_active_periods'>) =>
 		graph.mutate(() => nodesApi.update(current.id, patch));
 
 	function saveTitle(current: NodeResponse) {
@@ -82,7 +82,7 @@
 	}
 
 	async function poke(current: NodeResponse) {
-		if (await graph.mutate(() => nodesApi.poke(current.id))) notify(`Poked “${current.title}”`);
+		if (await graph.poke(current)) notify(`Poked “${current.title}”`);
 	}
 
 	async function remove(current: NodeResponse) {

@@ -59,7 +59,7 @@
 
 	async function poke(event: MouseEvent) {
 		event.stopPropagation();
-		const poked = await graph.mutate(() => nodesApi.poke(node.id));
+		const poked = await graph.poke(node);
 		if (poked) {
 			notify(`Poked “${node.title}”`);
 			pulsing = true;

@@ -1,9 +1,12 @@
 import { queryString, request } from './client';
+import { prefs } from '$lib/stores/prefs.svelte';
+import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 import type { AuthResponse } from '$lib/types/AuthResponse';
 import type { AuthUserView } from '$lib/types/AuthUserView';
 import type { CanvasResponse } from '$lib/types/CanvasResponse';
 import type { ChecklistItemResponse } from '$lib/types/ChecklistItemResponse';
 import type { ChangePasswordRequest } from '$lib/types/ChangePasswordRequest';
+import type { CreateActivePeriodRequest } from '$lib/types/CreateActivePeriodRequest';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
 import type { CreateNodeRequest } from '$lib/types/CreateNodeRequest';
 import type { CreateTopicRequest } from '$lib/types/CreateTopicRequest';
@@ -16,7 +19,9 @@ import type { PokeResponse } from '$lib/types/PokeResponse';
 import type { RefreshResponse } from '$lib/types/RefreshResponse';
 import type { ReorderNodesRequest } from '$lib/types/ReorderNodesRequest';
 import type { SignupRequest } from '$lib/types/SignupRequest';
+import type { TimelineResponse } from '$lib/types/TimelineResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
+import type { UpdateActivePeriodRequest } from '$lib/types/UpdateActivePeriodRequest';
 import type { UpdateChecklistItemRequest } from '$lib/types/UpdateChecklistItemRequest';
 import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
 import type { UpdateTopicRequest } from '$lib/types/UpdateTopicRequest';
@@ -43,8 +48,16 @@ export const nodesApi = {
 		),
 	get: (nodeId: string) => request<NodeResponse>('GET', `/nodes/${nodeId}`),
 	create: (body: CreateNodeRequest) => request<NodeResponse>('POST', '/nodes', body),
-	update: (nodeId: string, body: UpdateNodeRequest) =>
-		request<NodeResponse>('PATCH', `/nodes/${nodeId}`, body),
+	// `track_active_periods` is added here, not by the caller - it rides on
+	// every PATCH (harmless when status isn't in the body; the backend only
+	// acts on it for a real active-boundary transition), keeping the
+	// "record active periods" setting a single frontend choke point instead
+	// of something every status-changing call site has to remember to add.
+	update: (nodeId: string, body: Omit<UpdateNodeRequest, 'track_active_periods'>) =>
+		request<NodeResponse>('PATCH', `/nodes/${nodeId}`, {
+			...body,
+			track_active_periods: prefs.trackActivePeriods
+		} satisfies UpdateNodeRequest),
 	remove: (nodeId: string) => request<void>('DELETE', `/nodes/${nodeId}`),
 	attachTopic: (nodeId: string, topicId: string) =>
 		request<void>('POST', `/nodes/${nodeId}/topics`, { topic_id: topicId }),
@@ -79,8 +92,18 @@ export const topicsApi = {
 	remove: (topicId: string) => request<void>('DELETE', `/topics/${topicId}`)
 };
 
+export const periodsApi = {
+	list: (nodeId: string) => request<ActivePeriodResponse[]>('GET', `/nodes/${nodeId}/periods`),
+	add: (nodeId: string, body: CreateActivePeriodRequest) =>
+		request<ActivePeriodResponse>('POST', `/nodes/${nodeId}/periods`, body),
+	update: (periodId: string, body: UpdateActivePeriodRequest) =>
+		request<ActivePeriodResponse>('PATCH', `/periods/${periodId}`, body),
+	remove: (periodId: string) => request<void>('DELETE', `/periods/${periodId}`)
+};
+
 export const boardApi = {
-	canvas: () => request<CanvasResponse>('GET', '/board/canvas')
+	canvas: () => request<CanvasResponse>('GET', '/board/canvas'),
+	timeline: () => request<TimelineResponse>('GET', '/board/timeline')
 };
 
 export const dashboardApi = {

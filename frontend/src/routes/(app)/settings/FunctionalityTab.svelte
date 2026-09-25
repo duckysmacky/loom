@@ -81,6 +81,41 @@
 			/>
 		</label>
 	</div>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
+				<span class="row-label">Poke sets active</span>
+				<span class="row-help">A poke also switches the node's status to Active.</span>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.pokeSetsActive}
+				onchange={(event) => {
+					prefs.pokeSetsActive = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
+				<span class="row-label">Track active periods</span>
+				<span class="row-help">
+					Pausing and reactivating a node records a period on its timeline row, instead of just the
+					first start → finish span.
+				</span>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.trackActivePeriods}
+				onchange={(event) => {
+					prefs.trackActivePeriods = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
 </section>
 
 <style>

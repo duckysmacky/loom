@@ -9,6 +9,7 @@
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
+	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	let dashboard = $state<DashboardResponse | null>(null);
 	let loadFailed = $state(false);
@@ -59,8 +60,8 @@
 		}
 	}
 
-	function poke(nodeId: string, title: string) {
-		graph.mutate(() => nodesApi.poke(nodeId)).then((poked) => poked && notify(`Poked “${title}”`));
+	function poke(node: NodeResponse) {
+		graph.poke(node).then((poked) => poked && notify(`Poked “${node.title}”`));
 	}
 </script>
 
@@ -116,7 +117,7 @@
 												: `never touched · ${shortDate(node.created_at)}`}
 										</span>
 									</button>
-									<Button variant="poke" onclick={() => poke(node.id, node.title)}>Poke</Button>
+									<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
 								</li>
 							{/each}
 						</ul>

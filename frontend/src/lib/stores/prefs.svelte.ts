@@ -16,6 +16,10 @@ export type Prefs = {
 	organizedGrouping: Grouping;
 	/** Custom colors picked via the native color input, most recent first. */
 	recentColors: string[];
+	/** A poke also switches the node's status to Active. */
+	pokeSetsActive: boolean;
+	/** Pausing/reactivating a node records an active period on its timeline row. */
+	trackActivePeriods: boolean;
 };
 
 export const PREFS_STORAGE_KEY = 'loom.prefs';
@@ -29,7 +33,9 @@ const DEFAULTS: Prefs = {
 	captureFocus: 'secondary',
 	pokeFromCards: true,
 	organizedGrouping: 'focus',
-	recentColors: []
+	recentColors: [],
+	pokeSetsActive: false,
+	trackActivePeriods: false
 };
 
 function loadPrefs(): Prefs {

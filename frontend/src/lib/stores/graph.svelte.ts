@@ -1,7 +1,8 @@
-import { boardApi, topicsApi } from '$lib/api/endpoints';
+import { boardApi, nodesApi, topicsApi } from '$lib/api/endpoints';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
+import { prefs } from './prefs.svelte';
 import { notifyError } from './toasts.svelte';
 
 /**
@@ -48,6 +49,21 @@ class GraphStore {
 			notifyError(error);
 			return undefined;
 		}
+	}
+
+	/**
+	 * Logs a poke and, when "Poke sets active" is on, also switches the
+	 * node's status to `active` - one `mutate` call, one refetch, instead of
+	 * every poke call site running its own two-step sequence.
+	 */
+	async poke(node: NodeResponse) {
+		return this.mutate(async () => {
+			const poked = await nodesApi.poke(node.id);
+			if (prefs.pokeSetsActive && node.status !== 'active') {
+				await nodesApi.update(node.id, { status: 'active' });
+			}
+			return poked;
+		});
 	}
 
 	/**
