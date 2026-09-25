@@ -4,7 +4,7 @@ use uuid::Uuid;
 
 use crate::models::node::{
     CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
-    Progress, UpdateNodeRequest,
+    Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
 use crate::repo::{checklist, edges, node_topics, pokes};
 
@@ -32,6 +32,7 @@ pub(crate) struct NodeRow {
     pub(crate) canvas_y: Option<f64>,
     pub(crate) canvas_width: Option<f64>,
     pub(crate) canvas_height: Option<f64>,
+    pub(crate) sort_order: Option<i32>,
     pub(crate) topic_ids: Vec<Uuid>,
     pub(crate) blocked: bool,
     pub(crate) container_total: i64,
@@ -70,6 +71,7 @@ impl From<NodeRow> for NodeResponse {
             canvas_y: row.canvas_y,
             canvas_width: row.canvas_width,
             canvas_height: row.canvas_height,
+            sort_order: row.sort_order,
             topic_ids: row.topic_ids,
             blocked: row.blocked,
             container_progress,
@@ -108,6 +110,7 @@ pub async fn create_node(
             title, progress_current, progress_total, progress_unit, color, notes,
             created_at, updated_at, started_at, completed_at,
             canvas_x, canvas_y, canvas_width, canvas_height,
+            NULL::integer AS sort_order,
             ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
             false AS "blocked!",
             0::bigint AS "container_total!",
@@ -147,7 +150,7 @@ pub async fn list_nodes(
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
-            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,
+            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (
@@ -213,7 +216,7 @@ pub async fn get_node(
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
-            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,
+            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
             EXISTS (
@@ -326,7 +329,7 @@ pub async fn update_node(
             id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
             title, progress_current, progress_total, progress_unit, color, notes,
             created_at, updated_at, started_at, completed_at, canvas_x, canvas_y,
-            canvas_width, canvas_height
+            canvas_width, canvas_height, sort_order
         "#,
         user_id,
         node_id,
@@ -398,12 +401,54 @@ pub async fn update_node(
         canvas_y: row.canvas_y,
         canvas_width: row.canvas_width,
         canvas_height: row.canvas_height,
+        sort_order: row.sort_order,
         topic_ids,
         blocked: derived.blocked,
         container_progress: derived.container_progress,
         checklist_progress,
         last_poked_at,
     }))
+}
+
+/// Ranks the given nodes 1..N in list order; anything left out keeps its
+/// existing `sort_order`. Fails (rolled back) if any id isn't the caller's -
+/// same ownership guarantee as every other write here.
+pub async fn reorder_nodes(
+    user_id: Uuid,
+    pool: &PgPool,
+    request: &ReorderNodesRequest,
+) -> Result<bool, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+
+    let result = sqlx::query!(
+        r#"
+        UPDATE nodes SET sort_order = ranked.rank
+        FROM unnest($2::uuid[]) WITH ORDINALITY AS ranked(id, rank)
+        WHERE nodes.id = ranked.id AND nodes.user_id = $1
+        "#,
+        user_id,
+        &request.node_ids,
+    )
+    .execute(&mut *tx)
+    .await?;
+
+    if result.rows_affected() as usize != request.node_ids.len() {
+        tx.rollback().await?;
+        return Ok(false);
+    }
+    tx.commit().await?;
+    Ok(true)
+}
+
+/// Drops manual ordering for every one of the caller's nodes - "Reset order".
+pub async fn clear_order(user_id: Uuid, pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE nodes SET sort_order = NULL WHERE user_id = $1",
+        user_id,
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
 }
 
 pub async fn delete_node(user_id: Uuid, pool: &PgPool, node_id: Uuid) -> Result<bool, sqlx::Error> {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeEdge, makeNode } from './fixtures';
-import { dependencyOrder } from './order';
+import { dependencyOrder, manualOrder, moveBefore } from './order';
 
 const ids = (nodes: { id: string }[]) => nodes.map((node) => node.id);
 
@@ -29,5 +29,36 @@ describe('dependencyOrder', () => {
 			makeEdge('b', 'a', 'requires')
 		];
 		expect(ids(dependencyOrder(nodes, edges))).toEqual(['b', 'a']);
+	});
+});
+
+describe('manualOrder', () => {
+	it('sorts ranked nodes by rank, unranked nodes keep incoming order after them', () => {
+		const nodes = [
+			makeNode({ id: 'c', sort_order: null }),
+			makeNode({ id: 'a', sort_order: 2 }),
+			makeNode({ id: 'd', sort_order: null }),
+			makeNode({ id: 'b', sort_order: 1 })
+		];
+		expect(ids(manualOrder(nodes))).toEqual(['b', 'a', 'c', 'd']);
+	});
+
+	it('is a no-op when nothing is ranked', () => {
+		const nodes = ['a', 'b'].map((id) => makeNode({ id }));
+		expect(ids(manualOrder(nodes))).toEqual(['a', 'b']);
+	});
+});
+
+describe('moveBefore', () => {
+	it('moves the dragged id before the target', () => {
+		expect(moveBefore(['a', 'b', 'c'], 'c', 'a')).toEqual(['c', 'a', 'b']);
+	});
+
+	it('appends at the end when beforeId is null', () => {
+		expect(moveBefore(['a', 'b', 'c'], 'a', null)).toEqual(['b', 'c', 'a']);
+	});
+
+	it('drops the dragged id out of its old slot first', () => {
+		expect(moveBefore(['a', 'b', 'c'], 'a', 'c')).toEqual(['b', 'a', 'c']);
 	});
 });

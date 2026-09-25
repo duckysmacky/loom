@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE nodes SET sort_order = ranked.rank\n        FROM unnest($2::uuid[]) WITH ORDINALITY AS ranked(id, rank)\n        WHERE nodes.id = ranked.id AND nodes.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "UuidArray"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "60040f108ea58affb6e291940ca898c6cc575b8df5092f5523440c4129085ef9"
+}

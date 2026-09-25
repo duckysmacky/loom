@@ -14,6 +14,7 @@ import type { NodeListQuery } from '$lib/types/NodeListQuery';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { PokeResponse } from '$lib/types/PokeResponse';
 import type { RefreshResponse } from '$lib/types/RefreshResponse';
+import type { ReorderNodesRequest } from '$lib/types/ReorderNodesRequest';
 import type { SignupRequest } from '$lib/types/SignupRequest';
 import type { TopicResponse } from '$lib/types/TopicResponse';
 import type { UpdateChecklistItemRequest } from '$lib/types/UpdateChecklistItemRequest';
@@ -50,7 +51,10 @@ export const nodesApi = {
 	detachTopic: (nodeId: string, topicId: string) =>
 		request<void>('DELETE', `/nodes/${nodeId}/topics/${topicId}`),
 	poke: (nodeId: string) => request<PokeResponse>('POST', `/nodes/${nodeId}/pokes`),
-	pokes: (nodeId: string) => request<PokeResponse[]>('GET', `/nodes/${nodeId}/pokes`)
+	pokes: (nodeId: string) => request<PokeResponse[]>('GET', `/nodes/${nodeId}/pokes`),
+	reorder: (nodeIds: string[]) =>
+		request<void>('PUT', '/nodes/order', { node_ids: nodeIds } satisfies ReorderNodesRequest),
+	clearOrder: () => request<void>('DELETE', '/nodes/order')
 };
 
 export const checklistApi = {

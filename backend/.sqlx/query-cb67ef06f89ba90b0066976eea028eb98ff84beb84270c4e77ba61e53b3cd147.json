@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total, n.progress_unit,\n            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,\n            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)\n                AS \"checklist_total!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)\n                AS \"checklist_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND n.status IN ('active', 'queued')\n          AND COALESCE(\n                (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id),\n                n.created_at\n              ) < now() - interval '14 days'\n        GROUP BY n.id\n        ORDER BY COALESCE((SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id), n.created_at) ASC\n        ",
+  "query": "\n        -- Same auto-stamping as update_node: a node created straight into\n        -- `active`/`done` gets started_at/completed_at, not just one that\n        -- transitions there later.\n        INSERT INTO nodes (\n            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,\n            started_at, completed_at, progress_unit\n        )\n        VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9,\n            CASE WHEN $3 = 'active'::node_status THEN now() END,\n            CASE WHEN $3 = 'done'::node_status THEN now() END,\n            $10\n        )\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, progress_unit, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height,\n            NULL::integer AS sort_order,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            0::bigint AS \"checklist_total!\",\n            0::bigint AS \"checklist_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
   "describe": {
     "columns": [
       {
@@ -240,42 +240,48 @@
       },
       {
         "ordinal": 18,
+        "name": "sort_order",
+        "type_info": "Int4",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 19,
         "name": "topic_ids!: Vec<Uuid>",
         "type_info": "UuidArray",
         "origin": "Expression"
       },
       {
-        "ordinal": 19,
+        "ordinal": 20,
         "name": "blocked!",
         "type_info": "Bool",
         "origin": "Expression"
       },
       {
-        "ordinal": 20,
+        "ordinal": 21,
         "name": "container_total!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 21,
+        "ordinal": 22,
         "name": "container_done!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 22,
+        "ordinal": 23,
         "name": "checklist_total!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 23,
+        "ordinal": 24,
         "name": "checklist_done!",
         "type_info": "Int8",
         "origin": "Expression"
       },
       {
-        "ordinal": 24,
+        "ordinal": 25,
         "name": "last_poked_at",
         "type_info": "Timestamptz",
         "origin": "Expression"
@@ -283,7 +289,53 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid"
+        "Uuid",
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Int4",
+        "Int4",
+        "Text",
+        "Text",
+        "Text"
       ]
     },
     "nullable": [
@@ -311,8 +363,9 @@
       null,
       null,
       null,
+      null,
       null
     ]
   },
-  "hash": "ce410d377320dbf686d0654ab9be22e0f941376915c87c851a50263df455cd14"
+  "hash": "cb67ef06f89ba90b0066976eea028eb98ff84beb84270c4e77ba61e53b3cd147"
 }

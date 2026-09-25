@@ -6,7 +6,8 @@ use super::extract::{ApiJson, ApiPath, ApiQuery};
 use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
 use crate::models::node::{
-    AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, NodeResponse, UpdateNodeRequest,
+    AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, NodeResponse,
+    ReorderNodesRequest, UpdateNodeRequest,
 };
 use crate::repo::node_topics::{AttachOutcome, DetachOutcome};
 use crate::repo::{node_topics, nodes};
@@ -99,6 +100,25 @@ pub async fn update(
         .map_err(map_node_error)?
         .ok_or(ApiError::NotFound)?;
     Ok(Json(node))
+}
+
+pub async fn reorder(
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
+    ApiJson(request): ApiJson<ReorderNodesRequest>,
+) -> Result<StatusCode, ApiError> {
+    if !nodes::reorder_nodes(user_id, &state.pool, &request).await? {
+        return Err(ApiError::NotFound);
+    }
+    Ok(StatusCode::NO_CONTENT)
+}
+
+pub async fn clear_order(
+    State(state): State<AppState>,
+    AuthUser { user_id }: AuthUser,
+) -> Result<StatusCode, ApiError> {
+    nodes::clear_order(user_id, &state.pool).await?;
+    Ok(StatusCode::NO_CONTENT)
 }
 
 pub async fn delete(

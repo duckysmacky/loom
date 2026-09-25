@@ -417,6 +417,79 @@ async fn ownership_scoping_returns_404_for_another_users_node(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn reorder_sets_ranks_and_rejects_another_users_node(pool: PgPool) {
+    let app = app(pool);
+    let token_a = signup(&app, "orderer@example.com").await;
+    let token_b = signup(&app, "orderintruder@example.com").await;
+
+    let first = create_node(&app, &token_a, json!({"kind": "idea", "title": "first"})).await;
+    let second = create_node(&app, &token_a, json!({"kind": "idea", "title": "second"})).await;
+    let foreign = create_node(&app, &token_b, json!({"kind": "idea", "title": "not yours"})).await;
+
+    let (status, _) = send(
+        &app,
+        req(
+            "PUT",
+            "/api/nodes/order",
+            json!({"node_ids": [second["id"], first["id"]]}),
+            Some(&token_a),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+
+    let after = send(&app, req("GET", "/api/nodes", Value::Null, Some(&token_a)))
+        .await
+        .1;
+    let by_id = |id: &Value| {
+        after
+            .as_array()
+            .unwrap()
+            .iter()
+            .find(|node| &node["id"] == id)
+            .unwrap()
+    };
+    assert_eq!(by_id(&second["id"])["sort_order"], 1);
+    assert_eq!(by_id(&first["id"])["sort_order"], 2);
+
+    // Including another user's node rolls the whole write back.
+    let (rejected_status, _) = send(
+        &app,
+        req(
+            "PUT",
+            "/api/nodes/order",
+            json!({"node_ids": [first["id"], foreign["id"]]}),
+            Some(&token_a),
+        ),
+    )
+    .await;
+    assert_eq!(rejected_status, StatusCode::NOT_FOUND);
+    let unchanged = send(&app, req("GET", "/api/nodes", Value::Null, Some(&token_a)))
+        .await
+        .1;
+    let unchanged_first = unchanged
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|node| node["id"] == first["id"])
+        .unwrap();
+    assert_eq!(unchanged_first["sort_order"], 2);
+
+    let (clear_status, _) = send(
+        &app,
+        req("DELETE", "/api/nodes/order", Value::Null, Some(&token_a)),
+    )
+    .await;
+    assert_eq!(clear_status, StatusCode::NO_CONTENT);
+    let cleared = send(&app, req("GET", "/api/nodes", Value::Null, Some(&token_a)))
+        .await
+        .1;
+    for node in cleared.as_array().unwrap() {
+        assert_eq!(node["sort_order"], Value::Null);
+    }
+}
+
+#[sqlx::test]
 async fn attach_topic_belonging_to_another_user_returns_404(pool: PgPool) {
     let app = app(pool);
     let token_a = signup(&app, "topicowner@example.com").await;

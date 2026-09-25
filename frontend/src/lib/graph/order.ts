@@ -30,3 +30,28 @@ export function dependencyOrder(nodes: NodeResponse[], edges: EdgeResponse[]): N
 	nodes.forEach(visit);
 	return ordered;
 }
+
+/**
+ * Applies manual drag order on top of the auto order: ranked nodes
+ * (`sort_order` set) sort by rank first, then every unranked node keeps
+ * its incoming (auto) order, appended after them.
+ */
+export function manualOrder(nodes: NodeResponse[]): NodeResponse[] {
+	const ranked = nodes
+		.filter((node) => node.sort_order !== null)
+		.toSorted((left, right) => left.sort_order! - right.sort_order!);
+	const unranked = nodes.filter((node) => node.sort_order === null);
+	return [...ranked, ...unranked];
+}
+
+/**
+ * Reinserts `draggedId` into `ids` right before `beforeId` (or at the end
+ * when `beforeId` is null/missing), for the caller to send as the new
+ * manual rank of that group via `nodesApi.reorder`.
+ */
+export function moveBefore(ids: string[], draggedId: string, beforeId: string | null): string[] {
+	const rest = ids.filter((id) => id !== draggedId);
+	const index = beforeId ? rest.indexOf(beforeId) : -1;
+	if (index === -1) return [...rest, draggedId];
+	return [...rest.slice(0, index), draggedId, ...rest.slice(index)];
+}

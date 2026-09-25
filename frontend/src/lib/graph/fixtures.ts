@@ -22,6 +22,7 @@ export function makeNode(overrides: Partial<NodeResponse> = {}): NodeResponse {
 		canvas_y: null,
 		canvas_width: null,
 		canvas_height: null,
+		sort_order: null,
 		topic_ids: [],
 		blocked: false,
 		container_progress: null,

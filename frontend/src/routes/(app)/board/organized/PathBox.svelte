@@ -6,6 +6,15 @@
 	import { KIND_GLYPH, TIER_COLOR, borderStyle } from '$lib/graph/display';
 	import { openNode } from '$lib/navigation';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
+	import {
+		dragOverSlot,
+		dragState,
+		dropAtEnd,
+		dropOnCard,
+		endDrag,
+		startDrag,
+		type DropZone
+	} from './drag.svelte';
 	import PathBox from './PathBox.svelte';
 
 	let {
@@ -20,13 +29,25 @@
 	const inside = $derived(childrenOf(path.id));
 	const progress = $derived(path.container_progress);
 	const border = $derived(borderStyle(path));
+	const zone = $derived<DropZone>({ kind: 'path', pathId: path.id });
 </script>
 
 <!-- A path is a box its nodes sit inside; sub-paths nest as boxes within it.
 The translucent fill stacks, so deeper nesting reads darker. -->
+<!-- svelte-ignore a11y_no_static_element_interactions -->
 <section
 	class="path-box line-{border.line} tone-{border.tone}"
+	class:drop-target={dragState.draggedId && dragState.draggedId !== path.id}
 	style:border-top-color={TIER_COLOR[path.focus]}
+	ondragover={(event) => dragState.draggedId && event.preventDefault()}
+	ondrop={(event) => {
+		event.preventDefault();
+		event.stopPropagation();
+		dropAtEnd(
+			zone,
+			inside.map((node) => node.id)
+		);
+	}}
 >
 	<button type="button" class="head" onclick={() => openNode(path.id)}>
 		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
@@ -43,8 +64,25 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 	{#if inside.length}
 		<div class="inside">
 			{#each inside as node (node.id)}
+				<!-- svelte-ignore a11y_no_static_element_interactions -->
 				<div
 					class={node.kind === 'path' ? 'path-slot' : 'card-slot'}
+					class:dragging={dragState.draggedId === node.id}
+					class:drop-before={dragState.overId === node.id && dragState.overBefore}
+					class:drop-after={dragState.overId === node.id && !dragState.overBefore}
+					draggable="true"
+					ondragstart={() => startDrag(node.id)}
+					ondragover={(event) => dragOverSlot(node.id, event)}
+					ondrop={(event) => {
+						event.preventDefault();
+						event.stopPropagation();
+						dropOnCard(
+							node,
+							zone,
+							inside.map((n) => n.id)
+						);
+					}}
+					ondragend={endDrag}
 					animate:flip={{ duration: 200 }}
 				>
 					{#if node.kind === 'path'}
@@ -56,9 +94,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 			{/each}
 		</div>
 	{:else}
-		<p class="empty">
-			Empty path. Add nodes from its detail view, or drag them into this box on the canvas.
-		</p>
+		<p class="empty">Empty path. Add nodes from its detail view, or drag them into this box.</p>
 	{/if}
 </section>
 
@@ -172,5 +208,27 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 
 	.kind {
 		white-space: nowrap;
+	}
+
+	.path-box.drop-target {
+		outline: var(--border-width-hair) dashed var(--accent);
+		outline-offset: 2px;
+	}
+
+	.card-slot,
+	.path-slot {
+		cursor: grab;
+	}
+
+	.dragging {
+		opacity: 0.4;
+	}
+
+	.drop-before {
+		box-shadow: -3px 0 0 var(--accent);
+	}
+
+	.drop-after {
+		box-shadow: 3px 0 0 var(--accent);
 	}
 </style>

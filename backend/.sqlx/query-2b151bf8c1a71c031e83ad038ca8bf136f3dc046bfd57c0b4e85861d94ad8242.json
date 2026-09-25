@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        -- Same auto-stamping as update_node: a node created straight into\n        -- `active`/`done` gets started_at/completed_at, not just one that\n        -- transitions there later.\n        INSERT INTO nodes (\n            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,\n            started_at, completed_at, progress_unit\n        )\n        VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9,\n            CASE WHEN $3 = 'active'::node_status THEN now() END,\n            CASE WHEN $3 = 'done'::node_status THEN now() END,\n            $10\n        )\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, progress_unit, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            0::bigint AS \"checklist_total!\",\n            0::bigint AS \"checklist_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
+  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            status = COALESCE($4, status),\n            focus = COALESCE($5, focus),\n            title = COALESCE($6, title),\n            -- Tracked progress belongs to study nodes only: any other resulting\n            -- kind drops it (a kind change clears data the new kind can't have).\n            progress_current = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $7 THEN $8 ELSE progress_current\n            END,\n            progress_total = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $9 THEN $10 ELSE progress_total\n            END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            -- An explicit client value always wins ($15/$17). Otherwise,\n            -- the server tracks these itself: `started_at` is stamped the\n            -- first time status moves to `active` (never overwritten\n            -- again), and `completed_at` the first time it moves to\n            -- `done` - cleared automatically if status later moves away\n            -- from `done`, since it's no longer true.\n            started_at = CASE\n                WHEN $15 THEN $16\n                WHEN COALESCE($4, status) = 'active' AND started_at IS NULL THEN now()\n                ELSE started_at\n            END,\n            completed_at = CASE\n                WHEN $17 THEN $18\n                WHEN COALESCE($4, status) = 'done' AND completed_at IS NULL THEN now()\n                WHEN COALESCE($4, status) <> 'done' THEN NULL\n                ELSE completed_at\n            END,\n            canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,\n            canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,\n            canvas_width = CASE WHEN $25 THEN $26 ELSE canvas_width END,\n            canvas_height = CASE WHEN $27 THEN $28 ELSE canvas_height END,\n            progress_unit = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $23 THEN $24 ELSE progress_unit\n            END,\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, progress_unit, color, notes,\n            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y,\n            canvas_width, canvas_height, sort_order\n        ",
   "describe": {
     "columns": [
       {
@@ -240,49 +240,19 @@
       },
       {
         "ordinal": 18,
-        "name": "topic_ids!: Vec<Uuid>",
-        "type_info": "UuidArray",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 19,
-        "name": "blocked!",
-        "type_info": "Bool",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 20,
-        "name": "container_total!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 21,
-        "name": "container_done!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 22,
-        "name": "checklist_total!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 23,
-        "name": "checklist_done!",
-        "type_info": "Int8",
-        "origin": "Expression"
-      },
-      {
-        "ordinal": 24,
-        "name": "last_poked_at",
-        "type_info": "Timestamptz",
-        "origin": "Expression"
+        "name": "sort_order",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "sort_order"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
+        "Uuid",
         "Uuid",
         {
           "Custom": {
@@ -325,11 +295,28 @@
           }
         },
         "Text",
+        "Bool",
         "Int4",
+        "Bool",
         "Int4",
+        "Bool",
         "Text",
+        "Bool",
         "Text",
-        "Text"
+        "Bool",
+        "Timestamptz",
+        "Bool",
+        "Timestamptz",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Text",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Float8"
       ]
     },
     "nullable": [
@@ -351,14 +338,8 @@
       true,
       true,
       true,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      true
     ]
   },
-  "hash": "a6aa0b3792f5a386219d86646d277d2dbe7d530532cafe4b7b46d5991d23d515"
+  "hash": "2b151bf8c1a71c031e83ad038ca8bf136f3dc046bfd57c0b4e85861d94ad8242"
 }

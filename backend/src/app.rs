@@ -3,7 +3,7 @@ use std::time::Duration;
 use axum::response::IntoResponse;
 use axum::{
     Router,
-    routing::{delete, get, patch, post},
+    routing::{delete, get, patch, post, put},
 };
 use tower_governor::{
     GovernorLayer, errors::GovernorError, governor::GovernorConfigBuilder,
@@ -69,6 +69,10 @@ pub fn build_router(state: AppState) -> Router {
         .route(
             "/",
             get(handlers::nodes::list).post(handlers::nodes::create),
+        )
+        .route(
+            "/order",
+            put(handlers::nodes::reorder).delete(handlers::nodes::clear_order),
         )
         .route(
             "/{id}",

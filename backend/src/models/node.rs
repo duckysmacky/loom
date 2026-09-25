@@ -83,6 +83,9 @@ pub struct NodeResponse {
     /// A path's box size on the canvas; both `null` means "fit the children".
     pub canvas_width: Option<f64>,
     pub canvas_height: Option<f64>,
+    /// Manual rank for the Organized view's drag-to-reorder; `null` until
+    /// the user drags it, then it sorts ahead of every unranked node.
+    pub sort_order: Option<i32>,
     pub topic_ids: Vec<Uuid>,
     pub blocked: bool,
     pub container_progress: Option<Progress>,
@@ -202,4 +205,14 @@ pub struct NodeListQuery {
 #[ts(export)]
 pub struct AttachTopicRequest {
     pub topic_id: Uuid,
+}
+
+/// `PUT /api/nodes/order` - the caller's full manual ranking, first to last.
+/// Every id must belong to the caller; nodes left out keep whatever
+/// `sort_order` they had (a drag inside one section shouldn't touch ranks
+/// in another).
+#[derive(Debug, Deserialize, TS)]
+#[ts(export)]
+pub struct ReorderNodesRequest {
+    pub node_ids: Vec<Uuid>,
 }
