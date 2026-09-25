@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
@@ -21,7 +22,7 @@ pub struct CreateChecklistItemRequest {
     pub title: String,
 }
 
-#[derive(Debug, Default, Deserialize, TS)]
+#[derive(Debug, Default, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct UpdateChecklistItemRequest {
     #[serde(default)]

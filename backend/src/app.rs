@@ -13,6 +13,7 @@ use tower_http::trace::TraceLayer;
 
 use crate::handlers;
 use crate::handlers::error::ApiError;
+use crate::mcp;
 use crate::state::AppState;
 
 /// Governor's default 429/500 responses are plain text - map them to the
@@ -135,7 +136,12 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/tokens/{id}", delete(handlers::mcp_tokens::delete));
 
-    Router::new()
+    let mcp_router = state
+        .mcp_public_url
+        .clone()
+        .map(|public_url| mcp::router(state.clone(), &public_url));
+
+    let app = Router::new()
         .nest(
             "/api",
             Router::new()
@@ -151,8 +157,13 @@ pub fn build_router(state: AppState) -> Router {
                 .nest("/periods", period_routes)
                 .nest("/mcp", mcp_routes),
         )
-        .with_state(state)
-        .layer(TraceLayer::new_for_http())
+        .with_state(state);
+
+    match mcp_router {
+        Some(mcp_router) => app.merge(mcp_router),
+        None => app,
+    }
+    .layer(TraceLayer::new_for_http())
 }
 
 async fn health() -> &'static str {

@@ -1,4 +1,5 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
@@ -15,7 +16,7 @@ pub struct TopicResponse {
     pub updated_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize, TS)]
+#[derive(Debug, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct CreateTopicRequest {
     pub name: String,
@@ -24,7 +25,7 @@ pub struct CreateTopicRequest {
     pub color: Option<String>,
 }
 
-#[derive(Debug, Default, Deserialize, TS)]
+#[derive(Debug, Default, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct UpdateTopicRequest {
     #[serde(default)]

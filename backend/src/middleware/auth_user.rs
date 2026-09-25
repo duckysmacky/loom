@@ -13,6 +13,7 @@ use crate::state::AppState;
 /// Every later handler that needs the caller's identity takes this as an
 /// argument - `user_id` is then the first argument to whatever repo
 /// function it calls, per root CLAUDE.md's access-control model.
+#[derive(Clone, Copy)]
 pub struct AuthUser {
     pub user_id: Uuid,
 }

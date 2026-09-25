@@ -1,9 +1,10 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS, JsonSchema)]
 #[ts(export)]
 #[sqlx(type_name = "edge_kind", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
@@ -23,7 +24,7 @@ pub struct EdgeResponse {
     pub created_at: DateTime<Utc>,
 }
 
-#[derive(Debug, Deserialize, TS)]
+#[derive(Debug, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct CreateEdgeRequest {
     pub from_node_id: Uuid,

@@ -1,11 +1,12 @@
 use chrono::{DateTime, Utc};
+use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
 use super::deserialize_some;
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS, JsonSchema)]
 #[ts(export)]
 #[sqlx(type_name = "node_kind", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
@@ -16,7 +17,7 @@ pub enum NodeKind {
     Path,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS, JsonSchema)]
 #[ts(export)]
 #[sqlx(type_name = "node_status", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
@@ -29,7 +30,7 @@ pub enum NodeStatus {
     Archived,
 }
 
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS, JsonSchema)]
 #[ts(export)]
 #[sqlx(type_name = "node_focus", rename_all = "snake_case")]
 #[serde(rename_all = "snake_case")]
@@ -95,35 +96,42 @@ pub struct NodeResponse {
     pub last_poked_at: Option<DateTime<Utc>>,
 }
 
-#[derive(Debug, Deserialize, TS)]
+#[derive(Debug, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct CreateNodeRequest {
     pub kind: NodeKind,
+    /// Defaults to `idea` (backlog).
     #[serde(default)]
     #[ts(optional = nullable)]
     pub status: Option<NodeStatus>,
+    /// Defaults to `secondary`.
     #[serde(default)]
     #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
     pub title: String,
+    /// Study nodes only: units done so far (0..=progress_total).
     #[serde(default)]
     #[ts(optional = nullable)]
     pub progress_current: Option<i32>,
+    /// Study nodes only: total units (> 0). Set together with progress_current.
     #[serde(default)]
     #[ts(optional = nullable)]
     pub progress_total: Option<i32>,
+    /// Study nodes only: what the progress counts, e.g. "chapters" (max 40 chars).
     #[serde(default)]
     #[ts(optional = nullable)]
     pub progress_unit: Option<String>,
+    /// Accent color as a hex code, `#rgb` or `#rrggbb`.
     #[serde(default)]
     #[ts(optional = nullable)]
     pub color: Option<String>,
+    /// Free-form Markdown description.
     #[serde(default)]
     #[ts(optional = nullable)]
     pub notes: Option<String>,
 }
 
-#[derive(Debug, Default, Deserialize, TS)]
+#[derive(Debug, Default, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct UpdateNodeRequest {
     #[serde(default)]
@@ -161,15 +169,19 @@ pub struct UpdateNodeRequest {
     pub completed_at: Option<Option<DateTime<Utc>>>,
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
+    #[schemars(skip)]
     pub canvas_x: Option<Option<f64>>,
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
+    #[schemars(skip)]
     pub canvas_y: Option<Option<f64>>,
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
+    #[schemars(skip)]
     pub canvas_width: Option<Option<f64>>,
     #[serde(default, deserialize_with = "deserialize_some")]
     #[ts(optional = nullable)]
+    #[schemars(skip)]
     pub canvas_height: Option<Option<f64>>,
     /// Client preference (not stored server-side), carried on every PATCH:
     /// when true, pausing/archiving an active node closes its active period
@@ -177,6 +189,7 @@ pub struct UpdateNodeRequest {
     /// the last period. The first period and the done date follow status
     /// changes either way.
     #[serde(default)]
+    #[schemars(skip)]
     pub track_active_periods: bool,
 }
 
@@ -184,16 +197,19 @@ pub struct UpdateNodeRequest {
 /// constraints in Rust before the query runs (not a `sqlx::Type`: it's
 /// never bound directly to a SQL parameter, unlike `NodeStatus`/`NodeFocus`/
 /// `NodeKind`, which map 1:1 onto Postgres enum columns).
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 #[serde(rename_all = "snake_case")]
+#[schemars(
+    description = "`backlog` = status idea, `archived` = status archived, `all` = no preset"
+)]
 pub enum NodeView {
     Backlog,
     All,
     Archived,
 }
 
-#[derive(Debug, Default, Deserialize, TS)]
+#[derive(Debug, Default, Deserialize, TS, JsonSchema)]
 #[ts(export)]
 pub struct NodeListQuery {
     #[serde(default)]

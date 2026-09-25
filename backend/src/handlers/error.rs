@@ -23,9 +23,11 @@ pub enum ApiError {
     Internal(anyhow::Error),
 }
 
-impl IntoResponse for ApiError {
-    fn into_response(self) -> Response {
-        let (status, message) = match self {
+impl ApiError {
+    /// The HTTP status and client-facing message for this error - shared by
+    /// the REST responses below and the MCP tools' error results.
+    pub fn status_and_message(self) -> (StatusCode, String) {
+        match self {
             Self::NotFound => (StatusCode::NOT_FOUND, "not found".to_string()),
             Self::Conflict(message) => (StatusCode::CONFLICT, message.to_string()),
             Self::InvalidInput(message) => (StatusCode::BAD_REQUEST, message.to_string()),
@@ -51,8 +53,13 @@ impl IntoResponse for ApiError {
                     "internal error".to_string(),
                 )
             }
-        };
+        }
+    }
+}
 
+impl IntoResponse for ApiError {
+    fn into_response(self) -> Response {
+        let (status, message) = self.status_and_message();
         (status, Json(json!({ "error": message }))).into_response()
     }
 }
