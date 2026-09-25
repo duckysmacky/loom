@@ -5,6 +5,7 @@
 	import { withParam } from '$lib/navigation';
 	import AccountTab from './AccountTab.svelte';
 	import AppearanceTab from './AppearanceTab.svelte';
+	import ConnectionsTab from './ConnectionsTab.svelte';
 	import FunctionalityTab from './FunctionalityTab.svelte';
 	import TopicsTab from './TopicsTab.svelte';
 
@@ -39,10 +40,7 @@
 	{:else if tab === 'functionality'}
 		<FunctionalityTab />
 	{:else}
-		<section class="panel">
-			<h2>Connections</h2>
-			<p class="muted">Reserved for linking Loom to outside services. Nothing to connect yet.</p>
-		</section>
+		<ConnectionsTab />
 	{/if}
 </div>
 
@@ -53,14 +51,5 @@
 		display: flex;
 		flex-direction: column;
 		gap: 16px;
-	}
-
-	h2 {
-		margin: 0 0 6px;
-		font: 700 15px/1.2 var(--font-display);
-	}
-
-	p {
-		margin: 0;
 	}
 </style>

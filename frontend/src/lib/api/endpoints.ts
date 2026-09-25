@@ -7,12 +7,16 @@ import type { CanvasResponse } from '$lib/types/CanvasResponse';
 import type { ChecklistItemResponse } from '$lib/types/ChecklistItemResponse';
 import type { ChangePasswordRequest } from '$lib/types/ChangePasswordRequest';
 import type { CreateActivePeriodRequest } from '$lib/types/CreateActivePeriodRequest';
+import type { CreatedMcpTokenResponse } from '$lib/types/CreatedMcpTokenResponse';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
+import type { CreateMcpTokenRequest } from '$lib/types/CreateMcpTokenRequest';
 import type { CreateNodeRequest } from '$lib/types/CreateNodeRequest';
 import type { CreateTopicRequest } from '$lib/types/CreateTopicRequest';
 import type { DashboardResponse } from '$lib/types/DashboardResponse';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { LoginRequest } from '$lib/types/LoginRequest';
+import type { McpInfoResponse } from '$lib/types/McpInfoResponse';
+import type { McpTokenResponse } from '$lib/types/McpTokenResponse';
 import type { NodeListQuery } from '$lib/types/NodeListQuery';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { PokeResponse } from '$lib/types/PokeResponse';
@@ -104,6 +108,14 @@ export const periodsApi = {
 export const boardApi = {
 	canvas: () => request<CanvasResponse>('GET', '/board/canvas'),
 	timeline: () => request<TimelineResponse>('GET', '/board/timeline')
+};
+
+export const mcpApi = {
+	info: () => request<McpInfoResponse>('GET', '/mcp/info'),
+	tokens: () => request<McpTokenResponse[]>('GET', '/mcp/tokens'),
+	createToken: (body: CreateMcpTokenRequest) =>
+		request<CreatedMcpTokenResponse>('POST', '/mcp/tokens', body),
+	removeToken: (tokenId: string) => request<void>('DELETE', `/mcp/tokens/${tokenId}`)
 };
 
 export const dashboardApi = {
