@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT a.id, a.node_id, a.started_at, a.ended_at\n        FROM active_periods a\n        JOIN nodes n ON n.id = a.node_id\n        WHERE n.user_id = $1 AND a.node_id = $2\n        ORDER BY a.started_at DESC\n        ",
+  "query": "\n        SELECT a.id, a.node_id, a.started_at, a.ended_at\n        FROM active_periods a\n        JOIN nodes n ON n.id = a.node_id\n        WHERE n.user_id = $1 AND a.node_id = $2\n        ORDER BY a.started_at, a.id\n        ",
   "describe": {
     "columns": [
       {
@@ -61,5 +61,5 @@
       true
     ]
   },
-  "hash": "fc25e48e14bf2a24ec55b47c293342dadda87c031f1d893f81a3affb908377ac"
+  "hash": "64c1d999b13c6d40a0ebf35718166195547d8761833ca2b621b9d329390fe6e2"
 }

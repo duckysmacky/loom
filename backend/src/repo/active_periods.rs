@@ -5,8 +5,9 @@ use uuid::Uuid;
 use crate::models::active_period::ActivePeriodResponse;
 use crate::models::node::NodeStatus;
 
-/// `None` means `node_id` isn't owned by `user_id`; `Some(vec)` (possibly
-/// empty) means it is - same explicit ownership check as
+/// Chronological, oldest first - a newly added period reads as appended at
+/// the end. `None` means `node_id` isn't owned by `user_id`; `Some(vec)`
+/// (possibly empty) means it is - same explicit ownership check as
 /// `checklist::list_items`/`pokes::list_pokes`.
 pub async fn list_periods(
     user_id: Uuid,
@@ -31,7 +32,7 @@ pub async fn list_periods(
         FROM active_periods a
         JOIN nodes n ON n.id = a.node_id
         WHERE n.user_id = $1 AND a.node_id = $2
-        ORDER BY a.started_at DESC
+        ORDER BY a.started_at, a.id
         "#,
         user_id,
         node_id,

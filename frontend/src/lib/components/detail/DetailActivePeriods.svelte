@@ -52,8 +52,11 @@
 
 	{#if periods.length}
 		<ul class="items">
-			{#each periods as period (period.id)}
+			{#each periods as period, index (period.id)}
 				<li class="item" transition:slide={{ duration: ms(160) }}>
+					{#if periods.length > 1}
+						<span class="index">{index + 1}</span>
+					{/if}
 					<input
 						class="field date"
 						type="date"
@@ -132,6 +135,14 @@
 	.arrow {
 		flex: none;
 		color: var(--ink-2);
+	}
+
+	.index {
+		flex: none;
+		width: 14px;
+		font: 700 11px/1 var(--font-mono);
+		color: var(--ink-2);
+		text-align: right;
 	}
 
 	.remove {

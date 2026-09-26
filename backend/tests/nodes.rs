@@ -1150,6 +1150,7 @@ async fn patch_status(
 }
 
 /// A node's periods, oldest first.
+/// A node's periods, oldest first (the API's own order).
 async fn list_periods(app: &axum::Router, token: &str, node_id: &str) -> Vec<Value> {
     let (_, body) = send(
         app,
@@ -1161,9 +1162,7 @@ async fn list_periods(app: &axum::Router, token: &str, node_id: &str) -> Vec<Val
         ),
     )
     .await;
-    let mut periods = body.as_array().unwrap().clone();
-    periods.reverse();
-    periods
+    body.as_array().unwrap().clone()
 }
 
 async fn project(app: &axum::Router, token: &str) -> String {
