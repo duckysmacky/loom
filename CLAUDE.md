@@ -69,6 +69,12 @@ once. One graph per account; no collaboration features.
   counter.
 - **Poke:** an append-only "I worked on this" log entry, decoupled from
   `updated_at`. **Last touched** = `MAX(poked_at)`, derived.
+- **Active period:** a `started_at -> ended_at` span of a node being
+  worked on (`ended_at` null = ongoing). The first one opens on first
+  activation; with "Track active periods" on, pausing/archiving closes it
+  and reactivating opens a new one. **Started** = the first period's start
+  and **Completed** = the last period's end while `done` - both derived,
+  never stored; editing them moves those period edges.
 - **Stale:** an active/queued node whose last poke (or creation date)
   is more than 14 days old.
 - **Accent:** the user-assigned node color.
@@ -83,8 +89,8 @@ once. One graph per account; no collaboration features.
   extracted once via middleware from the verified JWT. Repository-layer
   functions take `user_id` first, always - this is the actual security
   model (no roles/permissions system exists).
-- Derived state (`blocked`, container/checklist progress, last-touched)
-  is computed at query time, never written to a column.
+- Derived state (`blocked`, container/checklist progress, last-touched,
+  started/completed) is computed at query time, never written to a column.
 - Kind capabilities are enforced in both the handlers (400s) and DB
   constraints - don't relax one without the other.
 - Never edit an applied migration; add a new one.
