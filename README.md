@@ -3,7 +3,7 @@
 A flexible manager for everything you're building, studying, and dreaming up.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-![version](https://img.shields.io/badge/version-1.0.0-blue)
+![version](https://img.shields.io/badge/version-1.1.0-blue)
 
 ## Table of contents
 
