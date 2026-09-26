@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE active_periods a SET ended_at = GREATEST(now(), a.started_at)\n        FROM nodes n\n        WHERE a.id = $2 AND n.id = a.node_id AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "2784f1f96f16125a18dad185b9813eb8fe37be544dd9a4d3642902ce4e1c006b"
+}

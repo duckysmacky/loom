@@ -1,0 +1,126 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            status = COALESCE($4, status),\n            focus = COALESCE($5, focus),\n            title = COALESCE($6, title),\n            -- Tracked progress belongs to study nodes only: any other resulting\n            -- kind drops it (a kind change clears data the new kind can't have).\n            progress_current = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $7 THEN $8 ELSE progress_current\n            END,\n            progress_total = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $9 THEN $10 ELSE progress_total\n            END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            canvas_x = CASE WHEN $15 THEN $16 ELSE canvas_x END,\n            canvas_y = CASE WHEN $17 THEN $18 ELSE canvas_y END,\n            canvas_width = CASE WHEN $19 THEN $20 ELSE canvas_width END,\n            canvas_height = CASE WHEN $21 THEN $22 ELSE canvas_height END,\n            progress_unit = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $23 THEN $24 ELSE progress_unit\n            END,\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "kind: NodeKind",
+        "type_info": {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "status: NodeStatus",
+        "type_info": {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "status"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        "Text",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Int4",
+        "Bool",
+        "Text",
+        "Bool",
+        "Text",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Float8",
+        "Bool",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "58d8005cdcbe48a7a708ecc3bdd1fa456ea690dbab3ef29939de2691cd318803"
+}

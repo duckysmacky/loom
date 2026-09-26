@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE active_periods a SET started_at = $3\n        FROM nodes n\n        WHERE n.id = a.node_id AND n.user_id = $1\n          AND a.id = (\n              SELECT id FROM active_periods WHERE node_id = $2\n              ORDER BY started_at, id LIMIT 1\n          )\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "e548c7ad42218ce977054d84aeffaaa69bf8e273f0c956086b06600cb6e24d82"
+}

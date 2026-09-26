@@ -6,7 +6,7 @@ use super::extract::{ApiJson, ApiPath, ApiQuery};
 use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
 use crate::models::node::{
-    AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, NodeResponse,
+    AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, NodeResponse, NodeStatus,
     ReorderNodesRequest, UpdateNodeRequest,
 };
 use crate::repo::node_topics::{AttachOutcome, DetachOutcome};
@@ -92,6 +92,33 @@ pub async fn update(
         };
         if resulting_kind != NodeKind::Study {
             return Err(ONLY_STUDY_PROGRESS);
+        }
+    }
+
+    // A completed date is the last active period's end, so it only exists
+    // on a done node that has started; clearing it elsewhere is a no-op.
+    if let Some(completed_at) = request.completed_at {
+        let current = nodes::get_node(user_id, &state.pool, node_id)
+            .await?
+            .ok_or(ApiError::NotFound)?;
+        let done = request.status.unwrap_or(current.status) == NodeStatus::Done;
+        let started = match request.started_at {
+            Some(started_at) => started_at.is_some(),
+            None => current.started_at.is_some(),
+        };
+        match completed_at {
+            Some(_) if !done => {
+                return Err(ApiError::InvalidInput(
+                    "only done nodes have a completion date",
+                ));
+            }
+            Some(_) if !started => {
+                return Err(ApiError::InvalidInput(
+                    "a node needs a start date before a completion date",
+                ));
+            }
+            None if !done => request.completed_at = None,
+            _ => {}
         }
     }
 
@@ -193,6 +220,11 @@ fn map_node_error(error: sqlx::Error) -> ApiError {
             }
             Some("nodes_canvas_size_positive") => {
                 return ApiError::InvalidInput("canvas_width/canvas_height must be positive");
+            }
+            // Started/completed are the edges of the active periods, so a
+            // start after its period's end trips the period's own check.
+            Some("active_periods_check") => {
+                return ApiError::InvalidInput("an active period can't end before it starts");
             }
             _ => {}
         }

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO active_periods (node_id, started_at, ended_at)\n        SELECT n.id, now(), CASE WHEN $3 THEN now() END FROM nodes n\n        WHERE n.id = $2 AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "51669d01468d384c759ad031f899955c4a099d187a63ffc0e2874576e1046414"
+}

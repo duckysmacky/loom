@@ -424,7 +424,12 @@ async fn reorder_sets_ranks_and_rejects_another_users_node(pool: PgPool) {
 
     let first = create_node(&app, &token_a, json!({"kind": "idea", "title": "first"})).await;
     let second = create_node(&app, &token_a, json!({"kind": "idea", "title": "second"})).await;
-    let foreign = create_node(&app, &token_b, json!({"kind": "idea", "title": "not yours"})).await;
+    let foreign = create_node(
+        &app,
+        &token_b,
+        json!({"kind": "idea", "title": "not yours"}),
+    )
+    .await;
 
     let (status, _) = send(
         &app,
@@ -862,7 +867,7 @@ async fn half_set_canvas_position_returns_400(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn creating_straight_into_active_or_done_stamps_timestamps(pool: PgPool) {
+async fn creating_straight_into_active_starts_it(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "createstamp@example.com").await;
 
@@ -875,13 +880,15 @@ async fn creating_straight_into_active_or_done_stamps_timestamps(pool: PgPool) {
     assert!(!active["started_at"].is_null());
     assert_eq!(active["completed_at"], Value::Null);
 
+    // Done without ever being active: no start, so no completion date.
     let done = create_node(
         &app,
         &token,
         json!({"kind": "study", "title": "d", "status": "done"}),
     )
     .await;
-    assert!(!done["completed_at"].is_null());
+    assert_eq!(done["started_at"], Value::Null);
+    assert_eq!(done["completed_at"], Value::Null);
 
     let queued = create_node(
         &app,
@@ -893,7 +900,7 @@ async fn creating_straight_into_active_or_done_stamps_timestamps(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn explicit_started_and_completed_dates_override_auto_stamping(pool: PgPool) {
+async fn explicit_started_and_completed_dates_move_the_period_edges(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "explicitdates@example.com").await;
     let node = create_node(
@@ -902,16 +909,31 @@ async fn explicit_started_and_completed_dates_override_auto_stamping(pool: PgPoo
         json!({"kind": "project", "title": "t", "status": "active"}),
     )
     .await;
-    let uri = format!("/api/nodes/{}", node["id"].as_str().unwrap());
+    let node_id = node["id"].as_str().unwrap();
+    let uri = format!("/api/nodes/{node_id}");
 
-    // Backdating an auto-stamped started_at, and setting completed_at on a
-    // node that isn't done - the explicit value wins in both cases.
+    // A completion date only exists on a done node.
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"completed_at": "2026-02-10T00:00:00Z"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    // Backdating started_at and completing with an explicit date moves the
+    // first period's start and the last period's end.
     let (status, body) = send(
         &app,
         req(
             "PATCH",
             &uri,
             json!({
+                "status": "done",
                 "started_at": "2026-01-05T00:00:00Z",
                 "completed_at": "2026-02-10T00:00:00Z"
             }),
@@ -922,13 +944,33 @@ async fn explicit_started_and_completed_dates_override_auto_stamping(pool: PgPoo
     assert_eq!(status, StatusCode::OK);
     assert_eq!(body["started_at"], "2026-01-05T00:00:00Z");
     assert_eq!(body["completed_at"], "2026-02-10T00:00:00Z");
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert_eq!(periods[0]["started_at"], "2026-01-05T00:00:00Z");
+    assert_eq!(periods[0]["ended_at"], "2026-02-10T00:00:00Z");
 
+    // A start after the period's end is rejected.
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &uri,
+            json!({"started_at": "2026-03-01T00:00:00Z"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    // Clearing started_at removes every period: not started, not completed.
     let (_, cleared) = send(
         &app,
         req("PATCH", &uri, json!({"started_at": null}), Some(&token)),
     )
     .await;
     assert_eq!(cleared["started_at"], Value::Null);
+    assert_eq!(cleared["completed_at"], Value::Null);
+    assert!(list_periods(&app, &token, node_id).await.is_empty());
 }
 
 #[sqlx::test]
@@ -1107,6 +1149,7 @@ async fn patch_status(
     body
 }
 
+/// A node's periods, oldest first.
 async fn list_periods(app: &axum::Router, token: &str, node_id: &str) -> Vec<Value> {
     let (_, body) = send(
         app,
@@ -1118,140 +1161,181 @@ async fn list_periods(app: &axum::Router, token: &str, node_id: &str) -> Vec<Val
         ),
     )
     .await;
-    body.as_array().unwrap().clone()
+    let mut periods = body.as_array().unwrap().clone();
+    periods.reverse();
+    periods
+}
+
+async fn project(app: &axum::Router, token: &str) -> String {
+    let node = create_node(app, token, json!({"kind": "project", "title": "t"})).await;
+    node["id"].as_str().unwrap().to_owned()
 }
 
 #[sqlx::test]
-async fn continuous_active_to_done_creates_zero_periods(pool: PgPool) {
+async fn first_activation_opens_the_first_period(pool: PgPool) {
     let app = app(pool);
-    let token = signup(&app, "continuous@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
+    let token = signup(&app, "firstperiod@example.com").await;
+    let node_id = project(&app, &token).await;
+    assert!(list_periods(&app, &token, &node_id).await.is_empty());
 
-    patch_status(&app, &token, node_id, "active", true).await;
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+    let active = patch_status(&app, &token, &node_id, "active", true).await;
+    let periods = list_periods(&app, &token, &node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert_eq!(periods[0]["started_at"], active["started_at"]);
+    assert_eq!(periods[0]["ended_at"], Value::Null);
+}
 
-    let done = patch_status(&app, &token, node_id, "done", true).await;
+#[sqlx::test]
+async fn done_closes_the_period_and_its_end_is_the_completed_date(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "doneperiod@example.com").await;
+    let node_id = project(&app, &token).await;
+
+    patch_status(&app, &token, &node_id, "active", true).await;
+    let done = patch_status(&app, &token, &node_id, "done", true).await;
+    let periods = list_periods(&app, &token, &node_id).await;
+    assert_eq!(periods.len(), 1);
     assert!(!done["completed_at"].is_null());
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+    assert_eq!(periods[0]["ended_at"], done["completed_at"]);
+    assert_eq!(periods[0]["started_at"], done["started_at"]);
 }
 
 #[sqlx::test]
-async fn pause_then_reactivate_materializes_then_opens_new_period(pool: PgPool) {
+async fn tracking_opens_a_new_period_on_reactivation(pool: PgPool) {
     let app = app(pool);
-    let token = signup(&app, "pausecycle@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
+    let token = signup(&app, "trackon@example.com").await;
+    let node_id = project(&app, &token).await;
 
-    let active = patch_status(&app, &token, node_id, "active", true).await;
-    let started_at = active["started_at"].clone();
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
-
-    // First pause: no periods existed yet, so period #1 is materialized
-    // from the node's own started_at.
-    patch_status(&app, &token, node_id, "paused", true).await;
-    let periods = list_periods(&app, &token, node_id).await;
+    patch_status(&app, &token, &node_id, "active", true).await;
+    patch_status(&app, &token, &node_id, "paused", true).await;
+    let periods = list_periods(&app, &token, &node_id).await;
     assert_eq!(periods.len(), 1);
-    assert_eq!(periods[0]["started_at"], started_at);
     assert!(!periods[0]["ended_at"].is_null());
 
-    // Reactivating opens a second, open-ended period.
-    patch_status(&app, &token, node_id, "active", true).await;
-    let periods = list_periods(&app, &token, node_id).await;
-    assert_eq!(periods.len(), 2);
-    let open_count = periods.iter().filter(|p| p["ended_at"].is_null()).count();
-    assert_eq!(open_count, 1);
-
-    // Pausing again closes #2; no #3 is created.
-    patch_status(&app, &token, node_id, "paused", true).await;
-    let periods = list_periods(&app, &token, node_id).await;
-    assert_eq!(periods.len(), 2);
-    assert!(periods.iter().all(|p| !p["ended_at"].is_null()));
+    patch_status(&app, &token, &node_id, "active", true).await;
+    patch_status(&app, &token, &node_id, "done", true).await;
+    let reactivated = patch_status(&app, &token, &node_id, "active", true).await;
+    assert_eq!(reactivated["completed_at"], Value::Null);
+    let periods = list_periods(&app, &token, &node_id).await;
+    assert_eq!(periods.len(), 3);
+    assert_eq!(periods[2]["ended_at"], Value::Null);
+    // Started stays the first period's start throughout.
+    assert_eq!(reactivated["started_at"], periods[0]["started_at"]);
 }
 
 #[sqlx::test]
-async fn archived_from_active_closes_period_but_leaves_completed_at_null(pool: PgPool) {
+async fn without_tracking_reactivation_reopens_the_last_period(pool: PgPool) {
     let app = app(pool);
-    let token = signup(&app, "archivecycle@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
+    let token = signup(&app, "trackoff@example.com").await;
+    let node_id = project(&app, &token).await;
 
-    patch_status(&app, &token, node_id, "active", true).await;
-    let archived = patch_status(&app, &token, node_id, "archived", true).await;
+    patch_status(&app, &token, &node_id, "active", false).await;
+    // Pausing without tracking leaves the period running.
+    patch_status(&app, &token, &node_id, "paused", false).await;
+    assert_eq!(
+        list_periods(&app, &token, &node_id).await[0]["ended_at"],
+        Value::Null
+    );
 
+    patch_status(&app, &token, &node_id, "done", false).await;
+    let reactivated = patch_status(&app, &token, &node_id, "active", false).await;
+    assert_eq!(reactivated["completed_at"], Value::Null);
+    let periods = list_periods(&app, &token, &node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert_eq!(periods[0]["ended_at"], Value::Null);
+}
+
+#[sqlx::test]
+async fn done_after_a_pause_adds_a_completion_day_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pausedone@example.com").await;
+    let node_id = project(&app, &token).await;
+
+    patch_status(&app, &token, &node_id, "active", true).await;
+    patch_status(&app, &token, &node_id, "paused", true).await;
+    let paused_end = list_periods(&app, &token, &node_id).await[0]["ended_at"].clone();
+
+    let done = patch_status(&app, &token, &node_id, "done", true).await;
+    let periods = list_periods(&app, &token, &node_id).await;
+    assert_eq!(periods.len(), 2);
+    // The pause record is kept; the done date gets its own period.
+    assert_eq!(periods[0]["ended_at"], paused_end);
+    assert_eq!(periods[1]["started_at"], periods[1]["ended_at"]);
+    assert_eq!(done["completed_at"], periods[1]["ended_at"]);
+}
+
+#[sqlx::test]
+async fn archiving_an_active_node_closes_its_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "archiveperiod@example.com").await;
+    let node_id = project(&app, &token).await;
+
+    patch_status(&app, &token, &node_id, "active", true).await;
+    let archived = patch_status(&app, &token, &node_id, "archived", true).await;
     assert_eq!(archived["completed_at"], Value::Null);
-    let periods = list_periods(&app, &token, node_id).await;
+    let periods = list_periods(&app, &token, &node_id).await;
     assert_eq!(periods.len(), 1);
     assert!(!periods[0]["ended_at"].is_null());
 }
 
 #[sqlx::test]
-async fn queued_and_idea_transitions_never_touch_periods(pool: PgPool) {
+async fn never_started_node_going_done_gets_no_dates(pool: PgPool) {
     let app = app(pool);
-    let token = signup(&app, "neutraltransitions@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
+    let token = signup(&app, "neverstarted@example.com").await;
+    let node_id = project(&app, &token).await;
 
-    patch_status(&app, &token, node_id, "active", true).await;
-    // active -> queued isn't a recognized closing transition.
-    patch_status(&app, &token, node_id, "queued", true).await;
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+    patch_status(&app, &token, &node_id, "queued", true).await;
+    let done = patch_status(&app, &token, &node_id, "done", true).await;
+    assert_eq!(done["started_at"], Value::Null);
+    assert_eq!(done["completed_at"], Value::Null);
+    assert!(list_periods(&app, &token, &node_id).await.is_empty());
 
-    // queued -> archived: old status isn't active, so nothing closes.
-    patch_status(&app, &token, node_id, "archived", true).await;
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
+    // And a completion date can't be set by hand either.
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"completed_at": "2026-02-10T00:00:00Z"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
 }
 
 #[sqlx::test]
-async fn track_active_periods_false_is_fully_inert(pool: PgPool) {
+async fn deleting_the_first_period_makes_started_follow_the_next(pool: PgPool) {
     let app = app(pool);
-    let token = signup(&app, "inertsetting@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
+    let token = signup(&app, "deletefirst@example.com").await;
+    let node_id = project(&app, &token).await;
 
-    patch_status(&app, &token, node_id, "active", false).await;
-    patch_status(&app, &token, node_id, "paused", false).await;
-    patch_status(&app, &token, node_id, "active", false).await;
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
-}
-
-#[sqlx::test]
-async fn first_activation_never_opens_a_period(pool: PgPool) {
-    let app = app(pool);
-    let token = signup(&app, "firstactivation@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
-
-    patch_status(&app, &token, node_id, "active", true).await;
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
-}
-
-#[sqlx::test]
-async fn reactivating_a_single_run_done_node_migrates_first_period(pool: PgPool) {
-    let app = app(pool);
-    let token = signup(&app, "reactivatedone@example.com").await;
-    let node = create_node(&app, &token, json!({"kind": "project", "title": "t"})).await;
-    let node_id = node["id"].as_str().unwrap();
-
-    let active = patch_status(&app, &token, node_id, "active", true).await;
-    let started_at = active["started_at"].clone();
-    let done = patch_status(&app, &token, node_id, "done", true).await;
-    let completed_at = done["completed_at"].clone();
-    assert!(!completed_at.is_null());
-    // Finished in one continuous run: still zero periods.
-    assert_eq!(list_periods(&app, &token, node_id).await.len(), 0);
-
-    // Reactivating migrates the started_at/completed_at span into period #1
-    // and opens a fresh, open-ended period #2.
-    let reactivated = patch_status(&app, &token, node_id, "active", true).await;
-    assert_eq!(reactivated["completed_at"], Value::Null); // existing behavior, unchanged
-    let periods = list_periods(&app, &token, node_id).await;
+    patch_status(&app, &token, &node_id, "active", true).await;
+    patch_status(&app, &token, &node_id, "paused", true).await;
+    patch_status(&app, &token, &node_id, "active", true).await;
+    let periods = list_periods(&app, &token, &node_id).await;
     assert_eq!(periods.len(), 2);
-    let migrated = periods
-        .iter()
-        .find(|p| p["started_at"] == started_at)
-        .expect("migrated period #1 present");
-    assert_eq!(migrated["ended_at"], completed_at);
-    let open_count = periods.iter().filter(|p| p["ended_at"].is_null()).count();
-    assert_eq!(open_count, 1);
+
+    let (status, _) = send(
+        &app,
+        req(
+            "DELETE",
+            &format!("/api/periods/{}", periods[0]["id"].as_str().unwrap()),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let (_, node) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{node_id}"),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(node["started_at"], periods[1]["started_at"]);
 }

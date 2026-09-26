@@ -117,90 +117,211 @@ pub async fn delete_period(
     Ok(result.rows_affected() == 1)
 }
 
-/// Applies the open/close rule for one status transition, inside the
-/// caller's transaction - called from `nodes::update_node` only when the
-/// client opted in via `track_active_periods`. No-op unless the transition
-/// actually crosses into or out of `active`; never touches
-/// `nodes.started_at`/`completed_at`, which stamp themselves regardless.
+/// The node's latest period (its end is the node's completed date while
+/// done) - `None` when the node has never started.
+async fn last_period(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    node_id: Uuid,
+) -> Result<Option<(Uuid, Option<DateTime<Utc>>)>, sqlx::Error> {
+    let row = sqlx::query!(
+        r#"
+        SELECT a.id, a.ended_at
+        FROM active_periods a
+        JOIN nodes n ON n.id = a.node_id
+        WHERE a.node_id = $2 AND n.user_id = $1
+        ORDER BY a.started_at DESC, a.id DESC
+        LIMIT 1
+        "#,
+        user_id,
+        node_id,
+    )
+    .fetch_optional(&mut *tx)
+    .await?;
+    Ok(row.map(|row| (row.id, row.ended_at)))
+}
+
+async fn open_period(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    node_id: Uuid,
+    closed: bool,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        INSERT INTO active_periods (node_id, started_at, ended_at)
+        SELECT n.id, now(), CASE WHEN $3 THEN now() END FROM nodes n
+        WHERE n.id = $2 AND n.user_id = $1
+        "#,
+        user_id,
+        node_id,
+        closed,
+    )
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// Sets a period's end; `None` reopens it.
+async fn set_period_end(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    period_id: Uuid,
+    ended_at: Option<DateTime<Utc>>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        UPDATE active_periods a SET ended_at = $3
+        FROM nodes n
+        WHERE a.id = $2 AND n.id = a.node_id AND n.user_id = $1
+        "#,
+        user_id,
+        period_id,
+        ended_at,
+    )
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// Closes a period now - clamped to its start, so a hand-set future start
+/// never makes the close violate the `ended_at >= started_at` check.
+async fn close_period_now(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    period_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        UPDATE active_periods a SET ended_at = GREATEST(now(), a.started_at)
+        FROM nodes n
+        WHERE a.id = $2 AND n.id = a.node_id AND n.user_id = $1
+        "#,
+        user_id,
+        period_id,
+    )
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
+/// Keeps the periods in step with a status change, inside the caller's
+/// transaction. A node's started date is its first period's start and its
+/// completed date is the last period's end while done, so this is what
+/// moves those edges:
 ///
-/// - Leaving `active` for `paused` or `archived` closes the open period.
-///   If none exists yet, materialize it immediately from the node's own
-///   `started_at` - there's no other durable timestamp for "when this
-///   happened" the way `done` has `completed_at`.
-/// - Leaving `active` for `done` only closes an *already-open* period (from
-///   an earlier pause/resume cycle); with zero periods it does nothing,
-///   relying on `completed_at` alone - that's the "finished in one
-///   continuous run" case, which should stay at zero periods.
-/// - Entering `active` from anything else opens a new period, but only on
-///   reactivation (`old_started_at` already set). If no periods exist yet
-///   and the node has an existing `completed_at` (a single-run `done` node
-///   being reactivated), first migrate that started_at/completed_at span
-///   into period #1 - the "migrate the first period" case.
-/// - `queued`/`idea` are neutral in both directions.
-pub async fn apply_status_transition(
+/// - `-> active`: the first activation opens the first period. After a
+///   closed period, `track_active_periods` opens a new one; with tracking
+///   off the last period is reopened instead (one continuous span).
+/// - `-> done`: closes the open period - its end becomes the completed
+///   date. If the last period already closed (a pause), a completion-day
+///   period is added so the pause record isn't overwritten. A node that
+///   never started gets nothing: no start means no completed date either.
+/// - `active -> paused/archived` with tracking on closes the open period.
+/// - `queued`/`idea` are neutral.
+pub async fn sync_status_transition(
+    user_id: Uuid,
     tx: &mut PgConnection,
     node_id: Uuid,
     old_status: NodeStatus,
     new_status: NodeStatus,
-    old_started_at: Option<DateTime<Utc>>,
-    old_completed_at: Option<DateTime<Utc>>,
+    track_active_periods: bool,
 ) -> Result<(), sqlx::Error> {
-    let was_active = old_status == NodeStatus::Active;
-    let opens = new_status == NodeStatus::Active && !was_active && old_started_at.is_some();
-    let closes = was_active
-        && matches!(
-            new_status,
-            NodeStatus::Paused | NodeStatus::Done | NodeStatus::Archived
-        );
-
-    if closes {
-        let closed_one = sqlx::query!(
-            "UPDATE active_periods SET ended_at = now() WHERE node_id = $1 AND ended_at IS NULL",
-            node_id,
-        )
-        .execute(&mut *tx)
-        .await?
-        .rows_affected()
-            > 0;
-
-        if !closed_one && new_status != NodeStatus::Done {
-            sqlx::query!(
-                "INSERT INTO active_periods (node_id, started_at, ended_at)
-                 SELECT id, started_at, now() FROM nodes WHERE id = $1 AND started_at IS NOT NULL",
-                node_id,
-            )
-            .execute(&mut *tx)
-            .await?;
-        }
+    if old_status == new_status {
+        return Ok(());
     }
-
-    if opens {
-        let has_any = sqlx::query_scalar!(
-            r#"SELECT EXISTS(SELECT 1 FROM active_periods WHERE node_id = $1) AS "exists!""#,
-            node_id,
-        )
-        .fetch_one(&mut *tx)
-        .await?;
-
-        // `opens` already guarantees `old_started_at.is_some()`.
-        if !has_any && let Some(completed_at) = old_completed_at {
-            sqlx::query!(
-                "INSERT INTO active_periods (node_id, started_at, ended_at) VALUES ($1, $2, $3)",
-                node_id,
-                old_started_at.unwrap(),
-                completed_at,
-            )
-            .execute(&mut *tx)
-            .await?;
+    let last = last_period(user_id, tx, node_id).await?;
+    match (new_status, last) {
+        (NodeStatus::Active, None) => open_period(user_id, tx, node_id, false).await?,
+        (NodeStatus::Active, Some((period_id, Some(_)))) => {
+            if track_active_periods {
+                open_period(user_id, tx, node_id, false).await?;
+            } else {
+                set_period_end(user_id, tx, period_id, None).await?;
+            }
         }
+        (NodeStatus::Done, Some((period_id, None))) => {
+            close_period_now(user_id, tx, period_id).await?
+        }
+        (NodeStatus::Done, Some((_, Some(_)))) => open_period(user_id, tx, node_id, true).await?,
+        (NodeStatus::Paused | NodeStatus::Archived, Some((period_id, None)))
+            if old_status == NodeStatus::Active && track_active_periods =>
+        {
+            close_period_now(user_id, tx, period_id).await?
+        }
+        _ => {}
+    }
+    Ok(())
+}
 
+/// An explicit started date moves the first period's start; with no periods
+/// it opens one there. `None` (clearing it) removes every period - the node
+/// is back to "not started".
+pub async fn set_started(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    node_id: Uuid,
+    started_at: Option<DateTime<Utc>>,
+) -> Result<(), sqlx::Error> {
+    let Some(started_at) = started_at else {
         sqlx::query!(
-            "INSERT INTO active_periods (node_id, started_at) VALUES ($1, now())",
+            r#"
+            DELETE FROM active_periods a
+            USING nodes n
+            WHERE a.node_id = $2 AND n.id = a.node_id AND n.user_id = $1
+            "#,
+            user_id,
             node_id,
         )
         .execute(&mut *tx)
         .await?;
-    }
+        return Ok(());
+    };
 
+    let moved = sqlx::query!(
+        r#"
+        UPDATE active_periods a SET started_at = $3
+        FROM nodes n
+        WHERE n.id = a.node_id AND n.user_id = $1
+          AND a.id = (
+              SELECT id FROM active_periods WHERE node_id = $2
+              ORDER BY started_at, id LIMIT 1
+          )
+        "#,
+        user_id,
+        node_id,
+        started_at,
+    )
+    .execute(&mut *tx)
+    .await?
+    .rows_affected();
+    if moved == 0 {
+        sqlx::query!(
+            r#"
+            INSERT INTO active_periods (node_id, started_at)
+            SELECT n.id, $3 FROM nodes n WHERE n.id = $2 AND n.user_id = $1
+            "#,
+            user_id,
+            node_id,
+            started_at,
+        )
+        .execute(&mut *tx)
+        .await?;
+    }
+    Ok(())
+}
+
+/// An explicit completed date moves the last period's end; `None` reopens
+/// it. No-op for a node without periods (the handler rejects a completed
+/// date on a node that never started).
+pub async fn set_completed(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    node_id: Uuid,
+    completed_at: Option<DateTime<Utc>>,
+) -> Result<(), sqlx::Error> {
+    if let Some((period_id, _)) = last_period(user_id, tx, node_id).await? {
+        set_period_end(user_id, tx, period_id, completed_at).await?;
+    }
     Ok(())
 }

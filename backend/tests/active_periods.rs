@@ -57,7 +57,12 @@ async fn signup(app: &axum::Router, email: &str) -> String {
 async fn create_node(app: &axum::Router, token: &str, title: &str) -> String {
     let (status, body) = send(
         app,
-        req("POST", "/api/nodes", json!({"kind": "idea", "title": title}), Some(token)),
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "idea", "title": title}),
+            Some(token),
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -67,7 +72,12 @@ async fn create_node(app: &axum::Router, token: &str, title: &str) -> String {
 async fn add_period(app: &axum::Router, token: &str, node_id: &str, body: Value) -> Value {
     let (status, period) = send(
         app,
-        req("POST", &format!("/api/nodes/{node_id}/periods"), body, Some(token)),
+        req(
+            "POST",
+            &format!("/api/nodes/{node_id}/periods"),
+            body,
+            Some(token),
+        ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
@@ -230,7 +240,11 @@ async fn another_users_periods_are_invisible(pool: PgPool) {
     )
     .await;
     assert_eq!(patch_status, StatusCode::NOT_FOUND);
-    let (delete_status, _) = send(&app, req("DELETE", &period_uri, Value::Null, Some(&intruder))).await;
+    let (delete_status, _) = send(
+        &app,
+        req("DELETE", &period_uri, Value::Null, Some(&intruder)),
+    )
+    .await;
     assert_eq!(delete_status, StatusCode::NOT_FOUND);
 
     // Untouched for the owner.

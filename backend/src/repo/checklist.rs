@@ -2,7 +2,6 @@ use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::models::checklist::ChecklistItemResponse;
-use crate::models::node::Progress;
 
 /// `None` means `node_id` isn't owned by `user_id`; `Some(vec)` (possibly
 /// empty) means it is - same explicit ownership check as `pokes::list_pokes`.
@@ -106,32 +105,6 @@ pub async fn delete_item(user_id: Uuid, pool: &PgPool, item_id: Uuid) -> Result<
     .execute(pool)
     .await?;
     Ok(result.rows_affected() == 1)
-}
-
-/// Done/total over the node's checklist - `None` when it has no items.
-pub async fn progress_for_node(
-    user_id: Uuid,
-    pool: &PgPool,
-    node_id: Uuid,
-) -> Result<Option<Progress>, sqlx::Error> {
-    let row = sqlx::query!(
-        r#"
-        SELECT
-            COUNT(*) AS "total!",
-            COUNT(*) FILTER (WHERE c.done) AS "done!"
-        FROM checklist_items c
-        JOIN nodes n ON n.id = c.node_id
-        WHERE n.user_id = $1 AND c.node_id = $2
-        "#,
-        user_id,
-        node_id,
-    )
-    .fetch_one(pool)
-    .await?;
-    Ok((row.total > 0).then_some(Progress {
-        done: row.done,
-        total: row.total,
-    }))
 }
 
 /// Drops every checklist item on a node (used when it stops being a project).

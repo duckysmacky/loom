@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            DELETE FROM active_periods a\n            USING nodes n\n            WHERE a.node_id = $2 AND n.id = a.node_id AND n.user_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "97e96984edc4c5b22d5c609f6eea8de74c310caf66bdfb1c0dae75654c646c5b"
+}

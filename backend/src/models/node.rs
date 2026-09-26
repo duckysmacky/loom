@@ -74,7 +74,9 @@ pub struct NodeResponse {
     pub notes: Option<String>,
     pub created_at: DateTime<Utc>,
     pub updated_at: DateTime<Utc>,
+    /// Derived: the first active period's start. `null` = never started.
     pub started_at: Option<DateTime<Utc>>,
+    /// Derived: the last active period's end, only while status is `done`.
     pub completed_at: Option<DateTime<Utc>>,
     /// Last position the node was dragged to on the board canvas; both
     /// `null` until it's placed by hand (the frontend auto-lays it out).
@@ -170,9 +172,10 @@ pub struct UpdateNodeRequest {
     #[ts(optional = nullable)]
     pub canvas_height: Option<Option<f64>>,
     /// Client preference (not stored server-side), carried on every PATCH:
-    /// when true, a status transition that crosses into/out of `active`
-    /// also opens/closes an `active_periods` row. Never affects
-    /// started_at/completed_at, which stamp themselves regardless.
+    /// when true, pausing/archiving an active node closes its active period
+    /// and reactivating opens a new one; when false, reactivating reopens
+    /// the last period. The first period and the done date follow status
+    /// changes either way.
     #[serde(default)]
     pub track_active_periods: bool,
 }

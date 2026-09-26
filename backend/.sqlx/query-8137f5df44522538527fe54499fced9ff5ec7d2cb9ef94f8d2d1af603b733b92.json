@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        -- Same auto-stamping as update_node: a node created straight into\n        -- `active`/`done` gets started_at/completed_at, not just one that\n        -- transitions there later.\n        INSERT INTO nodes (\n            user_id, kind, status, focus, title, progress_current, progress_total, color, notes,\n            started_at, completed_at, progress_unit\n        )\n        VALUES (\n            $1, $2, $3, $4, $5, $6, $7, $8, $9,\n            CASE WHEN $3 = 'active'::node_status THEN now() END,\n            CASE WHEN $3 = 'done'::node_status THEN now() END,\n            $10\n        )\n        RETURNING\n            id, kind AS \"kind: NodeKind\", status AS \"status: NodeStatus\", focus AS \"focus: NodeFocus\",\n            title, progress_current, progress_total, progress_unit, color, notes,\n            created_at, updated_at, started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height,\n            NULL::integer AS sort_order,\n            ARRAY[]::uuid[] AS \"topic_ids!: Vec<Uuid>\",\n            false AS \"blocked!\",\n            0::bigint AS \"container_total!\",\n            0::bigint AS \"container_done!\",\n            0::bigint AS \"checklist_total!\",\n            0::bigint AS \"checklist_done!\",\n            NULL::timestamptz AS last_poked_at\n        ",
+  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status: NodeStatus\", n.focus AS \"focus: NodeFocus\",\n            n.title, n.progress_current, n.progress_total, n.progress_unit,\n            n.color, n.notes, n.created_at, n.updated_at,\n            (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,\n            CASE WHEN n.status = 'done' THEN (\n                SELECT a.ended_at FROM active_periods a WHERE a.node_id = n.id\n                ORDER BY a.started_at DESC, a.id DESC LIMIT 1\n            ) END AS completed_at,\n            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)\n                AS \"checklist_total!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)\n                AS \"checklist_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1\n          AND n.status IN ('active', 'queued')\n          AND COALESCE(\n                (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id),\n                n.created_at\n              ) < now() - interval '14 days'\n        GROUP BY n.id\n        ORDER BY COALESCE((SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id), n.created_at) ASC\n        ",
   "describe": {
     "columns": [
       {
@@ -176,23 +176,13 @@
         "ordinal": 12,
         "name": "started_at",
         "type_info": "Timestamptz",
-        "origin": {
-          "Table": {
-            "table": "nodes",
-            "name": "started_at"
-          }
-        }
+        "origin": "Expression"
       },
       {
         "ordinal": 13,
         "name": "completed_at",
         "type_info": "Timestamptz",
-        "origin": {
-          "Table": {
-            "table": "nodes",
-            "name": "completed_at"
-          }
-        }
+        "origin": "Expression"
       },
       {
         "ordinal": 14,
@@ -242,7 +232,12 @@
         "ordinal": 18,
         "name": "sort_order",
         "type_info": "Int4",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "sort_order"
+          }
+        }
       },
       {
         "ordinal": 19,
@@ -289,53 +284,7 @@
     ],
     "parameters": {
       "Left": [
-        "Uuid",
-        {
-          "Custom": {
-            "name": "node_kind",
-            "kind": {
-              "Enum": [
-                "idea",
-                "project",
-                "study",
-                "path"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "node_status",
-            "kind": {
-              "Enum": [
-                "idea",
-                "queued",
-                "active",
-                "paused",
-                "done",
-                "archived"
-              ]
-            }
-          }
-        },
-        {
-          "Custom": {
-            "name": "node_focus",
-            "kind": {
-              "Enum": [
-                "primary",
-                "secondary",
-                "background"
-              ]
-            }
-          }
-        },
-        "Text",
-        "Int4",
-        "Int4",
-        "Text",
-        "Text",
-        "Text"
+        "Uuid"
       ]
     },
     "nullable": [
@@ -351,13 +300,13 @@
       true,
       false,
       false,
-      true,
-      true,
-      true,
-      true,
-      true,
-      true,
       null,
+      null,
+      true,
+      true,
+      true,
+      true,
+      true,
       null,
       null,
       null,
@@ -367,5 +316,5 @@
       null
     ]
   },
-  "hash": "cb67ef06f89ba90b0066976eea028eb98ff84beb84270c4e77ba61e53b3cd147"
+  "hash": "8137f5df44522538527fe54499fced9ff5ec7d2cb9ef94f8d2d1af603b733b92"
 }

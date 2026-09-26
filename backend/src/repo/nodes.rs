@@ -6,7 +6,7 @@ use crate::models::node::{
     CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
     Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
-use crate::repo::{active_periods, checklist, edges, node_topics, pokes};
+use crate::repo::{active_periods, checklist, edges};
 
 /// Query target for every node-returning query - flat fields only, since
 /// `query!`/`query_as!` map one SQL column to one struct field.
@@ -89,35 +89,15 @@ pub async fn create_node(
     let status = request.status.unwrap_or(NodeStatus::Idea);
     let focus = request.focus.unwrap_or(NodeFocus::Secondary);
 
-    let row = sqlx::query_as!(
-        NodeRow,
+    let mut tx = pool.begin().await?;
+    let node_id = sqlx::query_scalar!(
         r#"
-        -- Same auto-stamping as update_node: a node created straight into
-        -- `active`/`done` gets started_at/completed_at, not just one that
-        -- transitions there later.
         INSERT INTO nodes (
             user_id, kind, status, focus, title, progress_current, progress_total, color, notes,
-            started_at, completed_at, progress_unit
+            progress_unit
         )
-        VALUES (
-            $1, $2, $3, $4, $5, $6, $7, $8, $9,
-            CASE WHEN $3 = 'active'::node_status THEN now() END,
-            CASE WHEN $3 = 'done'::node_status THEN now() END,
-            $10
-        )
-        RETURNING
-            id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
-            title, progress_current, progress_total, progress_unit, color, notes,
-            created_at, updated_at, started_at, completed_at,
-            canvas_x, canvas_y, canvas_width, canvas_height,
-            NULL::integer AS sort_order,
-            ARRAY[]::uuid[] AS "topic_ids!: Vec<Uuid>",
-            false AS "blocked!",
-            0::bigint AS "container_total!",
-            0::bigint AS "container_done!",
-            0::bigint AS "checklist_total!",
-            0::bigint AS "checklist_done!",
-            NULL::timestamptz AS last_poked_at
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        RETURNING id
         "#,
         user_id,
         request.kind as NodeKind,
@@ -130,10 +110,24 @@ pub async fn create_node(
         request.notes,
         request.progress_unit,
     )
-    .fetch_one(pool)
+    .fetch_one(&mut *tx)
     .await?;
+    // A node created straight into `active` gets its first period, exactly
+    // as if it had been captured as an idea and then activated.
+    active_periods::sync_status_transition(
+        user_id,
+        &mut tx,
+        node_id,
+        NodeStatus::Idea,
+        status,
+        false,
+    )
+    .await?;
+    tx.commit().await?;
 
-    Ok(row.into())
+    get_node(user_id, pool, node_id)
+        .await?
+        .ok_or(sqlx::Error::RowNotFound)
 }
 
 pub async fn list_nodes(
@@ -149,7 +143,12 @@ pub async fn list_nodes(
         SELECT
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
-            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
+            n.color, n.notes, n.created_at, n.updated_at,
+            (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
+            CASE WHEN n.status = 'done' THEN (
+                SELECT a.ended_at FROM active_periods a WHERE a.node_id = n.id
+                ORDER BY a.started_at DESC, a.id DESC LIMIT 1
+            ) END AS completed_at,
             n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
@@ -215,7 +214,12 @@ pub async fn get_node(
         SELECT
             n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
-            n.color, n.notes, n.created_at, n.updated_at, n.started_at, n.completed_at,
+            n.color, n.notes, n.created_at, n.updated_at,
+            (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
+            CASE WHEN n.status = 'done' THEN (
+                SELECT a.ended_at FROM active_periods a WHERE a.node_id = n.id
+                ORDER BY a.started_at DESC, a.id DESC LIMIT 1
+            ) END AS completed_at,
             n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,
             COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
                 AS "topic_ids!: Vec<Uuid>",
@@ -262,10 +266,6 @@ pub async fn update_node(
     let color = request.color.clone().flatten();
     let notes_set = request.notes.is_some();
     let notes = request.notes.clone().flatten();
-    let started_at_set = request.started_at.is_some();
-    let started_at = request.started_at.flatten();
-    let completed_at_set = request.completed_at.is_some();
-    let completed_at = request.completed_at.flatten();
     let canvas_x_set = request.canvas_x.is_some();
     let canvas_x = request.canvas_x.flatten();
     let canvas_y_set = request.canvas_y.is_some();
@@ -279,19 +279,17 @@ pub async fn update_node(
 
     let mut tx = pool.begin().await?;
 
-    // Captured before the update, in the same transaction, only when the
-    // client opted into period tracking - `apply_status_transition` below
-    // needs the pre-update status/started_at to detect the transition.
-    let old = if request.track_active_periods {
-        sqlx::query!(
-            r#"SELECT status AS "status: NodeStatus", started_at, completed_at FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
-            node_id,
-            user_id,
-        )
-        .fetch_optional(&mut *tx)
-        .await?
-    } else {
-        None
+    // The pre-update status, locked in the same transaction - the period
+    // sync below needs to know which transition just happened.
+    let Some(old_status) = sqlx::query_scalar!(
+        r#"SELECT status AS "status: NodeStatus" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
+        node_id,
+        user_id,
+    )
+    .fetch_optional(&mut *tx)
+    .await?
+    else {
+        return Ok(None);
     };
 
     let row = sqlx::query!(
@@ -313,38 +311,17 @@ pub async fn update_node(
             END,
             color = CASE WHEN $11 THEN $12 ELSE color END,
             notes = CASE WHEN $13 THEN $14 ELSE notes END,
-            -- An explicit client value always wins ($15/$17). Otherwise,
-            -- the server tracks these itself: `started_at` is stamped the
-            -- first time status moves to `active` (never overwritten
-            -- again), and `completed_at` the first time it moves to
-            -- `done` - cleared automatically if status later moves away
-            -- from `done`, since it's no longer true.
-            started_at = CASE
-                WHEN $15 THEN $16
-                WHEN COALESCE($4, status) = 'active' AND started_at IS NULL THEN now()
-                ELSE started_at
-            END,
-            completed_at = CASE
-                WHEN $17 THEN $18
-                WHEN COALESCE($4, status) = 'done' AND completed_at IS NULL THEN now()
-                WHEN COALESCE($4, status) <> 'done' THEN NULL
-                ELSE completed_at
-            END,
-            canvas_x = CASE WHEN $19 THEN $20 ELSE canvas_x END,
-            canvas_y = CASE WHEN $21 THEN $22 ELSE canvas_y END,
-            canvas_width = CASE WHEN $25 THEN $26 ELSE canvas_width END,
-            canvas_height = CASE WHEN $27 THEN $28 ELSE canvas_height END,
+            canvas_x = CASE WHEN $15 THEN $16 ELSE canvas_x END,
+            canvas_y = CASE WHEN $17 THEN $18 ELSE canvas_y END,
+            canvas_width = CASE WHEN $19 THEN $20 ELSE canvas_width END,
+            canvas_height = CASE WHEN $21 THEN $22 ELSE canvas_height END,
             progress_unit = CASE
                 WHEN COALESCE($3, kind) <> 'study' THEN NULL
                 WHEN $23 THEN $24 ELSE progress_unit
             END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
-        RETURNING
-            id, kind AS "kind: NodeKind", status AS "status: NodeStatus", focus AS "focus: NodeFocus",
-            title, progress_current, progress_total, progress_unit, color, notes,
-            created_at, updated_at, started_at, completed_at, canvas_x, canvas_y,
-            canvas_width, canvas_height, sort_order
+        RETURNING kind AS "kind: NodeKind", status AS "status: NodeStatus"
         "#,
         user_id,
         node_id,
@@ -360,80 +337,50 @@ pub async fn update_node(
         color,
         notes_set,
         notes,
-        started_at_set,
-        started_at,
-        completed_at_set,
-        completed_at,
         canvas_x_set,
         canvas_x,
         canvas_y_set,
         canvas_y,
-        progress_unit_set,
-        progress_unit,
         canvas_width_set,
         canvas_width,
         canvas_height_set,
         canvas_height,
+        progress_unit_set,
+        progress_unit,
     )
-    .fetch_optional(&mut *tx)
+    .fetch_one(&mut *tx)
     .await?;
 
-    let Some(row) = row else {
-        return Ok(None);
-    };
-    if let (true, Some(old)) = (request.track_active_periods, &old) {
-        active_periods::apply_status_transition(
-            &mut tx,
-            row.id,
-            old.status,
-            row.status,
-            old.started_at,
-            old.completed_at,
-        )
-        .await?;
+    // Started/completed are the edges of the active periods: a status change
+    // moves them first, then an explicit date in the request wins, as the
+    // old auto-stamped columns did.
+    active_periods::sync_status_transition(
+        user_id,
+        &mut tx,
+        node_id,
+        old_status,
+        row.status,
+        request.track_active_periods,
+    )
+    .await?;
+    if let Some(started_at) = request.started_at {
+        active_periods::set_started(user_id, &mut tx, node_id, started_at).await?;
+    }
+    if let Some(completed_at) = request.completed_at {
+        active_periods::set_completed(user_id, &mut tx, node_id, completed_at).await?;
     }
     // Checklists belong to projects only - same kind-change rule as the
     // progress columns above, in the same transaction.
     if row.kind != NodeKind::Project {
-        checklist::delete_all_for_node(user_id, &mut tx, row.id).await?;
+        checklist::delete_all_for_node(user_id, &mut tx, node_id).await?;
     }
     // Only paths contain nodes: a node that stops being one lets go of them.
     if row.kind != NodeKind::Path {
-        edges::release_children(user_id, &mut tx, row.id).await?;
+        edges::release_children(user_id, &mut tx, node_id).await?;
     }
     tx.commit().await?;
 
-    let topic_ids = node_topics::topic_ids_for_node(user_id, pool, row.id).await?;
-    let derived = edges::derived_state(user_id, pool, row.id).await?;
-    let last_poked_at = pokes::last_poked_at(user_id, pool, row.id).await?;
-    let checklist_progress = checklist::progress_for_node(user_id, pool, row.id).await?;
-
-    Ok(Some(NodeResponse {
-        id: row.id,
-        kind: row.kind,
-        status: row.status,
-        focus: row.focus,
-        title: row.title,
-        progress_current: row.progress_current,
-        progress_total: row.progress_total,
-        progress_unit: row.progress_unit,
-        color: row.color,
-        notes: row.notes,
-        created_at: row.created_at,
-        updated_at: row.updated_at,
-        started_at: row.started_at,
-        completed_at: row.completed_at,
-        canvas_x: row.canvas_x,
-        canvas_y: row.canvas_y,
-        canvas_width: row.canvas_width,
-        canvas_height: row.canvas_height,
-        sort_order: row.sort_order,
-        topic_ids,
-        blocked: derived.blocked,
-        container_progress: derived.container_progress,
-        checklist_progress,
-        last_poked_at,
-    }))
+    get_node(user_id, pool, node_id).await
 }
 
 /// Ranks the given nodes 1..N in list order; anything left out keeps its

@@ -2,7 +2,7 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery, EdgeResponse};
-use crate::models::node::{NodeKind, Progress};
+use crate::models::node::NodeKind;
 use sqlx::PgConnection;
 
 pub enum CreateEdgeOutcome {
@@ -14,11 +14,6 @@ pub enum CreateEdgeOutcome {
     NotAPath,
     /// `part_of` from a node that already sits in a path.
     AlreadyInPath,
-}
-
-pub struct NodeDerivedState {
-    pub blocked: bool,
-    pub container_progress: Option<Progress>,
 }
 
 pub async fn create_edge(
@@ -228,43 +223,4 @@ pub async fn release_children(
     .execute(connection)
     .await?;
     Ok(())
-}
-
-/// The `blocked`/`container_progress` derivation for a single node - reused
-/// by `repo::nodes::update_node`'s post-update follow-up, and by
-/// `list_nodes`/`get_node` inline as the same three-subquery shape.
-pub async fn derived_state(
-    user_id: Uuid,
-    pool: &PgPool,
-    node_id: Uuid,
-) -> Result<NodeDerivedState, sqlx::Error> {
-    let row = sqlx::query!(
-        r#"
-        SELECT
-            EXISTS (
-                SELECT 1 FROM edges e
-                JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
-            ) AS "blocked!",
-            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
-                AS "container_total!",
-            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
-             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
-                AS "container_done!"
-        FROM nodes n
-        WHERE n.id = $2 AND n.user_id = $1
-        "#,
-        user_id,
-        node_id,
-    )
-    .fetch_one(pool)
-    .await?;
-
-    Ok(NodeDerivedState {
-        blocked: row.blocked,
-        container_progress: (row.container_total > 0).then_some(Progress {
-            done: row.container_done,
-            total: row.container_total,
-        }),
-    })
 }

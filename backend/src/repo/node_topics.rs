@@ -82,22 +82,3 @@ pub async fn detach_topic(
 
     Ok(DetachOutcome::Detached)
 }
-
-pub async fn topic_ids_for_node(
-    user_id: Uuid,
-    pool: &PgPool,
-    node_id: Uuid,
-) -> Result<Vec<Uuid>, sqlx::Error> {
-    sqlx::query_scalar!(
-        r#"
-        SELECT nt.topic_id
-        FROM node_topics nt
-        JOIN nodes n ON n.id = nt.node_id
-        WHERE n.user_id = $1 AND nt.node_id = $2
-        "#,
-        user_id,
-        node_id,
-    )
-    .fetch_all(pool)
-    .await
-}

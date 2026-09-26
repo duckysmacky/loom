@@ -1,4 +1,3 @@
-use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
@@ -57,25 +56,4 @@ pub async fn list_pokes(
     .await?;
 
     Ok(Some(pokes))
-}
-
-/// `MAX(poked_at)` for one node, ownership-scoped - reused by
-/// `nodes::update_node`'s post-update follow-up (a node update doesn't
-/// touch its own poke history, but the field still needs populating).
-pub async fn last_poked_at(
-    user_id: Uuid,
-    pool: &PgPool,
-    node_id: Uuid,
-) -> Result<Option<DateTime<Utc>>, sqlx::Error> {
-    sqlx::query_scalar!(
-        r#"
-        SELECT MAX(p.poked_at) FROM pokes p
-        JOIN nodes n ON n.id = p.node_id
-        WHERE n.id = $2 AND n.user_id = $1
-        "#,
-        user_id,
-        node_id,
-    )
-    .fetch_one(pool)
-    .await
 }

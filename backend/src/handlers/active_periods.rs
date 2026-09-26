@@ -30,7 +30,9 @@ pub async fn create(
     if let Some(ended_at) = request.ended_at
         && ended_at < request.started_at
     {
-        return Err(ApiError::InvalidInput("ended_at must not be before started_at"));
+        return Err(ApiError::InvalidInput(
+            "ended_at must not be before started_at",
+        ));
     }
     let period = active_periods::create_period(
         user_id,

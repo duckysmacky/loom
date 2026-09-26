@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT status AS \"status: NodeStatus\", started_at, completed_at FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE",
+  "query": "SELECT status AS \"status: NodeStatus\" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE",
   "describe": {
     "columns": [
       {
@@ -27,28 +27,6 @@
             "name": "status"
           }
         }
-      },
-      {
-        "ordinal": 1,
-        "name": "started_at",
-        "type_info": "Timestamptz",
-        "origin": {
-          "Table": {
-            "table": "nodes",
-            "name": "started_at"
-          }
-        }
-      },
-      {
-        "ordinal": 2,
-        "name": "completed_at",
-        "type_info": "Timestamptz",
-        "origin": {
-          "Table": {
-            "table": "nodes",
-            "name": "completed_at"
-          }
-        }
       }
     ],
     "parameters": {
@@ -58,10 +36,8 @@
       ]
     },
     "nullable": [
-      false,
-      true,
-      true
+      false
     ]
   },
-  "hash": "5004afb77f47fe0bbfdd7b33855a1d19e82d1174e8d2410312a5e9393de93380"
+  "hash": "068d1b1fb03205f041c5f3c5b00d71287222f8bafe56764905f2abb4c6b66db9"
 }
