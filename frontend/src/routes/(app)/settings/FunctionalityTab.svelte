@@ -102,8 +102,8 @@
 			<span>
 				<span class="row-label">Track active periods</span>
 				<span class="row-help">
-					Pausing and reactivating a node records a period on its timeline row, instead of just the
-					first start → finish span.
+					Pausing or archiving closes the current active period; reactivating starts a new one. Off:
+					reactivating continues the last period.
 				</span>
 			</span>
 			<input

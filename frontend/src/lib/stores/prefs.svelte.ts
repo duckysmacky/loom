@@ -18,7 +18,7 @@ export type Prefs = {
 	recentColors: string[];
 	/** A poke also switches the node's status to Active. */
 	pokeSetsActive: boolean;
-	/** Pausing/reactivating a node records an active period on its timeline row. */
+	/** Pausing/archiving closes the active period, reactivating opens a new one. */
 	trackActivePeriods: boolean;
 };
 
@@ -35,7 +35,7 @@ const DEFAULTS: Prefs = {
 	organizedGrouping: 'focus',
 	recentColors: [],
 	pokeSetsActive: false,
-	trackActivePeriods: false
+	trackActivePeriods: true
 };
 
 function loadPrefs(): Prefs {

@@ -46,7 +46,9 @@
 		<span class="label">Active periods</span>
 		<button type="button" class="link" onclick={addPeriod}>+ Add period</button>
 	</div>
-	<p class="explain">Manual pause/resume history - independent of the auto-tracking setting.</p>
+	<p class="explain">
+		The first period's start is the Started date, the last one's end the Completed date.
+	</p>
 
 	{#if periods.length}
 		<ul class="items">
