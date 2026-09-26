@@ -11,10 +11,21 @@ instance. It includes:
 The instance must have its MCP server switched on (`MCP_ENABLED=true` and `PUBLIC_URL`). See
 the main README's **MCP server** section.
 
-## Install (Claude Code)
+## Install 
 
-The plugin is published through the
-[duckysmacky marketplace](https://github.com/duckysmacky/skills):
+### Claude Web and Desktop
+
+1. Customize -> Plugins -> Add -> Add marketplace -> Add from a repository
+-> Paste `github.com/duckysmacky/skills` - this will add my personal skills
+marketplace
+2. Customize -> Plugins -> Search for `loom` in the search bar and then
+3. Connectors -> Yours -> Find `loom` in the list and press "connect"
+4. Claude opens Loom's consent page (sign in first if asked) - check the app
+name and click "approve"
+
+### Claude Code
+
+Run install commands:
 
 ```sh
 /plugin marketplace add duckysmacky/skills
@@ -24,38 +35,6 @@ The plugin is published through the
 1. When asked, enter your Loom URL, e.g. `https://loom.example.com`.
 2. Run `/mcp`, select `loom` and authenticate.
 3. Approve the connection in the browser window that opens.
-
-To try it from a local checkout instead:
-
-```sh
-claude --plugin-dir ./claude-plugin
-```
-
-### Marketplace entry
-
-This is the entry in `duckysmacky/skills` → `.claude-plugin/marketplace.json`:
-
-```json
-{
-  "name": "loom",
-  "source": {
-    "source": "git-subdir",
-    "url": "https://github.com/duckysmacky/loom.git",
-    "path": "claude-plugin"
-  },
-  "description": "Drive your self-hosted Loom graph (projects, studies, ideas) from Claude",
-  "category": "productivity",
-  "tags": ["loom", "mcp", "projects", "learning"]
-}
-```
-
-## Claude.ai, Desktop and Cowork
-
-Those apps don't install Claude Code plugins, but both parts work there:
-
-- **MCP server:** go to Settings → Connectors → *Add custom connector*, then enter
-  `https://loom.example.com/mcp`.
-- **Skill:** zip `skills/loom` and upload it in Claude's skill settings.
 
 ## Contents
 
