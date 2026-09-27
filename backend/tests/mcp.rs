@@ -320,6 +320,10 @@ async fn cannot_touch_another_users_nodes(pool: PgPool) {
             json!({"node_id": node_id, "titles": ["x"]}),
         ),
         ("loom_poke_node", json!({"node_id": node_id})),
+        (
+            "loom_place_nodes",
+            json!({"placements": [{"node_id": node_id, "x": 0, "y": 0}]}),
+        ),
         ("loom_delete_node", json!({"node_id": node_id})),
     ] {
         let result = call(&app, &intruder, tool, arguments).await;
@@ -334,4 +338,165 @@ async fn cannot_touch_another_users_nodes(pool: PgPool) {
     let (status, _, node) = send(&app, req("GET", &uri, Value::Null, Some(&owner_jwt))).await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(node["title"], "Secret");
+}
+
+#[sqlx::test]
+async fn place_nodes_sets_and_clears_positions(pool: PgPool) {
+    let app = app(pool);
+    let (jwt, token) = user_with_token(&app, "place@example.com").await;
+    let created = call(
+        &app,
+        &token,
+        "loom_create_node",
+        json!({"kind": "path", "title": "Box"}),
+    )
+    .await;
+    let node_id = created["structuredContent"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    assert!(created["structuredContent"].get("canvas_x").is_none());
+
+    let result = call(
+        &app,
+        &token,
+        "loom_place_nodes",
+        json!({"placements": [{"node_id": node_id, "x": 300, "y": -40, "width": 620, "height": 300}]}),
+    )
+    .await;
+    assert!(!is_error(&result), "{result}");
+    assert_eq!(result["structuredContent"], json!({"placed": 1}));
+
+    let uri = format!("/api/nodes/{node_id}");
+    let (_, _, node) = send(&app, req("GET", &uri, Value::Null, Some(&jwt))).await;
+    assert_eq!(
+        (
+            &node["canvas_x"],
+            &node["canvas_y"],
+            &node["canvas_width"],
+            &node["canvas_height"]
+        ),
+        (&json!(300.0), &json!(-40.0), &json!(620.0), &json!(300.0))
+    );
+    let details = call(&app, &token, "loom_get_node", json!({"node_id": node_id})).await;
+    assert_eq!(
+        details["structuredContent"]["node"]["canvas_x"],
+        json!(300.0)
+    );
+
+    // Omitting x/y keeps the position (resize only).
+    call(
+        &app,
+        &token,
+        "loom_place_nodes",
+        json!({"placements": [{"node_id": node_id, "width": 700, "height": 320}]}),
+    )
+    .await;
+    let (_, _, node) = send(&app, req("GET", &uri, Value::Null, Some(&jwt))).await;
+    assert_eq!(
+        (&node["canvas_x"], &node["canvas_width"]),
+        (&json!(300.0), &json!(700.0))
+    );
+
+    // Omitting width/height keeps the size; null x/y hands the node back to auto-layout.
+    call(
+        &app,
+        &token,
+        "loom_place_nodes",
+        json!({"placements": [{"node_id": node_id, "x": null, "y": null}]}),
+    )
+    .await;
+    let (_, _, node) = send(&app, req("GET", &uri, Value::Null, Some(&jwt))).await;
+    assert!(node["canvas_x"].is_null() && node["canvas_y"].is_null());
+    assert_eq!(node["canvas_width"], json!(700.0));
+}
+
+#[sqlx::test]
+async fn place_nodes_rejects_half_a_position(pool: PgPool) {
+    let app = app(pool);
+    let (_, token) = user_with_token(&app, "half@example.com").await;
+    let created = call(
+        &app,
+        &token,
+        "loom_create_node",
+        json!({"kind": "idea", "title": "A"}),
+    )
+    .await;
+    let node_id = created["structuredContent"]["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+
+    let result = call(
+        &app,
+        &token,
+        "loom_place_nodes",
+        json!({"placements": [{"node_id": node_id, "x": 10}]}),
+    )
+    .await;
+    assert!(is_error(&result));
+    assert!(error_text(&result).contains("placements[0]"), "{result}");
+    assert!(
+        error_text(&result).contains("canvas_x/canvas_y"),
+        "{result}"
+    );
+}
+
+#[sqlx::test]
+async fn subgraph_positions_survive_joining_a_path(pool: PgPool) {
+    let app = app(pool);
+    let (jwt, token) = user_with_token(&app, "layout@example.com").await;
+
+    let result = call(
+        &app,
+        &token,
+        "loom_create_subgraph",
+        json!({
+            "nodes": [
+                {"ref": "path", "kind": "path", "title": "Path", "x": 0, "y": 400},
+                {"ref": "one", "kind": "study", "title": "One", "x": 24, "y": 56},
+                {"ref": "two", "kind": "study", "title": "Two", "x": 294, "y": 56}
+            ],
+            "edges": [
+                {"from": "one", "to": "path", "kind": "part_of"},
+                {"from": "two", "to": "path", "kind": "part_of"},
+                {"from": "two", "to": "one", "kind": "requires"}
+            ]
+        }),
+    )
+    .await;
+    assert!(!is_error(&result), "{result}");
+    let ids = &result["structuredContent"]["ids"];
+
+    for (reference, x, y) in [
+        ("path", 0.0, 400.0),
+        ("one", 24.0, 56.0),
+        ("two", 294.0, 56.0),
+    ] {
+        let uri = format!("/api/nodes/{}", ids[reference].as_str().unwrap());
+        let (_, _, node) = send(&app, req("GET", &uri, Value::Null, Some(&jwt))).await;
+        assert_eq!(
+            (node["canvas_x"].as_f64(), node["canvas_y"].as_f64()),
+            (Some(x), Some(y)),
+            "{reference}"
+        );
+    }
+}
+
+#[sqlx::test]
+async fn failing_subgraph_placement_rolls_back(pool: PgPool) {
+    let app = app(pool);
+    let (jwt, token) = user_with_token(&app, "badplace@example.com").await;
+
+    let result = call(
+        &app,
+        &token,
+        "loom_create_subgraph",
+        json!({"nodes": [{"ref": "p", "kind": "path", "title": "P", "x": 0, "y": 0, "width": -5, "height": 10}]}),
+    )
+    .await;
+    assert!(is_error(&result));
+    assert!(error_text(&result).contains("positive"), "{result}");
+    let (_, _, nodes) = send(&app, req("GET", "/api/nodes", Value::Null, Some(&jwt))).await;
+    assert!(nodes.as_array().unwrap().is_empty());
 }

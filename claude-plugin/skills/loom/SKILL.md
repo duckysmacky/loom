@@ -83,6 +83,7 @@ Always tell the user what will be lost, and confirm before promoting.
 | `loom_list_topics` / `loom_create_topic` / `loom_update_topic` / `loom_delete_topic` | Manage tags. |
 | `loom_attach_topic` / `loom_detach_topic` | Tag or untag a node. |
 | `loom_poke_node` | Log work on a node. |
+| `loom_place_nodes` | Set where nodes sit on the Board canvas (see [Placing nodes](#placing-nodes-on-the-canvas)). |
 
 When a tool fails (validation, not found, conflict, cycle), it returns an error result with a
 plain message. Read the message, fix the input and retry. Don't guess ids: look them up.
@@ -124,37 +125,82 @@ For "Create a learning path for X":
      - `requires` edges for the order: `{"from": "s2", "to": "s1", "kind": "requires"}`. Add
        these only where a real prerequisite exists; parallel steps get none.
      - optionally `related` links to existing nodes, using their ids.
-4. If topics fit, pass existing `topic_ids` on the nodes. You can also create one topic first
+4. Lay it out as a diagram (see [Placing nodes](#placing-nodes-on-the-canvas)): each step goes
+   in the column after its prerequisites, parallel steps are stacked, and the path box sits
+   clear of the existing nodes.
+5. If topics fit, pass existing `topic_ids` on the nodes. You can also create one topic first
    with `loom_create_topic` and use its id.
-5. Report back:
+6. Report back:
    - the path
    - the steps in order
    - which steps are blocked until earlier ones are done
 
-Example `loom_create_subgraph` arguments:
+Example `loom_create_subgraph` arguments. The book and the Tokio tutorial don't depend on each
+other, so they're stacked in the first column. The chat server requires both, so it sits one
+column right, level with the gap between them. The path goes below the existing nodes, which
+here end at y = 320.
 
 ```json
 {
   "nodes": [
     {"ref": "path", "kind": "path", "title": "Learn async Rust", "status": "queued",
-     "notes": "Goal: write and debug async services with Tokio."},
+     "notes": "Goal: write and debug async services with Tokio.", "x": 0, "y": 400},
     {"ref": "book", "kind": "study", "title": "Asynchronous Programming in Rust (book)",
      "status": "queued", "progress_current": 0, "progress_total": 10, "progress_unit": "chapters",
-     "notes": "https://rust-lang.github.io/async-book/"},
+     "notes": "https://rust-lang.github.io/async-book/", "x": 24, "y": 56},
     {"ref": "tokio", "kind": "study", "title": "Tokio tutorial", "status": "queued",
-     "progress_current": 0, "progress_total": 9, "progress_unit": "sections"},
+     "progress_current": 0, "progress_total": 9, "progress_unit": "sections", "x": 24, "y": 192},
     {"ref": "chat", "kind": "project", "title": "Build a chat server", "status": "queued",
-     "checklist": ["Accept TCP connections", "Broadcast messages", "Graceful shutdown"]}
+     "checklist": ["Accept TCP connections", "Broadcast messages", "Graceful shutdown"],
+     "x": 294, "y": 124}
   ],
   "edges": [
     {"from": "book", "to": "path", "kind": "part_of"},
     {"from": "tokio", "to": "path", "kind": "part_of"},
     {"from": "chat", "to": "path", "kind": "part_of"},
-    {"from": "tokio", "to": "book", "kind": "requires"},
+    {"from": "chat", "to": "book", "kind": "requires"},
     {"from": "chat", "to": "tokio", "kind": "requires"}
   ]
 }
 ```
+
+## Placing nodes on the canvas
+
+The Board canvas shows nodes as cards and paths as boxes around their children. Placement is
+optional: unplaced nodes get an automatic layout when the canvas opens. Place nodes when the
+arrangement matters, e.g. a new learning path or a cluster next to related work.
+
+**Coordinates.** Pixels at a card's top-left, x right and y down. A card is **190 × 96**.
+Inside a path, positions are relative to the box, whose content starts at **(24, 56)**; the
+56 px above that is its header. Top-level nodes and boxes are absolute. A box fits its children
+unless it has `canvas_width` / `canvas_height`, so leave the size unset.
+
+**Lay it out like a diagram.** The canvas draws `requires` arrows left to right, so positions
+should show the dependency structure:
+
+- **Blocking goes horizontally.** A node sits in the column to the right of everything it
+  requires: `x = 24 + rank × 270`, where rank 0 means it requires nothing in the path and
+  otherwise it's one more than its highest-ranked prerequisite.
+- **Parallel or related goes vertically.** Nodes in the same column are stacked
+  `y = 56 + row × 136`. Never string independent nodes along one row, because that reads as an
+  order that doesn't exist.
+- **Centre a node on what it connects to.** Its y is the middle of its prerequisites' y
+  values, so the arrows fan in evenly. If B requires A and C, stack A and C in one column and
+  put B in the next column, level with the gap between them.
+- Keep chains on the same row so their arrows run straight, and never overlap cards.
+
+**New work among existing nodes.** Read `loom_get_graph`, then put a new top-level path or
+cluster below everything already there (y = lowest bottom edge + 80) or to its right. A single
+new node goes beside the node it relates to.
+
+**Setting positions:**
+
+- On create: pass `x` / `y` on `loom_create_subgraph` nodes. They're applied after the edges.
+- Existing nodes: use `loom_place_nodes`. Fields you omit are left as they are; `x: null,
+  y: null` hands a node back to the automatic layout.
+- Joining or leaving a path clears a node's position, because it's relative to the box. Place
+  the node again after changing a `part_of` edge.
+- Don't move nodes the user arranged by hand unless they ask.
 
 ## Other common requests
 
@@ -173,4 +219,8 @@ Example `loom_create_subgraph` arguments:
 
   Recommend next steps; don't change anything unless asked.
 - **"Move X into path Y"**: a node can be in only one path. Check `loom_get_node` for an
-  existing outgoing `part_of` edge, delete it, then create the new one.
+  existing outgoing `part_of` edge, delete it, then create the new one. Then place X inside Y's
+  box with `loom_place_nodes`, next to the steps it relates to.
+- **"Tidy up this path"**: read the path's children and their `requires` edges, then give each
+  child a new position with the diagram rules above in one `loom_place_nodes` call. Confirm
+  first if the user arranged the path by hand.

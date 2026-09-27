@@ -21,6 +21,7 @@ use crate::handlers::extract::{ApiJson, ApiPath, ApiQuery};
 use crate::handlers::{board, checklist, dashboard, edges, nodes, pokes, topics};
 use crate::middleware::auth_user::AuthUser;
 use crate::models::checklist::{CreateChecklistItemRequest, UpdateChecklistItemRequest};
+use crate::models::deserialize_some;
 use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery};
 use crate::models::node::{
     AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, UpdateNodeRequest,
@@ -53,16 +54,18 @@ log entry; nodes active/queued with no poke for 14 days are stale.
 Read before you write: call loom_get_graph or loom_list_nodes to find existing \
 nodes and topics instead of creating duplicates. Use loom_create_subgraph to \
 build several connected nodes at once (e.g. a learning path). Null fields are \
-omitted from results.";
+omitted from results.
 
-/// Keys that only matter to the web canvas - noise for an agent.
-const LAYOUT_KEYS: [&str; 5] = [
-    "canvas_x",
-    "canvas_y",
-    "canvas_width",
-    "canvas_height",
-    "sort_order",
-];
+Canvas positions (canvas_x/canvas_y, and canvas_width/canvas_height for path \
+boxes) are optional: the Board lays unplaced nodes out left to right on its own. \
+To arrange nodes deliberately, pass x/y to loom_create_subgraph or use \
+loom_place_nodes, and lay them out like a diagram: a node goes in the column to \
+the right of what it requires, parallel or related nodes are stacked vertically \
+in one column, and a node sits level with the middle of its prerequisites.";
+
+/// Keys that only matter to the web app - noise for an agent. (Canvas
+/// positions stay: agents can read and set them.)
+const LAYOUT_KEYS: [&str; 1] = ["sort_order"];
 
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct NodeIdParams {
@@ -147,6 +150,18 @@ pub struct SubgraphNode {
     pub reference: String,
     #[serde(flatten)]
     pub node: CreateNodeParams,
+    /// Optional canvas position, same rules as loom_place_nodes. Applied
+    /// after the edges, so joining a path doesn't reset it. Omit to let the
+    /// Board lay the node out automatically.
+    #[serde(default)]
+    pub x: Option<f64>,
+    #[serde(default)]
+    pub y: Option<f64>,
+    /// Paths only: box size. Omit to let the box fit its children.
+    #[serde(default)]
+    pub width: Option<f64>,
+    #[serde(default)]
+    pub height: Option<f64>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -165,6 +180,39 @@ pub struct CreateSubgraphParams {
     /// Edges to create once every node exists.
     #[serde(default)]
     pub edges: Vec<SubgraphEdge>,
+}
+
+/// Where one node sits on the Board canvas, in pixels (x grows right, y
+/// grows down).
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct NodePlacement {
+    pub node_id: Uuid,
+    /// Left edge. Inside a path it's relative to the path box's top-left
+    /// (keep >= 24); otherwise absolute. Set `x` and `y` together; `null`
+    /// for both hands the node back to automatic layout, omitting both
+    /// leaves the position as it is (e.g. to only resize a path).
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[schemars(with = "Option<f64>")]
+    pub x: Option<Option<f64>>,
+    /// Top edge. Inside a path it's relative to the path box (keep >= 56,
+    /// below the box header); otherwise absolute.
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[schemars(with = "Option<f64>")]
+    pub y: Option<Option<f64>>,
+    /// Paths only: box width (at least 260). Omit to keep the current size,
+    /// `null` (with `height`) to fit the box to its children again.
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[schemars(with = "Option<f64>")]
+    pub width: Option<Option<f64>>,
+    /// Paths only: box height (at least 170). Same rules as `width`.
+    #[serde(default, deserialize_with = "deserialize_some")]
+    #[schemars(with = "Option<f64>")]
+    pub height: Option<Option<f64>>,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct PlaceNodesParams {
+    pub placements: Vec<NodePlacement>,
 }
 
 #[derive(Clone)]
@@ -536,12 +584,56 @@ impl LoomServer {
         )
     }
 
+    /// Sets where nodes sit on the Board canvas. Coordinates are pixels, x
+    /// right and y down, for a node's top-left corner; a card is 190x96. A
+    /// node inside a path is positioned relative to the path box's top-left,
+    /// and the box's content area starts at (24, 56); top-level nodes are
+    /// absolute. Joining or leaving a path resets a node's position, so
+    /// place nodes after changing `part_of` edges. Placements are applied in
+    /// order; if one fails, the ones before it stay applied.
+    #[tool(annotations(
+        title = "Place nodes",
+        read_only_hint = false,
+        destructive_hint = false,
+        idempotent_hint = true
+    ))]
+    async fn loom_place_nodes(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<PlaceNodesParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let user = auth(&parts)?;
+        let total = params.placements.len();
+        for (index, placement) in params.placements.into_iter().enumerate() {
+            let node_id = placement.node_id;
+            let outcome = self
+                .place(
+                    user,
+                    node_id,
+                    placement.x,
+                    placement.y,
+                    placement.width,
+                    placement.height,
+                )
+                .await;
+            if let Err(error) = outcome {
+                return Ok(CallToolResult::error(vec![ContentBlock::text(format!(
+                    "placements[{index}] ({node_id}): {}. The {index} placement(s) before it were applied.",
+                    error_text(error)
+                ))]));
+            }
+        }
+        structured(json!({ "placed": total }))
+    }
+
     /// Creates several nodes and the edges between them in one call - e.g.
     /// a learning path: one `path` node, its `study`/`project` steps each
     /// `part_of` the path, and `requires` edges for the order (step 2
     /// requires step 1). Nodes get a local `ref`; edges connect refs or
     /// existing node ids. All or nothing: on any error everything created
-    /// by this call is deleted again. Returns the ref -> id map.
+    /// by this call is deleted again. Nodes may carry an optional canvas
+    /// position (`x`/`y`, plus `width`/`height` for paths - see
+    /// loom_place_nodes). Returns the ref -> id map.
     #[tool(annotations(
         title = "Create subgraph",
         read_only_hint = false,
@@ -677,6 +769,29 @@ impl LoomServer {
         Ok(items)
     }
 
+    /// Moves a node on the canvas through the regular update handler. Each
+    /// argument is omitted (`None`), cleared (`Some(None)`) or set.
+    async fn place(
+        &self,
+        user: AuthUser,
+        node_id: Uuid,
+        x: Option<Option<f64>>,
+        y: Option<Option<f64>>,
+        width: Option<Option<f64>>,
+        height: Option<Option<f64>>,
+    ) -> Result<(), ApiError> {
+        let changes = UpdateNodeRequest {
+            canvas_x: x,
+            canvas_y: y,
+            canvas_width: width,
+            canvas_height: height,
+            ..Default::default()
+        };
+        nodes::update(self.app(), user, ApiPath(node_id), ApiJson(changes))
+            .await
+            .map(|_| ())
+    }
+
     async fn create_subgraph(
         &self,
         user: AuthUser,
@@ -685,11 +800,13 @@ impl LoomServer {
         created_edges: &mut Vec<Uuid>,
     ) -> Result<Value, String> {
         let mut ids = HashMap::new();
+        let mut placements = Vec::new();
         for (index, spec) in params.nodes.into_iter().enumerate() {
             let at = format!("nodes[{index}] (ref \"{}\")", spec.reference);
             if ids.contains_key(&spec.reference) {
                 return Err(format!("{at}: duplicate ref"));
             }
+            let position = [spec.x, spec.y, spec.width, spec.height];
             let node = self
                 .create_node(user, spec.node)
                 .await
@@ -700,6 +817,9 @@ impl LoomServer {
                 .ok_or_else(|| format!("{at}: created node has no id"))?;
             created_nodes.push(node_id);
             ids.insert(spec.reference, node_id);
+            if position.iter().any(Option::is_some) {
+                placements.push((at, node_id, position));
+            }
         }
 
         let resolve = |endpoint: &str| {
@@ -724,6 +844,20 @@ impl LoomServer {
                 .await
                 .map_err(|error| format!("{at}: {}", error_text(error)))?;
             created_edges.push(edge.id);
+        }
+
+        // Last: creating a `part_of` edge resets the child's position.
+        for (at, node_id, [x, y, width, height]) in placements {
+            self.place(
+                user,
+                node_id,
+                x.map(Some),
+                y.map(Some),
+                width.map(Some),
+                height.map(Some),
+            )
+            .await
+            .map_err(|error| format!("{at}: {}", error_text(error)))?;
         }
 
         Ok(
@@ -803,13 +937,16 @@ mod tests {
     #[test]
     fn compact_drops_nulls_and_layout_keys_recursively() {
         let mut value = json!({
-            "node": { "id": "a", "notes": null, "canvas_x": 1.0, "sort_order": 2 },
+            "node": { "id": "a", "notes": null, "canvas_x": 1.0, "canvas_y": null, "sort_order": 2 },
             "edges": [{ "id": "e", "kind": "requires", "extra": null }],
         });
         compact(&mut value);
         assert_eq!(
             value,
-            json!({ "node": { "id": "a" }, "edges": [{ "id": "e", "kind": "requires" }] })
+            json!({
+                "node": { "id": "a", "canvas_x": 1.0 },
+                "edges": [{ "id": "e", "kind": "requires" }],
+            })
         );
     }
 }

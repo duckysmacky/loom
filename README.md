@@ -346,7 +346,8 @@ validation, same rules:
 |---|---|
 | Read | `loom_get_overview`, `loom_get_graph`, `loom_list_nodes`, `loom_get_node` |
 | Nodes | `loom_create_node`, `loom_update_node` (incl. promoting), `loom_delete_node`, `loom_poke_node` |
-| Build in bulk | `loom_create_subgraph` - many nodes plus their edges in one all-or-nothing call |
+| Build in bulk | `loom_create_subgraph` - many nodes plus their edges in one all-or-nothing call, optionally with canvas positions |
+| Layout | `loom_place_nodes` - set where nodes and path boxes sit on the Board canvas (unplaced nodes are laid out automatically) |
 | Edges | `loom_create_edge`, `loom_delete_edge` |
 | Checklists | `loom_add_checklist_items`, `loom_update_checklist_item`, `loom_delete_checklist_item` |
 | Topics | `loom_list_topics`, `loom_create_topic`, `loom_update_topic`, `loom_delete_topic`, `loom_attach_topic`, `loom_detach_topic` |
