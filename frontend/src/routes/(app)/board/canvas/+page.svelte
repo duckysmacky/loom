@@ -577,6 +577,43 @@
 		border-width: 1.5px;
 	}
 
+	/* Path box resizing: xyflow's grab areas are 1px lines and 5px handles.
+	   The lines become 12px-wide invisible strips with the 1px rule drawn in
+	   the middle, and the handles grow. */
+	.canvas :global(.svelte-flow__resize-control.handle) {
+		width: 11px;
+		height: 11px;
+		border-radius: 0;
+	}
+
+	.canvas :global(.svelte-flow__resize-control.line) {
+		--grab: 12px;
+		border-width: 0;
+		background: transparent;
+	}
+
+	.canvas :global(.svelte-flow__resize-control.line.left),
+	.canvas :global(.svelte-flow__resize-control.line.right) {
+		width: var(--grab);
+		background: linear-gradient(
+			to right,
+			transparent calc(50% - 0.5px),
+			var(--node-path) calc(50% - 0.5px) calc(50% + 0.5px),
+			transparent calc(50% + 0.5px)
+		);
+	}
+
+	.canvas :global(.svelte-flow__resize-control.line.top),
+	.canvas :global(.svelte-flow__resize-control.line.bottom) {
+		height: var(--grab);
+		background: linear-gradient(
+			to bottom,
+			transparent calc(50% - 0.5px),
+			var(--node-path) calc(50% - 0.5px) calc(50% + 0.5px),
+			transparent calc(50% + 0.5px)
+		);
+	}
+
 	.canvas :global(.svelte-flow__node:focus-visible) {
 		outline: 2px solid var(--accent);
 	}
