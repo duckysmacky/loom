@@ -134,7 +134,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     assert_eq!(status, StatusCode::OK);
     let counts = &dashboard["counts"];
     assert_eq!(counts["total"], 4);
-    assert_eq!(counts["by_status"]["idea"], 2);
+    assert_eq!(counts["by_status"]["idea"], 0);
     assert_eq!(counts["by_status"]["active"], 1);
     assert_eq!(counts["by_status"]["archived"], 1);
     assert_eq!(counts["by_status"]["queued"], 0);
@@ -154,7 +154,7 @@ async fn stale_list_reflects_14_day_threshold(pool: PgPool) {
     let never_poked_old = create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "never-poked-old", "status": "active"}),
+        json!({"kind": "project", "title": "never-poked-old", "status": "active"}),
     )
     .await;
     backdate_created_at(&pool, &never_poked_old, 15).await;
@@ -162,7 +162,7 @@ async fn stale_list_reflects_14_day_threshold(pool: PgPool) {
     let poked_long_ago = create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "poked-long-ago", "status": "active"}),
+        json!({"kind": "project", "title": "poked-long-ago", "status": "active"}),
     )
     .await;
     poke_and_backdate(&app, &pool, &token, &poked_long_ago, 15).await;
@@ -170,7 +170,7 @@ async fn stale_list_reflects_14_day_threshold(pool: PgPool) {
     let recently_poked = create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "recently-poked", "status": "active"}),
+        json!({"kind": "project", "title": "recently-poked", "status": "active"}),
     )
     .await;
     backdate_created_at(&pool, &recently_poked, 20).await;
@@ -189,7 +189,7 @@ async fn stale_list_reflects_14_day_threshold(pool: PgPool) {
     let stale_but_done = create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "stale-but-done", "status": "done"}),
+        json!({"kind": "project", "title": "stale-but-done", "status": "done"}),
     )
     .await;
     backdate_created_at(&pool, &stale_but_done, 20).await;
@@ -291,7 +291,7 @@ async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) 
 }
 
 #[sqlx::test]
-async fn backlog_count_and_recent_backlog_cover_every_status_idea_node(pool: PgPool) {
+async fn backlog_count_and_recent_backlog_cover_every_idea_kind_node(pool: PgPool) {
     let app = app(pool.clone());
     let token = signup(&app, "backlog@example.com").await;
 
@@ -303,14 +303,13 @@ async fn backlog_count_and_recent_backlog_cover_every_status_idea_node(pool: PgP
         )
         .await;
     }
-    // A queued idea is out of the backlog; a project at status=idea is in it.
+    // A project at status idea is committed work, not an idea.
     create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "queued-idea", "status": "queued"}),
+        json!({"kind": "project", "title": "project", "status": "idea"}),
     )
     .await;
-    create_node(&app, &token, json!({"kind": "project", "title": "project"})).await;
 
     let (_, dashboard) = send(
         &app,
@@ -318,10 +317,10 @@ async fn backlog_count_and_recent_backlog_cover_every_status_idea_node(pool: PgP
     )
     .await;
 
-    assert_eq!(dashboard["counts"]["backlog"], 8);
+    assert_eq!(dashboard["counts"]["backlog"], 7);
     assert_eq!(
         titles(&dashboard["recent_backlog"]),
-        vec!["project", "idea-6", "idea-5", "idea-4", "idea-3"]
+        vec!["idea-6", "idea-5", "idea-4", "idea-3", "idea-2"]
     );
 }
 

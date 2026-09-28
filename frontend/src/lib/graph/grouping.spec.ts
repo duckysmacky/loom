@@ -45,6 +45,12 @@ describe('groupNodes', () => {
 		]);
 	});
 
+	it('gives ideas (no focus or status) their own section', () => {
+		const idea = makeNode({ id: 'i', kind: 'idea', focus: null, status: null });
+		expect(shape(groupNodes([...nodes, idea], 'focus')).at(-1)).toEqual(['ideas', ['i']]);
+		expect(shape(groupNodes([...nodes, idea], 'status')).at(-1)).toEqual(['ideas', ['i']]);
+	});
+
 	it('groups by tag alphabetically, repeating multi-tag nodes, with an untagged bucket', () => {
 		const sections = groupNodes(nodes, 'tag', [topic('rust', 'rust'), topic('math', 'math')]);
 		expect(shape(sections)).toEqual([

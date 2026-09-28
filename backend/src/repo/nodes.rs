@@ -16,8 +16,8 @@ use crate::repo::{active_periods, checklist, edges};
 pub(crate) struct NodeRow {
     pub(crate) id: Uuid,
     pub(crate) kind: NodeKind,
-    pub(crate) status: NodeStatus,
-    pub(crate) focus: NodeFocus,
+    pub(crate) status: Option<NodeStatus>,
+    pub(crate) focus: Option<NodeFocus>,
     pub(crate) title: String,
     pub(crate) progress_current: Option<i32>,
     pub(crate) progress_total: Option<i32>,
@@ -86,8 +86,14 @@ pub async fn create_node(
     pool: &PgPool,
     request: &CreateNodeRequest,
 ) -> Result<NodeResponse, sqlx::Error> {
-    let status = request.status.unwrap_or(NodeStatus::Idea);
-    let focus = request.focus.unwrap_or(NodeFocus::Secondary);
+    // Ideas carry no status/focus; everything else defaults to queued/secondary.
+    let (status, focus) = match request.kind {
+        NodeKind::Idea => (None, None),
+        _ => (
+            Some(request.status.unwrap_or(NodeStatus::Queued)),
+            Some(request.focus.unwrap_or(NodeFocus::Secondary)),
+        ),
+    };
 
     let mut tx = pool.begin().await?;
     let node_id = sqlx::query_scalar!(
@@ -101,8 +107,8 @@ pub async fn create_node(
         "#,
         user_id,
         request.kind as NodeKind,
-        status as NodeStatus,
-        focus as NodeFocus,
+        status as Option<NodeStatus>,
+        focus as Option<NodeFocus>,
         request.title,
         request.progress_current,
         request.progress_total,
@@ -114,15 +120,7 @@ pub async fn create_node(
     .await?;
     // A node created straight into `active` gets its first period, exactly
     // as if it had been captured as an idea and then activated.
-    active_periods::sync_status_transition(
-        user_id,
-        &mut tx,
-        node_id,
-        NodeStatus::Idea,
-        status,
-        false,
-    )
-    .await?;
+    active_periods::sync_status_transition(user_id, &mut tx, node_id, None, status, false).await?;
     tx.commit().await?;
 
     get_node(user_id, pool, node_id)
@@ -141,7 +139,7 @@ pub async fn list_nodes(
         NodeRow,
         r#"
         SELECT
-            n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
+            n.id, n.kind AS "kind: NodeKind", n.status AS "status?: NodeStatus", n.focus AS "focus?: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at,
             (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
@@ -155,7 +153,8 @@ pub async fn list_nodes(
             EXISTS (
                 SELECT 1 FROM edges e
                 JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
+                WHERE e.from_node_id = n.id AND e.kind = 'requires'
+                  AND req.status IS DISTINCT FROM 'done'
             ) AS "blocked!",
             (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
                 AS "container_total!",
@@ -192,12 +191,12 @@ pub async fn list_nodes(
 }
 
 /// Translates `view` into the effective (kind, status) constraint it
-/// implies. `backlog` = everything still at status=idea, whatever its kind:
-/// captured but not yet picked up (moving it to queued/active takes it out).
+/// implies. `backlog` = every idea-kind node: captured but not yet promoted
+/// (promoting it to a project/study/path takes it out).
 /// `archived` = status=archived. `all`/`None` = no extra constraint.
 fn view_predicates(view: Option<NodeView>) -> (Option<NodeKind>, Option<NodeStatus>) {
     match view {
-        Some(NodeView::Backlog) => (None, Some(NodeStatus::Idea)),
+        Some(NodeView::Backlog) => (Some(NodeKind::Idea), None),
         Some(NodeView::Archived) => (None, Some(NodeStatus::Archived)),
         Some(NodeView::All) | None => (None, None),
     }
@@ -212,7 +211,7 @@ pub async fn get_node(
         NodeRow,
         r#"
         SELECT
-            n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
+            n.id, n.kind AS "kind: NodeKind", n.status AS "status?: NodeStatus", n.focus AS "focus?: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at,
             (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
@@ -226,7 +225,8 @@ pub async fn get_node(
             EXISTS (
                 SELECT 1 FROM edges e
                 JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
+                WHERE e.from_node_id = n.id AND e.kind = 'requires'
+                  AND req.status IS DISTINCT FROM 'done'
             ) AS "blocked!",
             (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
                 AS "container_total!",
@@ -282,7 +282,7 @@ pub async fn update_node(
     // The pre-update status, locked in the same transaction - the period
     // sync below needs to know which transition just happened.
     let Some(old_status) = sqlx::query_scalar!(
-        r#"SELECT status AS "status: NodeStatus" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
+        r#"SELECT status AS "status?: NodeStatus" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
         node_id,
         user_id,
     )
@@ -296,8 +296,16 @@ pub async fn update_node(
         r#"
         UPDATE nodes SET
             kind = COALESCE($3, kind),
-            status = COALESCE($4, status),
-            focus = COALESCE($5, focus),
+            -- Ideas have no status/focus: becoming one clears both, and
+            -- promoting one defaults to queued/secondary unless given.
+            status = CASE
+                WHEN COALESCE($3, kind) = 'idea' THEN NULL
+                ELSE COALESCE($4, status, 'queued')
+            END,
+            focus = CASE
+                WHEN COALESCE($3, kind) = 'idea' THEN NULL
+                ELSE COALESCE($5, focus, 'secondary')
+            END,
             title = COALESCE($6, title),
             -- Tracked progress belongs to study nodes only: any other resulting
             -- kind drops it (a kind change clears data the new kind can't have).
@@ -321,7 +329,7 @@ pub async fn update_node(
             END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
-        RETURNING kind AS "kind: NodeKind", status AS "status: NodeStatus"
+        RETURNING kind AS "kind: NodeKind", status AS "status?: NodeStatus"
         "#,
         user_id,
         node_id,

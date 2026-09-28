@@ -220,12 +220,13 @@ async fn close_period_now(
 ///   never started gets nothing: no start means no completed date either.
 /// - `active -> paused/archived` with tracking on closes the open period.
 /// - `queued`/`idea` are neutral.
+/// - no status (demoted to an idea) closes the open period, tracking or not.
 pub async fn sync_status_transition(
     user_id: Uuid,
     tx: &mut PgConnection,
     node_id: Uuid,
-    old_status: NodeStatus,
-    new_status: NodeStatus,
+    old_status: Option<NodeStatus>,
+    new_status: Option<NodeStatus>,
     track_active_periods: bool,
 ) -> Result<(), sqlx::Error> {
     if old_status == new_status {
@@ -233,23 +234,27 @@ pub async fn sync_status_transition(
     }
     let last = last_period(user_id, tx, node_id).await?;
     match (new_status, last) {
-        (NodeStatus::Active, None) => open_period(user_id, tx, node_id, false).await?,
-        (NodeStatus::Active, Some((period_id, Some(_)))) => {
+        (Some(NodeStatus::Active), None) => open_period(user_id, tx, node_id, false).await?,
+        (Some(NodeStatus::Active), Some((period_id, Some(_)))) => {
             if track_active_periods {
                 open_period(user_id, tx, node_id, false).await?;
             } else {
                 set_period_end(user_id, tx, period_id, None).await?;
             }
         }
-        (NodeStatus::Done, Some((period_id, None))) => {
+        (Some(NodeStatus::Done), Some((period_id, None))) => {
             close_period_now(user_id, tx, period_id).await?
         }
-        (NodeStatus::Done, Some((_, Some(_)))) => open_period(user_id, tx, node_id, true).await?,
-        (NodeStatus::Paused | NodeStatus::Archived, Some((period_id, None)))
-            if old_status == NodeStatus::Active && track_active_periods =>
+        (Some(NodeStatus::Done), Some((_, Some(_)))) => {
+            open_period(user_id, tx, node_id, true).await?
+        }
+        (Some(NodeStatus::Paused | NodeStatus::Archived), Some((period_id, None)))
+            if old_status == Some(NodeStatus::Active) && track_active_periods =>
         {
             close_period_now(user_id, tx, period_id).await?
         }
+        // Demoted to an idea: whatever was running stops, tracking or not.
+        (None, Some((period_id, None))) => close_period_now(user_id, tx, period_id).await?,
         _ => {}
     }
     Ok(())

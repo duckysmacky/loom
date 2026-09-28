@@ -17,19 +17,19 @@
 	let focus = $state<NodeFocus>('secondary');
 	// Only these three make sense straight out of quick capture; anything
 	// else (paused/done/archived) is a status change made later.
-	let status = $state<Extract<NodeStatus, 'idea' | 'queued' | 'active'>>('idea');
+	let status = $state<Extract<NodeStatus, 'idea' | 'queued' | 'active'>>('queued');
 	let topicIds = $state<string[]>([]);
 	let saving = $state(false);
 
 	// Fresh form with the configured defaults (Settings > Functionality)
-	// every time it opens. Backlog = status idea, for any kind - an idea
-	// defaults there, everything else defaults to queued.
+	// every time it opens. Ideas carry no status/focus; everything else
+	// defaults to queued.
 	$effect(() => {
 		if (!overlays.captureOpen) return;
 		title = '';
 		kind = prefs.captureKind;
 		focus = prefs.captureFocus;
-		status = prefs.captureKind === 'idea' ? 'idea' : 'queued';
+		status = 'queued';
 		topicIds = [];
 	});
 
@@ -45,7 +45,9 @@
 		if (!trimmed) return;
 		saving = true;
 		const created = await graph.mutate(async () => {
-			const node = await nodesApi.create({ kind, title: trimmed, focus, status });
+			const node = await nodesApi.create(
+				kind === 'idea' ? { kind, title: trimmed } : { kind, title: trimmed, focus, status }
+			);
 			for (const topicId of topicIds) await nodesApi.attachTopic(node.id, topicId);
 			return node;
 		});
@@ -92,32 +94,34 @@
 					]}
 				/>
 			</div>
-			<div class="group">
-				<span class="label">Focus</span>
-				<SegmentedControl
-					label="Focus"
-					value={focus}
-					onchange={(value) => (focus = value)}
-					options={[
-						{ value: 'primary', label: 'Primary' },
-						{ value: 'secondary', label: 'Secondary' },
-						{ value: 'background', label: 'Background' }
-					]}
-				/>
-			</div>
-			<div class="group">
-				<span class="label">Status</span>
-				<SegmentedControl
-					label="Status"
-					value={status}
-					onchange={(value) => (status = value)}
-					options={[
-						{ value: 'idea', label: 'Backlog' },
-						{ value: 'queued', label: 'Queued' },
-						{ value: 'active', label: 'Active' }
-					]}
-				/>
-			</div>
+			{#if kind !== 'idea'}
+				<div class="group">
+					<span class="label">Focus</span>
+					<SegmentedControl
+						label="Focus"
+						value={focus}
+						onchange={(value) => (focus = value)}
+						options={[
+							{ value: 'primary', label: 'Primary' },
+							{ value: 'secondary', label: 'Secondary' },
+							{ value: 'background', label: 'Background' }
+						]}
+					/>
+				</div>
+				<div class="group">
+					<span class="label">Status</span>
+					<SegmentedControl
+						label="Status"
+						value={status}
+						onchange={(value) => (status = value)}
+						options={[
+							{ value: 'idea', label: 'Backlog' },
+							{ value: 'queued', label: 'Queued' },
+							{ value: 'active', label: 'Active' }
+						]}
+					/>
+				</div>
+			{/if}
 		</div>
 
 		{#if graph.topics.length}

@@ -218,7 +218,9 @@
 					{/if}
 
 					<DetailNotes {node} />
-					<DetailActivePeriods {node} />
+					{#if node.kind !== 'idea'}
+						<DetailActivePeriods {node} />
+					{/if}
 					{#if node.kind === 'path'}
 						<DetailContains {node} />
 					{/if}
@@ -229,19 +231,22 @@
 				</div>
 
 				<aside class="side">
-					<label class="control">
-						<span class="label">Status</span>
-						<select
-							class="field"
-							value={node.status}
-							onchange={(event) =>
-								update(node, { status: event.currentTarget.value as NodeResponse['status'] })}
-						>
-							{#each ['idea', 'queued', 'active', 'paused', 'done', 'archived'] as status (status)}
-								<option value={status}>{status[0].toUpperCase() + status.slice(1)}</option>
-							{/each}
-						</select>
-					</label>
+					<!-- Ideas have no status or focus until promoted. -->
+					{#if node.status}
+						<label class="control">
+							<span class="label">Status</span>
+							<select
+								class="field"
+								value={node.status}
+								onchange={(event) =>
+									update(node, { status: event.currentTarget.value as NodeResponse['status'] })}
+							>
+								{#each ['idea', 'queued', 'active', 'paused', 'done', 'archived'] as status (status)}
+									<option value={status}>{status[0].toUpperCase() + status.slice(1)}</option>
+								{/each}
+							</select>
+						</label>
+					{/if}
 					<label class="control">
 						<span class="label">Kind</span>
 						<!-- The key re-renders the select, so a cancelled change snaps back. -->
@@ -259,19 +264,21 @@
 							</select>
 						{/key}
 					</label>
-					<div class="control">
-						<span class="label">Focus tier</span>
-						<SegmentedControl
-							label="Focus tier"
-							value={node.focus}
-							onchange={(focus) => update(node, { focus })}
-							options={[
-								{ value: 'primary', label: 'Primary' },
-								{ value: 'secondary', label: 'Secondary' },
-								{ value: 'background', label: 'Background' }
-							]}
-						/>
-					</div>
+					{#if node.focus}
+						<div class="control">
+							<span class="label">Focus tier</span>
+							<SegmentedControl
+								label="Focus tier"
+								value={node.focus}
+								onchange={(focus) => update(node, { focus })}
+								options={[
+									{ value: 'primary', label: 'Primary' },
+									{ value: 'secondary', label: 'Secondary' },
+									{ value: 'background', label: 'Background' }
+								]}
+							/>
+						</div>
+					{/if}
 					<div class="control">
 						<span class="label">Accent</span>
 						<AccentPicker value={node.color} onchange={(color) => update(node, { color })} />
@@ -290,40 +297,42 @@
 
 					<!-- Stamped automatically on status changes; editable when the
 					     real dates differ (e.g. something started before it was logged). -->
-					<div class="dates">
-						<label class="control">
-							<span class="label">Started</span>
-							<input
-								class="field"
-								type="date"
-								value={toDateInput(node.started_at)}
-								onchange={(event) =>
-									update(node, { started_at: fromDateInput(event.currentTarget.value) })}
-							/>
-						</label>
-						<label class="control">
-							<span class="label">Completed</span>
-							<input
-								class="field"
-								type="date"
-								value={toDateInput(node.completed_at)}
-								disabled={node.status !== 'done'}
-								title={node.status === 'done'
-									? undefined
-									: 'Only done nodes have a completion date'}
-								onchange={(event) =>
-									update(node, { completed_at: fromDateInput(event.currentTarget.value) })}
-							/>
-						</label>
-					</div>
+					{#if node.kind !== 'idea'}
+						<div class="dates">
+							<label class="control">
+								<span class="label">Started</span>
+								<input
+									class="field"
+									type="date"
+									value={toDateInput(node.started_at)}
+									onchange={(event) =>
+										update(node, { started_at: fromDateInput(event.currentTarget.value) })}
+								/>
+							</label>
+							<label class="control">
+								<span class="label">Completed</span>
+								<input
+									class="field"
+									type="date"
+									value={toDateInput(node.completed_at)}
+									disabled={node.status !== 'done'}
+									title={node.status === 'done'
+										? undefined
+										: 'Only done nodes have a completion date'}
+									onchange={(event) =>
+										update(node, { completed_at: fromDateInput(event.currentTarget.value) })}
+								/>
+							</label>
+						</div>
+					{/if}
 
 					<div class="actions">
 						<span class="label">Actions</span>
 						{#if blocked}
 							<span class="not-actionable">Not actionable yet</span>
-						{:else if node.status === 'idea'}
+						{:else if node.kind === 'idea'}
 							<Button variant="poke" onclick={() => (promoting = node)}>Move to board</Button>
-						{:else if ['active', 'queued', 'paused'].includes(node.status)}
+						{:else if node.status && ['active', 'queued', 'paused'].includes(node.status)}
 							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
 						{/if}
 						<Button
@@ -336,7 +345,7 @@
 							<Button variant="quiet" onclick={() => update(node, { status: 'queued' })}>
 								Restore
 							</Button>
-						{:else}
+						{:else if node.status}
 							<Button variant="quiet" onclick={() => update(node, { status: 'archived' })}>
 								Archive
 							</Button>

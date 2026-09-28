@@ -1,13 +1,14 @@
 <script lang="ts">
 	import type { NodeStatus } from '$lib/types/NodeStatus';
 
-	/** `blocked` is derived (never stored) and overrides the stored status. */
-	let { status, blocked = false }: { status: NodeStatus; blocked?: boolean } = $props();
+	/** `blocked` is derived (never stored) and overrides the stored status.
+	 * Ideas have no status: nothing to show unless blocked. */
+	let { status, blocked = false }: { status: NodeStatus | null; blocked?: boolean } = $props();
 
 	const shown = $derived(blocked && status !== 'done' ? 'blocked' : status);
 </script>
 
-<span class="badge {shown}">{shown}</span>
+{#if shown}<span class="badge {shown}">{shown}</span>{/if}
 
 <style>
 	.badge {

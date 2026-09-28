@@ -35,6 +35,13 @@ describe('nodeMatches', () => {
 		expect(nodeMatches(container, { ...anything, kinds: ['path'] })).toBe(false);
 	});
 
+	it('leaves ideas out of status and focus filters', () => {
+		const idea = makeNode({ kind: 'idea', status: null, focus: null });
+		expect(nodeMatches(idea, anything)).toBe(true);
+		expect(nodeMatches(idea, { ...anything, statuses: ['queued'] })).toBe(false);
+		expect(nodeMatches(idea, { ...anything, focuses: ['primary'] })).toBe(false);
+	});
+
 	it('ANDs criteria and ORs values within one criterion', () => {
 		const node = makeNode({ focus: 'primary', topic_ids: ['graphics'] });
 		expect(nodeMatches(node, { ...anything, focuses: ['primary', 'secondary'] })).toBe(true);

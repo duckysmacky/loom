@@ -59,7 +59,7 @@ class GraphStore {
 	async poke(node: NodeResponse) {
 		return this.mutate(async () => {
 			const poked = await nodesApi.poke(node.id);
-			if (prefs.pokeSetsActive && node.status !== 'active') {
+			if (prefs.pokeSetsActive && node.kind !== 'idea' && node.status !== 'active') {
 				await nodesApi.update(node.id, { status: 'active' });
 			}
 			return poked;

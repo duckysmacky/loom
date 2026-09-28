@@ -75,7 +75,7 @@ async fn create_get_update_delete_happy_path(pool: PgPool) {
         json!({"kind": "study", "title": "Loom backend"}),
     )
     .await;
-    assert_eq!(node["status"], "idea");
+    assert_eq!(node["status"], "queued");
     assert_eq!(node["focus"], "secondary");
     assert_eq!(node["topic_ids"], json!([]));
     let node_id = node["id"].as_str().unwrap().to_owned();
@@ -250,7 +250,7 @@ async fn list_filters_by_status_focus_kind(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "b", "status": "queued", "focus": "primary"}),
+        json!({"kind": "study", "title": "b", "status": "queued", "focus": "primary"}),
     )
     .await;
 
@@ -269,7 +269,7 @@ async fn list_filters_by_status_focus_kind(pool: PgPool) {
         &app,
         req(
             "GET",
-            "/api/nodes?focus=primary&kind=idea",
+            "/api/nodes?focus=primary&kind=study",
             Value::Null,
             Some(&token),
         ),
@@ -576,7 +576,7 @@ async fn attach_and_detach_topic_on_another_users_node_returns_404(pool: PgPool)
 }
 
 #[sqlx::test]
-async fn view_backlog_includes_every_status_idea_node(pool: PgPool) {
+async fn view_backlog_includes_every_idea_kind_node(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "viewbacklog@example.com").await;
 
@@ -584,13 +584,7 @@ async fn view_backlog_includes_every_status_idea_node(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "promoted"}),
-    )
-    .await;
-    create_node(
-        &app,
-        &token,
-        json!({"kind": "idea", "title": "queued-idea", "status": "queued"}),
+        json!({"kind": "project", "title": "promoted", "status": "idea"}),
     )
     .await;
 
@@ -605,9 +599,8 @@ async fn view_backlog_includes_every_status_idea_node(pool: PgPool) {
         .iter()
         .map(|n| n["title"].as_str().unwrap().to_owned())
         .collect();
-    // The project was created at the default status (idea), so it's backlog
-    // too; the queued idea isn't.
-    assert_eq!(titles, vec!["promoted".to_string(), "backlog".to_string()]);
+    // Only idea-kind nodes; a project at status idea is committed work.
+    assert_eq!(titles, vec!["backlog".to_string()]);
 }
 
 #[sqlx::test]
@@ -618,7 +611,7 @@ async fn view_archived_includes_only_archived(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "idea", "title": "archived", "status": "archived"}),
+        json!({"kind": "project", "title": "archived", "status": "archived"}),
     )
     .await;
     create_node(&app, &token, json!({"kind": "idea", "title": "active"})).await;
@@ -669,8 +662,8 @@ async fn view_combines_with_explicit_status_filter(pool: PgPool) {
     let token = signup(&app, "viewcombine@example.com").await;
     create_node(&app, &token, json!({"kind": "idea", "title": "backlog"})).await;
 
-    // view=backlog implies status=idea; contradicting it with status=active
-    // legitimately empties the result via AND, not a special case.
+    // view=backlog implies kind=idea, which has no status; adding
+    // status=active legitimately empties the result via AND.
     let (_, list) = send(
         &app,
         req(
@@ -1111,6 +1104,8 @@ async fn kind_change_clears_data_the_new_kind_cannot_have(pool: PgPool) {
     )
     .await;
     assert_eq!(became_idea["checklist_progress"], Value::Null);
+    assert_eq!(became_idea["status"], Value::Null);
+    assert_eq!(became_idea["focus"], Value::Null);
     let (_, items) = send(&app, req("GET", &checklist_uri, Value::Null, Some(&token))).await;
     assert_eq!(items, json!([]));
 
@@ -1337,4 +1332,88 @@ async fn deleting_the_first_period_makes_started_follow_the_next(pool: PgPool) {
     )
     .await;
     assert_eq!(node["started_at"], periods[1]["started_at"]);
+}
+
+#[sqlx::test]
+async fn ideas_have_no_status_or_focus(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "ideanostatus@example.com").await;
+
+    let idea = create_node(&app, &token, json!({"kind": "idea", "title": "idea"})).await;
+    assert_eq!(idea["status"], Value::Null);
+    assert_eq!(idea["focus"], Value::Null);
+    let idea_uri = format!("/api/nodes/{}", idea["id"].as_str().unwrap());
+
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "idea", "title": "bad", "status": "queued"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &idea_uri,
+            json!({"focus": "primary"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    // Demoting while setting a status is contradictory too.
+    let project_id = project(&app, &token).await;
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{project_id}"),
+            json!({"kind": "idea", "status": "active"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test]
+async fn promoting_an_idea_defaults_and_demoting_clears_and_closes_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "promotedemote@example.com").await;
+
+    let idea = create_node(&app, &token, json!({"kind": "idea", "title": "idea"})).await;
+    let idea_uri = format!("/api/nodes/{}", idea["id"].as_str().unwrap());
+    let (_, promoted) = send(
+        &app,
+        req("PATCH", &idea_uri, json!({"kind": "project"}), Some(&token)),
+    )
+    .await;
+    assert_eq!(promoted["status"], "queued");
+    assert_eq!(promoted["focus"], "secondary");
+
+    // Tracking off, so only the demotion itself can close the period.
+    let node_id = project(&app, &token).await;
+    patch_status(&app, &token, &node_id, "active", false).await;
+    let (_, demoted) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"kind": "idea"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(demoted["status"], Value::Null);
+    assert_eq!(demoted["focus"], Value::Null);
+    let periods = list_periods(&app, &token, &node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert!(!periods[0]["ended_at"].is_null());
 }

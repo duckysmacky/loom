@@ -41,6 +41,9 @@ pub async fn create(
     if sets_progress && request.kind != NodeKind::Study {
         return Err(ONLY_STUDY_PROGRESS);
     }
+    if request.kind == NodeKind::Idea && (request.status.is_some() || request.focus.is_some()) {
+        return Err(IDEAS_HAVE_NO_STATUS);
+    }
 
     let node = nodes::create_node(user_id, &state.pool, &request)
         .await
@@ -80,7 +83,8 @@ pub async fn update(
     let sets_progress = matches!(request.progress_current, Some(Some(_)))
         || matches!(request.progress_total, Some(Some(_)))
         || matches!(request.progress_unit, Some(Some(_)));
-    if sets_progress {
+    let sets_status = request.status.is_some() || request.focus.is_some();
+    if sets_progress || sets_status {
         let resulting_kind = match request.kind {
             Some(kind) => kind,
             None => {
@@ -90,8 +94,11 @@ pub async fn update(
                     .kind
             }
         };
-        if resulting_kind != NodeKind::Study {
+        if sets_progress && resulting_kind != NodeKind::Study {
             return Err(ONLY_STUDY_PROGRESS);
+        }
+        if sets_status && resulting_kind == NodeKind::Idea {
+            return Err(IDEAS_HAVE_NO_STATUS);
         }
     }
 
@@ -101,7 +108,7 @@ pub async fn update(
         let current = nodes::get_node(user_id, &state.pool, node_id)
             .await?
             .ok_or(ApiError::NotFound)?;
-        let done = request.status.unwrap_or(current.status) == NodeStatus::Done;
+        let done = request.status.or(current.status) == Some(NodeStatus::Done);
         let started = match request.started_at {
             Some(started_at) => started_at.is_some(),
             None => current.started_at.is_some(),
@@ -188,6 +195,7 @@ const MAX_PROGRESS_UNIT_LEN: usize = 40;
 
 /// Kinds are strict: only study nodes carry a tracked progress counter.
 const ONLY_STUDY_PROGRESS: ApiError = ApiError::InvalidInput("only study nodes track progress");
+const IDEAS_HAVE_NO_STATUS: ApiError = ApiError::InvalidInput("ideas have no status or focus");
 
 /// Trims the progress label; blank means "no label" (stored as NULL).
 fn clean_progress_unit(unit: Option<String>) -> Result<Option<String>, ApiError> {
@@ -223,6 +231,7 @@ fn map_node_error(error: sqlx::Error) -> ApiError {
             }
             // Started/completed are the edges of the active periods, so a
             // start after its period's end trips the period's own check.
+            Some("nodes_idea_has_no_status") => return IDEAS_HAVE_NO_STATUS,
             Some("active_periods_check") => {
                 return ApiError::InvalidInput("an active period can't end before it starts");
             }

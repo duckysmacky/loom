@@ -1,4 +1,5 @@
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
+import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
 /**
@@ -32,18 +33,18 @@ export function accentColor(node: NodeResponse): string {
 }
 
 /** Focus-tier marker colors, shared by the Organized section bars and canvas cards. */
-export const TIER_COLOR: Record<NodeResponse['focus'], string> = {
+export const TIER_COLOR: Record<NodeFocus, string> = {
 	primary: 'var(--accent)',
 	secondary: 'var(--ink-2)',
 	background: 'var(--line)'
 };
 
 /**
- * A backlog node: anything still at status `idea`, whatever its kind. These
- * stay out of the board views - captured, but not picked up yet.
+ * A backlog node: an idea-kind node. Ideas have no status or focus and stay
+ * out of the board views - captured, but not promoted yet.
  */
 export function isBacklog(node: NodeResponse): boolean {
-	return node.status === 'idea';
+	return node.kind === 'idea';
 }
 
 export type BorderStyle = {
@@ -55,7 +56,8 @@ export type BorderStyle = {
  * Card border language. The line says what a node is (solid project/study,
  * dashed idea/path); only "paused" overrides it, with a dotted line. The
  * colour says how it's doing: warn while blocked, green once done, faded
- * while hidden (backlog/archived), muted grey while queued.
+ * while hidden (backlog ideas/archived), muted grey while queued or at idea
+ * status.
  */
 export function borderStyle(node: NodeResponse): BorderStyle {
 	const line =
@@ -69,9 +71,9 @@ export function borderStyle(node: NodeResponse): BorderStyle {
 			? 'warn'
 			: node.status === 'done'
 				? 'ok'
-				: node.status === 'archived' || node.status === 'idea'
+				: node.status === null || node.status === 'archived'
 					? 'faded'
-					: node.status === 'queued'
+					: node.status === 'queued' || node.status === 'idea'
 						? 'muted'
 						: 'frame';
 	return { line, tone };
@@ -82,12 +84,12 @@ export function borderStyle(node: NodeResponse): BorderStyle {
  * `borderStyle`'s kind/status-driven `tone`), so tier reads as an
  * at-a-glance weight difference without competing with the status color.
  */
-export function tierBorderWidth(focus: NodeResponse['focus']): string {
+export function tierBorderWidth(focus: NodeFocus | null): string {
 	return {
 		primary: '3px',
 		secondary: 'var(--border-width)',
 		background: 'var(--border-width-hair)'
-	}[focus];
+	}[focus ?? 'background'];
 }
 
 /** Typographic kind marks (the design system uses glyphs, never icons). */
@@ -183,6 +185,7 @@ export function kindChangeLosses(node: NodeResponse, kind: NodeResponse['kind'])
 	if (kind !== 'path' && node.container_progress) {
 		losses.push(`${node.container_progress.total} contained node(s), which leave the path`);
 	}
+	if (kind === 'idea' && node.kind !== 'idea') losses.push('its status and focus tier');
 	return losses;
 }
 

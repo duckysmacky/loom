@@ -159,7 +159,7 @@
 
 	function barTone(node: NodeResponse): string {
 		if (node.blocked && node.status !== 'done') return 'blocked';
-		return node.status;
+		return node.status ?? node.kind;
 	}
 
 	function barCaption(node: NodeResponse): string {
@@ -242,7 +242,7 @@
 						<span class="dot" style:background={accentColor(node)}></span>
 						<span class="name-text">
 							<span class="title">{node.title}</span>
-							<span class="meta">{node.focus} · {barCaption(node)}</span>
+							<span class="meta">{node.focus ?? node.kind} · {barCaption(node)}</span>
 						</span>
 					</button>
 					<div class="track" class:days={showDays} style:width="{axisWidth}px">
@@ -253,7 +253,7 @@
 								class="bar {barTone(node)}"
 								style:left="{span.left}px"
 								style:width="{span.width}px"
-								title="{node.title} · {node.status} · {caption}"
+								title="{node.title} · {node.status ?? node.kind} · {caption}"
 								onclick={() => openNode(node.id)}
 							>
 								<span>{barTone(node)}</span>
@@ -299,7 +299,7 @@
 					<button type="button" class="chip" onclick={() => openNode(node.id)}>
 						<span class="dot" style:background={accentColor(node)}></span>
 						{node.title}
-						<span class="status">{node.status}</span>
+						<span class="status">{node.status ?? node.kind}</span>
 					</button>
 				{/each}
 			</div>

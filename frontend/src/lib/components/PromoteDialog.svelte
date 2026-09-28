@@ -11,10 +11,9 @@
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	/**
-	 * Takes a node out of the backlog in place - same row, same id, same
-	 * edges - by setting its kind, status (queued/active) and focus tier in
-	 * one PATCH. Backlog = status idea, so any kind can be promoted; an idea
-	 * may stay an idea.
+	 * Takes an idea out of the backlog in place - same row, same id, same
+	 * edges - by giving it a real kind, a status (queued/active) and a focus
+	 * tier in one PATCH. Ideas have none of those until promoted.
 	 */
 	let { node, onclose }: { node: NodeResponse | null; onclose: () => void } = $props();
 
@@ -23,11 +22,11 @@
 	let focus = $state<NodeFocus>('secondary');
 	let saving = $state(false);
 
-	// Start from the node's own kind and focus each time the dialog opens.
+	// Reset each time the dialog opens.
 	$effect(() => {
 		if (!node) return;
-		kind = node.kind;
-		focus = node.focus;
+		kind = 'project';
+		focus = node.focus ?? 'secondary';
 		status = 'queued';
 	});
 
@@ -57,7 +56,6 @@
 				value={kind}
 				onchange={(value) => (kind = value)}
 				options={[
-					{ value: 'idea', label: 'Idea' },
 					{ value: 'project', label: 'Project' },
 					{ value: 'study', label: 'Study' },
 					{ value: 'path', label: 'Path' }

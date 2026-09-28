@@ -33,7 +33,7 @@ top/bottom pair so related cards connect vertically. -->
 	class:dimmed={data.dimmed}
 	class:selected
 	style:width="{CANVAS_NODE_WIDTH}px"
-	style:border-top-color={TIER_COLOR[node.focus]}
+	style:border-top-color={TIER_COLOR[node.focus ?? 'background']}
 	style:border-left-width={tierBorderWidth(node.focus)}
 	style:border-right-width={tierBorderWidth(node.focus)}
 	style:border-bottom-width={tierBorderWidth(node.focus)}
@@ -54,7 +54,9 @@ top/bottom pair so related cards connect vertically. -->
 	{/if}
 	<div
 		class="tier"
-		style:color={node.focus === 'background' ? 'var(--ink-2)' : TIER_COLOR[node.focus]}
+		style:color={node.focus === 'background'
+			? 'var(--ink-2)'
+			: TIER_COLOR[node.focus ?? 'background']}
 	>
 		{node.focus}
 	</div>

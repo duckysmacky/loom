@@ -28,8 +28,10 @@
 	import PathBox from './PathBox.svelte';
 
 	const STATUS_ORDER: NodeStatus[] = ['active', 'queued', 'paused', 'idea', 'done', 'archived'];
-	const byStatus = (left: NodeResponse, right: NodeResponse) =>
-		STATUS_ORDER.indexOf(left.status) - STATUS_ORDER.indexOf(right.status);
+	// Ideas have no status: they sort last.
+	const rank = (node: NodeResponse) =>
+		node.status ? STATUS_ORDER.indexOf(node.status) : STATUS_ORDER.length;
+	const byStatus = (left: NodeResponse, right: NodeResponse) => rank(left) - rank(right);
 
 	// Status order first, then dependency order on top: prerequisites before
 	// what they unblock. Manual drag order wins over both, on top: ranked

@@ -64,8 +64,10 @@ pub struct Progress {
 pub struct NodeResponse {
     pub id: Uuid,
     pub kind: NodeKind,
-    pub status: NodeStatus,
-    pub focus: NodeFocus,
+    /// `None` for ideas: they have no status until promoted.
+    pub status: Option<NodeStatus>,
+    /// `None` for ideas: they have no focus tier until promoted.
+    pub focus: Option<NodeFocus>,
     pub title: String,
     pub progress_current: Option<i32>,
     pub progress_total: Option<i32>,
@@ -100,11 +102,11 @@ pub struct NodeResponse {
 #[ts(export)]
 pub struct CreateNodeRequest {
     pub kind: NodeKind,
-    /// Defaults to `idea` (backlog).
+    /// Not allowed for ideas (they have no status). Defaults to `queued`.
     #[serde(default)]
     #[ts(optional = nullable)]
     pub status: Option<NodeStatus>,
-    /// Defaults to `secondary`.
+    /// Not allowed for ideas (they have no focus). Defaults to `secondary`.
     #[serde(default)]
     #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
@@ -201,7 +203,7 @@ pub struct UpdateNodeRequest {
 #[ts(export)]
 #[serde(rename_all = "snake_case")]
 #[schemars(
-    description = "`backlog` = status idea, `archived` = status archived, `all` = no preset"
+    description = "`backlog` = idea-kind nodes, `archived` = status archived, `all` = no preset"
 )]
 pub enum NodeView {
     Backlog,

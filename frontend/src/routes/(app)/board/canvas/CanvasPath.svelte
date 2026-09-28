@@ -45,7 +45,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	class="path-box line-{border.line} tone-{border.tone}"
 	class:dimmed={data.dimmed}
 	class:selected
-	style:border-top-color={TIER_COLOR[node.focus]}
+	style:border-top-color={TIER_COLOR[node.focus ?? 'background']}
 >
 	<div class="head path-head" title="Open path">
 		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>

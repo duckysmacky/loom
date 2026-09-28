@@ -16,10 +16,9 @@ import {
 import { makeEdge, makeNode } from './fixtures';
 
 describe('display helpers', () => {
-	it('treats every status-idea node as backlog, whatever its kind', () => {
-		expect(isBacklog(makeNode({ kind: 'idea', status: 'idea' }))).toBe(true);
-		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(true);
-		expect(isBacklog(makeNode({ kind: 'idea', status: 'queued' }))).toBe(false);
+	it('treats every idea-kind node as backlog, and nothing else', () => {
+		expect(isBacklog(makeNode({ kind: 'idea', status: null, focus: null }))).toBe(true);
+		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(false);
 	});
 
 	it('picks the border line from the kind, with paused as the one override', () => {
@@ -34,7 +33,8 @@ describe('display helpers', () => {
 		expect(borderStyle(makeNode({ blocked: true })).tone).toBe('warn');
 		expect(borderStyle(makeNode({ status: 'done', blocked: true })).tone).toBe('ok');
 		expect(borderStyle(makeNode({ status: 'archived' })).tone).toBe('faded');
-		expect(borderStyle(makeNode({ status: 'idea' })).tone).toBe('faded');
+		expect(borderStyle(makeNode({ kind: 'idea', status: null })).tone).toBe('faded');
+		expect(borderStyle(makeNode({ status: 'idea' })).tone).toBe('muted');
 		expect(borderStyle(makeNode({ status: 'queued' })).tone).toBe('muted');
 		expect(borderStyle(makeNode({ status: 'paused' })).tone).toBe('frame');
 		expect(borderStyle(makeNode({ status: 'active' })).tone).toBe('frame');
@@ -82,7 +82,10 @@ describe('display helpers', () => {
 		expect(kindChangeLosses(study, 'study')).toEqual([]);
 		expect(kindChangeLosses(study, 'project')).toEqual(['the progress counter (2 / 9)']);
 		const project = makeNode({ kind: 'project', checklist_progress: { done: 0, total: 3 } });
-		expect(kindChangeLosses(project, 'idea')).toEqual(['3 checklist item(s)']);
+		expect(kindChangeLosses(project, 'idea')).toEqual([
+			'3 checklist item(s)',
+			'its status and focus tier'
+		]);
 	});
 
 	it('bumps tracked progress by one, never past the total', () => {

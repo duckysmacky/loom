@@ -45,6 +45,14 @@ const STATUS_BUCKETS: Bucket[] = (
 	holds: (node) => node.status === status
 }));
 
+/** Ideas have no focus or status: they get their own section in those groupings. */
+const IDEA_BUCKET: Bucket = {
+	id: 'ideas',
+	title: `${KIND_GLYPH.idea} ideas`,
+	bar: 'var(--node-idea)',
+	holds: (node) => node.kind === 'idea'
+};
+
 function tagBuckets(topics: TopicResponse[]): Bucket[] {
 	return [
 		...topics
@@ -75,9 +83,9 @@ export function groupNodes(
 	topics: TopicResponse[] = []
 ): Section[] {
 	const buckets = {
-		focus: FOCUS_BUCKETS,
+		focus: [...FOCUS_BUCKETS, IDEA_BUCKET],
 		kind: KIND_BUCKETS,
-		status: STATUS_BUCKETS,
+		status: [...STATUS_BUCKETS, IDEA_BUCKET],
 		tag: tagBuckets(topics)
 	}[grouping];
 	return buckets

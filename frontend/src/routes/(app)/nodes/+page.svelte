@@ -34,13 +34,14 @@
 	// whenever the graph cache reloads after a mutation.
 	$effect(() => {
 		void graph.version;
-		// Filters hidden on the current tab don't apply (backlog and archived
-		// fix the status).
+		// Filters hidden on the current tab don't apply (backlog fixes the
+		// kind and has no status/focus; archived fixes the status).
+		const backlog = view === 'backlog';
 		const query = {
 			view,
-			kind: kind || null,
+			kind: backlog ? null : kind || null,
 			status: view === 'all' ? status || null : null,
-			focus: focus || null
+			focus: backlog ? null : focus || null
 		};
 		nodesApi
 			.list(query)
@@ -114,16 +115,18 @@
 
 <div class="page">
 	<div class="filters">
-		<label class="filter">
-			<span>Kind</span>
-			<select bind:value={kind}>
-				<option value="">Any</option>
-				<option value="idea">Idea</option>
-				<option value="project">Project</option>
-				<option value="study">Study</option>
-				<option value="path">Path</option>
-			</select>
-		</label>
+		{#if view !== 'backlog'}
+			<label class="filter">
+				<span>Kind</span>
+				<select bind:value={kind}>
+					<option value="">Any</option>
+					<option value="idea">Idea</option>
+					<option value="project">Project</option>
+					<option value="study">Study</option>
+					<option value="path">Path</option>
+				</select>
+			</label>
+		{/if}
 		{#if view === 'all'}
 			<label class="filter">
 				<span>Status</span>
@@ -135,15 +138,17 @@
 				</select>
 			</label>
 		{/if}
-		<label class="filter">
-			<span>Focus</span>
-			<select bind:value={focus}>
-				<option value="">Any</option>
-				<option value="primary">Primary</option>
-				<option value="secondary">Secondary</option>
-				<option value="background">Background</option>
-			</select>
-		</label>
+		{#if view !== 'backlog'}
+			<label class="filter">
+				<span>Focus</span>
+				<select bind:value={focus}>
+					<option value="">Any</option>
+					<option value="primary">Primary</option>
+					<option value="secondary">Secondary</option>
+					<option value="background">Background</option>
+				</select>
+			</label>
+		{/if}
 		<label class="filter">
 			<span>Tag</span>
 			<select bind:value={topicId}>
@@ -203,7 +208,7 @@
 							<div class="sub">
 								<span class="kind">
 									{KIND_GLYPH[node.kind]}
-									{node.kind}{node.status === node.kind ? '' : ` · ${node.status}`}
+									{node.kind}{node.status ? ` · ${node.status}` : ''}
 								</span>
 								{notesExcerpt(node.notes)}
 							</div>

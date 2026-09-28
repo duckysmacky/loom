@@ -16,8 +16,13 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
     let stale = get_stale(user_id, pool).await?;
     let all_nodes = nodes::list_nodes(user_id, pool, &NodeListQuery::default()).await?;
 
-    let in_play =
-        |node: &&NodeResponse| !matches!(node.status, NodeStatus::Done | NodeStatus::Archived);
+    // Ideas (no status) aren't in play: they're off the board until promoted.
+    let in_play = |node: &&NodeResponse| {
+        !matches!(
+            node.status,
+            None | Some(NodeStatus::Done | NodeStatus::Archived)
+        )
+    };
 
     counts.blocked = all_nodes
         .iter()
@@ -28,19 +33,19 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
     let mut primary: Vec<NodeResponse> = all_nodes
         .iter()
         .filter(in_play)
-        .filter(|node| node.focus == NodeFocus::Primary)
+        .filter(|node| node.focus == Some(NodeFocus::Primary))
         .cloned()
         .collect();
     // Stable sort - within a rank the listing's newest-first order holds.
     primary.sort_by_key(|node| match (node.status, node.blocked) {
-        (NodeStatus::Active, false) => 0,
+        (Some(NodeStatus::Active), false) => 0,
         (_, true) => 1,
         _ => 2,
     });
 
     let recent_backlog = all_nodes
         .iter()
-        .filter(|node| node.status == NodeStatus::Idea)
+        .filter(|node| node.kind == NodeKind::Idea)
         .take(RECENT_BACKLOG_LIMIT)
         .cloned()
         .collect();
@@ -63,7 +68,7 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
 
 pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts, sqlx::Error> {
     struct Row {
-        status: NodeStatus,
+        status: Option<NodeStatus>,
         kind: NodeKind,
         count: i64,
     }
@@ -71,7 +76,7 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
     let rows = sqlx::query_as!(
         Row,
         r#"
-        SELECT status AS "status: NodeStatus", kind AS "kind: NodeKind", COUNT(*) AS "count!"
+        SELECT status AS "status?: NodeStatus", kind AS "kind: NodeKind", COUNT(*) AS "count!"
         FROM nodes
         WHERE user_id = $1
         GROUP BY status, kind
@@ -96,21 +101,18 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         path: 0,
     };
     let mut total = 0i64;
-    let mut backlog = 0i64;
 
     for row in rows {
         total += row.count;
-        // Backlog = still at status idea, whatever the kind.
-        if row.status == NodeStatus::Idea {
-            backlog += row.count;
-        }
         match row.status {
-            NodeStatus::Idea => by_status.idea += row.count,
-            NodeStatus::Queued => by_status.queued += row.count,
-            NodeStatus::Active => by_status.active += row.count,
-            NodeStatus::Paused => by_status.paused += row.count,
-            NodeStatus::Done => by_status.done += row.count,
-            NodeStatus::Archived => by_status.archived += row.count,
+            Some(NodeStatus::Idea) => by_status.idea += row.count,
+            Some(NodeStatus::Queued) => by_status.queued += row.count,
+            Some(NodeStatus::Active) => by_status.active += row.count,
+            Some(NodeStatus::Paused) => by_status.paused += row.count,
+            Some(NodeStatus::Done) => by_status.done += row.count,
+            Some(NodeStatus::Archived) => by_status.archived += row.count,
+            // Ideas have no status.
+            None => {}
         }
         match row.kind {
             NodeKind::Idea => by_kind.idea += row.count,
@@ -126,7 +128,8 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         by_kind,
         // Needs the derived `blocked` flag - filled in by `get_dashboard`.
         blocked: 0,
-        backlog,
+        // Backlog = every idea-kind node.
+        backlog: by_kind.idea,
     })
 }
 
@@ -140,7 +143,7 @@ pub async fn get_stale(user_id: Uuid, pool: &PgPool) -> Result<Vec<NodeResponse>
         NodeRow,
         r#"
         SELECT
-            n.id, n.kind AS "kind: NodeKind", n.status AS "status: NodeStatus", n.focus AS "focus: NodeFocus",
+            n.id, n.kind AS "kind: NodeKind", n.status AS "status?: NodeStatus", n.focus AS "focus?: NodeFocus",
             n.title, n.progress_current, n.progress_total, n.progress_unit,
             n.color, n.notes, n.created_at, n.updated_at,
             (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
@@ -154,7 +157,8 @@ pub async fn get_stale(user_id: Uuid, pool: &PgPool) -> Result<Vec<NodeResponse>
             EXISTS (
                 SELECT 1 FROM edges e
                 JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires' AND req.status <> 'done'
+                WHERE e.from_node_id = n.id AND e.kind = 'requires'
+                  AND req.status IS DISTINCT FROM 'done'
             ) AS "blocked!",
             (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
                 AS "container_total!",

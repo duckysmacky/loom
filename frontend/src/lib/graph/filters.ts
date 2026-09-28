@@ -23,8 +23,10 @@ export function nodeMatches(node: NodeResponse, criteria: FilterCriteria): boole
 	)
 		return false;
 	if (criteria.kinds.length && !criteria.kinds.includes(node.kind)) return false;
-	if (criteria.statuses.length && !criteria.statuses.includes(node.status)) return false;
-	if (criteria.focuses.length && !criteria.focuses.includes(node.focus)) return false;
+	if (criteria.statuses.length && !(node.status && criteria.statuses.includes(node.status)))
+		return false;
+	if (criteria.focuses.length && !(node.focus && criteria.focuses.includes(node.focus)))
+		return false;
 	if (criteria.topicIds.length && !criteria.topicIds.some((id) => node.topic_ids.includes(id)))
 		return false;
 	return true;

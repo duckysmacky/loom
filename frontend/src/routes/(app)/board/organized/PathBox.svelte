@@ -38,7 +38,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 <section
 	class="path-box line-{border.line} tone-{border.tone}"
 	class:drop-target={dragState.draggedId && dragState.draggedId !== path.id}
-	style:border-top-color={TIER_COLOR[path.focus]}
+	style:border-top-color={TIER_COLOR[path.focus ?? 'background']}
 	style:border-left-width={tierBorderWidth(path.focus)}
 	style:border-right-width={tierBorderWidth(path.focus)}
 	style:border-bottom-width={tierBorderWidth(path.focus)}

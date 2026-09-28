@@ -51,7 +51,7 @@
 				<button type="button" class="title" onclick={() => openNode(child.id)}>
 					{child.title}
 				</button>
-				<span class="kind">{child.kind} · {child.status}</span>
+				<span class="kind">{child.kind}{child.status ? ` · ${child.status}` : ''}</span>
 				<button
 					type="button"
 					class="remove"

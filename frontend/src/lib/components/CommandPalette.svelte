@@ -60,7 +60,9 @@
 		const nodeItems: Item[] = graph.nodes.map((node) => ({
 			id: node.id,
 			label: node.title,
-			hint: `${node.kind} · ${node.blocked && node.status !== 'done' ? 'blocked' : node.status}`,
+			hint: [node.kind, node.blocked && node.status !== 'done' ? 'blocked' : node.status]
+				.filter(Boolean)
+				.join(' · '),
 			color: accentColor(node),
 			run: () => openNode(node.id)
 		}));

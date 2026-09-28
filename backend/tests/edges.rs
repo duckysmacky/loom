@@ -64,7 +64,7 @@ async fn create_node(app: &axum::Router, token: &str, title: &str) -> String {
         req(
             "POST",
             "/api/nodes",
-            json!({"kind": "idea", "title": title}),
+            json!({"kind": "project", "title": title}),
             Some(token),
         ),
     )
@@ -341,6 +341,32 @@ async fn precedes_does_not_block(pool: PgPool) {
 
     assert_eq!(get_node(&app, &token, &a).await["blocked"], false);
     assert_eq!(get_node(&app, &token, &b).await["blocked"], false);
+}
+
+#[sqlx::test]
+async fn requiring_an_idea_blocks(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "requiresidea@example.com").await;
+    let a = create_node(&app, &token, "A").await;
+    let (status, idea) = send(
+        &app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "idea", "title": "idea"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    let idea = idea["id"].as_str().unwrap().to_owned();
+
+    assert_eq!(
+        create_edge(&app, &token, &a, &idea, "requires").await.0,
+        StatusCode::CREATED
+    );
+    // An idea has no status, so it's never done: it blocks.
+    assert_eq!(get_node(&app, &token, &a).await["blocked"], true);
 }
 
 #[sqlx::test]
