@@ -507,3 +507,43 @@ async fn failing_subgraph_placement_rolls_back(pool: PgPool) {
     let (_, _, nodes) = send(&app, req("GET", "/api/nodes", Value::Null, Some(&jwt))).await;
     assert!(nodes.as_array().unwrap().is_empty());
 }
+
+#[sqlx::test]
+async fn ideas_have_no_status_and_promote_to_queued(pool: PgPool) {
+    let app = app(pool);
+    let (_, token) = user_with_token(&app, "mcpideas@example.com").await;
+
+    let result = call(
+        &app,
+        &token,
+        "loom_create_node",
+        json!({"kind": "idea", "title": "Nope", "status": "queued"}),
+    )
+    .await;
+    assert!(is_error(&result));
+    assert!(error_text(&result).contains("ideas have no status"));
+
+    let idea = call(
+        &app,
+        &token,
+        "loom_create_node",
+        json!({"kind": "idea", "title": "Someday"}),
+    )
+    .await;
+    // Null fields are omitted from results.
+    assert!(idea["structuredContent"].get("status").is_none());
+    let node_id = idea["structuredContent"]["id"].as_str().unwrap().to_owned();
+
+    let listed = call(&app, &token, "loom_list_nodes", json!({"view": "ideas"})).await;
+    assert_eq!(listed["structuredContent"]["nodes"][0]["id"], node_id);
+
+    let promoted = call(
+        &app,
+        &token,
+        "loom_update_node",
+        json!({"node_id": node_id, "kind": "project"}),
+    )
+    .await;
+    assert_eq!(promoted["structuredContent"]["status"], "queued");
+    assert_eq!(promoted["structuredContent"]["focus"], "secondary");
+}

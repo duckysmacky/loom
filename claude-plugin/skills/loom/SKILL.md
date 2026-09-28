@@ -22,13 +22,17 @@ Every item is a **node**, and nodes are connected by **edges**. You work with it
 
 | Kind      | What it is                                  | Can hold                                                                                |
 | --------- | ------------------------------------------- | --------------------------------------------------------------------------------------- |
-| `idea`    | An uncommitted capture                      | Notes only                                                                              |
+| `idea`    | An uncommitted capture                      | Notes only - no status, no focus tier                                                   |
 | `project` | Something to build or do                    | A **checklist**                                                                         |
 | `study`   | A course, book, video series or topic       | A **progress counter**: `progress_current` / `progress_total` / `progress_unit` (e.g. 3 / 12 "chapters") |
 | `path`    | A container, like a learning path or roadmap | **Children**: other nodes join it with a `part_of` edge. Paths can nest.               |
 
-**Status** runs `idea` (the backlog) → `queued` → `active` → `paused` → `done`, or `archived`.
-Any node with status `idea` counts as backlog, whatever its kind.
+**Ideas** are every `idea`-kind node: the user's Ideas list, kept off the board until promoted.
+They have **no status and no focus**. Sending either for an idea is an error, and results omit
+them.
+
+**Status** (projects, studies and paths) runs `idea` → `queued` → `active` → `paused` → `done`,
+or `archived`. The `idea` status is an ordinary status, not the Ideas list.
 
 **Focus tier** is `primary`, `secondary` or `background`. It is separate from status, and it
 decides what the dashboard surfaces. Keep `primary` for the few things the user is actively
@@ -66,16 +70,18 @@ loses whatever the new kind can't hold:
 - leaving `project` deletes its checklist
 - leaving `study` clears its progress
 - leaving `path` releases its children
+- becoming an `idea` clears status and focus (and ends any running active period)
 
-Always tell the user what will be lost, and confirm before promoting.
+Promoting an idea sets status `queued` and focus `secondary` unless you pass others. Always tell
+the user what will be lost, and confirm before promoting.
 
 ## Tools
 
 | Tool | Use it to |
 | --- | --- |
-| `loom_get_overview` | Get dashboard counts plus the primary, stale and recent-backlog nodes and paths. Good for "what am I working on?" |
+| `loom_get_overview` | Get dashboard counts plus the primary, stale and recent-idea nodes and paths. Good for "what am I working on?" |
 | `loom_get_graph` | Get every node, edge and topic. **Start here before any bulk change.** |
-| `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`backlog`, `archived`), or by a title `search`. |
+| `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived`), or by a title `search`. |
 | `loom_get_node` | Get one node with its edges both ways, its checklist and recent pokes. |
 | `loom_create_node` | Create one node. It can also take `checklist` (projects) and `topic_ids`. |
 | `loom_create_subgraph` | Create many nodes and the edges between them in **one all-or-nothing call**. |
@@ -101,9 +107,9 @@ plain message. Read the message, fix the input and retry. Don't guess ids: look 
    for needs no extra confirmation.
 3. **Don't invent progress.** Only set `status: done`, tick checklist items or raise
    `progress_current` when the user says the work happened. Log real work with a poke.
-4. **New nodes start in the backlog.** The default status is `idea`, which is right for captured
-   ideas. For a plan the user wants to start, set the first step `queued` or `active` and leave
-   the rest `queued`.
+4. **Uncommitted things are ideas.** Capture them as `kind: idea` with no status or focus. New
+   projects, studies and paths default to `queued` / `secondary`; for a plan the user wants to
+   start, set the first step `active` and leave the rest `queued`.
 5. **Pick the kind by what the node needs.** Something to read or watch with a count is a
    `study`. Something to build with steps is a `project`. A grouping is a `path`. Anything not
    yet committed is an `idea`.
@@ -210,10 +216,10 @@ new node goes beside the node it relates to.
 
 ## Other common requests
 
-- **"Capture an idea"**: `loom_create_node` with `kind: idea`. Put the gist in `notes`. Don't
-  over-structure it.
-- **"Turn idea X into a project"**: `loom_update_node` with `kind: project` and usually
-  `status: queued`. Then add a checklist with `loom_add_checklist_items`. An idea holds nothing
+- **"Capture an idea"**: `loom_create_node` with `kind: idea` and no status/focus. Put the gist
+  in `notes`. Don't over-structure it.
+- **"Turn idea X into a project"**: `loom_update_node` with `kind: project` (status defaults to
+  `queued`, focus to `secondary`). Then add a checklist with `loom_add_checklist_items`. An idea holds nothing
   that could be lost, so this is safe.
 - **"I read two more chapters of Y"**: `loom_get_node` to read `progress_current`, then
   `loom_update_node` with the new value, then `loom_poke_node`.

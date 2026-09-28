@@ -32,19 +32,25 @@ use crate::state::AppState;
 const INSTRUCTIONS: &str = "\
 Loom is the user's personal graph of projects, studies and ideas.
 
-Node kinds: `idea` (uncommitted capture - no progress, no checklist), `project` \
+Node kinds: `idea` (uncommitted capture - no status, no focus, no progress, no \
+checklist; the user's Ideas list, kept off the board until promoted), `project` \
 (the only kind with a checklist), `study` (courses/books/topics - the only kind \
 with a progress counter: progress_current/progress_total/progress_unit), `path` \
 (the only container - other nodes join it with a `part_of` edge; paths can nest).
 
-Status: idea (= backlog) -> queued -> active -> paused -> done, or archived. \
-Focus tier (primary/secondary/background) is orthogonal to status and drives the \
-dashboard. Changing a node's kind (\"promoting\") keeps its id and edges but drops \
-data the new kind can't hold (leaving project deletes its checklist, leaving study \
-clears progress, leaving path releases its children).
+Status (projects, studies and paths only): idea -> queued -> active -> paused -> \
+done, or archived. Focus tier (primary/secondary/background) is orthogonal to \
+status and drives the dashboard. Ideas have neither: sending status or focus for \
+an idea is an error, and both are omitted from idea results. Changing a node's \
+kind (\"promoting\") keeps its id and edges but drops data the new kind can't \
+hold (leaving project deletes its checklist, leaving study clears progress, \
+leaving path releases its children). Promoting an idea sets status queued and \
+focus secondary unless given; turning a node into an idea clears both and ends \
+its open active period.
 
 Edges always point from the node being described: `requires` (from depends on \
-to - `from` is blocked until `to` is done; cycles rejected), `part_of` (from is a \
+to - `from` is blocked until `to` is done, and an idea is never done; cycles \
+rejected), `part_of` (from is a \
 child of the path `to`; one path per node; cycles rejected), `precedes` (from \
 should be worked on before to - an organizational order that never blocks; \
 cycles rejected), `related` (soft link).
@@ -235,7 +241,7 @@ impl LoomServer {
     }
 
     /// Dashboard summary: counts by status/kind, blocked count, primary-focus
-    /// nodes, stale nodes, recent backlog and paths.
+    /// nodes, stale nodes, recent ideas and paths.
     #[tool(annotations(title = "Get overview", read_only_hint = true))]
     async fn loom_get_overview(
         &self,
@@ -266,7 +272,7 @@ impl LoomServer {
     }
 
     /// Lists nodes, newest first, optionally filtered by kind/status/focus,
-    /// a view preset (`backlog` = status idea, `archived`) and a title search.
+    /// a view preset (`ideas` = idea-kind nodes, `archived`) and a title search.
     #[tool(annotations(title = "List nodes", read_only_hint = true))]
     async fn loom_list_nodes(
         &self,
@@ -319,7 +325,9 @@ impl LoomServer {
     /// nullable field. Changing `kind` promotes it in place (same
     /// id and edges) but drops data the new kind can't hold: leaving
     /// project deletes its checklist, leaving study clears progress,
-    /// leaving path releases its children.
+    /// leaving path releases its children. Promoting an idea gives it
+    /// status `queued` / focus `secondary` unless set; changing kind to
+    /// `idea` clears both. Ideas reject status/focus.
     #[tool(annotations(title = "Update node", read_only_hint = false, destructive_hint = true))]
     async fn loom_update_node(
         &self,
