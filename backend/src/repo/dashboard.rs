@@ -5,7 +5,7 @@ use crate::models::dashboard::{DashboardCounts, DashboardResponse, KindCounts, S
 use crate::models::node::{NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus};
 use crate::repo::nodes::{self, NodeRow};
 
-const RECENT_BACKLOG_LIMIT: usize = 5;
+const RECENT_IDEAS_LIMIT: usize = 5;
 
 /// Assembles the whole dashboard. Everything except the counts and the
 /// stale list is carved out of one full node listing - a single-user graph
@@ -43,10 +43,10 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
         _ => 2,
     });
 
-    let recent_backlog = all_nodes
+    let recent_ideas = all_nodes
         .iter()
         .filter(|node| node.kind == NodeKind::Idea)
-        .take(RECENT_BACKLOG_LIMIT)
+        .take(RECENT_IDEAS_LIMIT)
         .cloned()
         .collect();
 
@@ -61,7 +61,7 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
         counts,
         stale,
         primary,
-        recent_backlog,
+        recent_ideas,
         paths,
     })
 }
@@ -128,8 +128,7 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         by_kind,
         // Needs the derived `blocked` flag - filled in by `get_dashboard`.
         blocked: 0,
-        // Backlog = every idea-kind node.
-        backlog: by_kind.idea,
+        ideas: by_kind.idea,
     })
 }
 

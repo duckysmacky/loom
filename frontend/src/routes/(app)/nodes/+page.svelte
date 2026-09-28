@@ -5,7 +5,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { KIND_GLYPH, accentColor, isBacklog, notesExcerpt, shortDate } from '$lib/graph/display';
+	import { KIND_GLYPH, accentColor, isIdea, notesExcerpt, shortDate } from '$lib/graph/display';
 	import { openNode, withParam } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -16,9 +16,9 @@
 	import type { NodeStatus } from '$lib/types/NodeStatus';
 	import type { NodeView } from '$lib/types/NodeView';
 
-	const VIEWS: NodeView[] = ['backlog', 'all', 'archived'];
+	const VIEWS: NodeView[] = ['ideas', 'all', 'archived'];
 	const view = $derived<NodeView>(
-		VIEWS.find((candidate) => candidate === page.url.searchParams.get('tab')) ?? 'backlog'
+		VIEWS.find((candidate) => candidate === page.url.searchParams.get('tab')) ?? 'ideas'
 	);
 
 	let kind = $state<NodeKind | ''>('');
@@ -34,14 +34,14 @@
 	// whenever the graph cache reloads after a mutation.
 	$effect(() => {
 		void graph.version;
-		// Filters hidden on the current tab don't apply (backlog fixes the
+		// Filters hidden on the current tab don't apply (ideas fixes the
 		// kind and has no status/focus; archived fixes the status).
-		const backlog = view === 'backlog';
+		const ideas = view === 'ideas';
 		const query = {
 			view,
-			kind: backlog ? null : kind || null,
+			kind: ideas ? null : kind || null,
 			status: view === 'all' ? status || null : null,
-			focus: backlog ? null : focus || null
+			focus: ideas ? null : focus || null
 		};
 		nodesApi
 			.list(query)
@@ -51,9 +51,9 @@
 
 	const tabs = $derived([
 		{
-			value: 'backlog' as const,
-			label: 'Backlog',
-			count: graph.nodes.filter(isBacklog).length
+			value: 'ideas' as const,
+			label: 'Ideas',
+			count: graph.nodes.filter(isIdea).length
 		},
 		{ value: 'all' as const, label: 'All', count: graph.nodes.length },
 		{
@@ -99,8 +99,8 @@
 	}
 
 	const footer = $derived(
-		view === 'backlog'
-			? `${visibleRows.length} in the backlog · moving to the board sets a kind, status and focus tier`
+		view === 'ideas'
+			? `${visibleRows.length} ideas · promoting sets a kind, status and focus tier`
 			: view === 'archived'
 				? `${visibleRows.length} archived · restoring moves a node back to queued`
 				: `${visibleRows.length} nodes`
@@ -115,7 +115,7 @@
 
 <div class="page">
 	<div class="filters">
-		{#if view !== 'backlog'}
+		{#if view !== 'ideas'}
 			<label class="filter">
 				<span>Kind</span>
 				<select bind:value={kind}>
@@ -138,7 +138,7 @@
 				</select>
 			</label>
 		{/if}
-		{#if view !== 'backlog'}
+		{#if view !== 'ideas'}
 			<label class="filter">
 				<span>Focus</span>
 				<select bind:value={focus}>
@@ -186,8 +186,8 @@
 				{:else if !visibleRows.length}
 					<tr>
 						<td colspan="6" class="empty">
-							{view === 'backlog'
-								? 'Backlog is empty. Press N to capture an idea.'
+							{view === 'ideas'
+								? 'No ideas yet. Press N to capture one.'
 								: view === 'archived'
 									? 'Nothing archived.'
 									: 'No nodes match these filters.'}
@@ -234,7 +234,7 @@
 							<!-- stopPropagation: the row itself opens the detail panel. -->
 							<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 							<span onclick={(event) => event.stopPropagation()}>
-								{#if isBacklog(node)}
+								{#if isIdea(node)}
 									<Button variant="poke" onclick={() => (promoting = node)}>To board</Button>
 								{:else if node.status === 'archived'}
 									<Button variant="poke" onclick={() => restore(node)}>Restore</Button>

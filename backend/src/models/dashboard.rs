@@ -43,9 +43,9 @@ pub struct DashboardCounts {
     /// Nodes still in play (not done/archived) with an unmet `requires` edge.
     #[ts(type = "number")]
     pub blocked: i64,
-    /// Unpromoted ideas - same predicate as `GET /api/nodes?view=backlog`.
+    /// Unpromoted ideas - same predicate as `GET /api/nodes?view=ideas`.
     #[ts(type = "number")]
-    pub backlog: i64,
+    pub ideas: i64,
 }
 
 /// The `/api/dashboard` response - everything the dashboard shows, in one
@@ -60,7 +60,7 @@ pub struct DashboardResponse {
     /// actionable (active + unblocked) first, then blocked, then the rest.
     pub primary: Vec<NodeResponse>,
     /// The newest unpromoted ideas, newest first.
-    pub recent_backlog: Vec<NodeResponse>,
+    pub recent_ideas: Vec<NodeResponse>,
     /// `kind=path` nodes not done/archived, newest first.
     pub paths: Vec<NodeResponse>,
 }

@@ -43,7 +43,7 @@
 					{ label: 'Total nodes', value: dashboard.counts.total, tone: '' },
 					{ label: 'Active', value: dashboard.counts.by_status.active, tone: '' },
 					{ label: 'Blocked', value: dashboard.counts.blocked, tone: 'warn' },
-					{ label: 'Backlog', value: dashboard.counts.backlog, tone: '' },
+					{ label: 'Ideas', value: dashboard.counts.ideas, tone: '' },
 					{ label: 'Done', value: dashboard.counts.by_status.done, tone: 'ok' }
 				]
 			: []
@@ -128,8 +128,8 @@
 
 				<div class="panel">
 					<div class="panel-head">
-						<h2 class="panel-title">Backlog</h2>
-						<a class="more" href="/nodes">{dashboard.counts.backlog} in backlog →</a>
+						<h2 class="panel-title">Ideas</h2>
+						<a class="more" href="/nodes">{dashboard.counts.ideas} ideas →</a>
 					</div>
 					<form class="capture" onsubmit={captureIdea}>
 						<input
@@ -140,9 +140,9 @@
 						/>
 						<Button variant="primary" type="submit" disabled={!ideaTitle.trim()}>Add</Button>
 					</form>
-					{#if dashboard.recent_backlog.length}
+					{#if dashboard.recent_ideas.length}
 						<ul class="rows">
-							{#each dashboard.recent_backlog as node (node.id)}
+							{#each dashboard.recent_ideas as node (node.id)}
 								<li class="row">
 									<span class="dot" style:background={accentColor(node)}></span>
 									<button type="button" class="row-main" onclick={() => openNode(node.id)}>

@@ -142,7 +142,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     assert_eq!(counts["by_kind"]["project"], 1);
     assert_eq!(counts["by_kind"]["study"], 1);
     assert_eq!(counts["by_kind"]["path"], 0);
-    assert_eq!(counts["backlog"], 2);
+    assert_eq!(counts["ideas"], 2);
     assert_eq!(counts["blocked"], 0);
 }
 
@@ -291,9 +291,9 @@ async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) 
 }
 
 #[sqlx::test]
-async fn backlog_count_and_recent_backlog_cover_every_idea_kind_node(pool: PgPool) {
+async fn ideas_count_and_recent_ideas_cover_every_idea_kind_node(pool: PgPool) {
     let app = app(pool.clone());
-    let token = signup(&app, "backlog@example.com").await;
+    let token = signup(&app, "ideas@example.com").await;
 
     for index in 0..7 {
         create_node(
@@ -317,9 +317,9 @@ async fn backlog_count_and_recent_backlog_cover_every_idea_kind_node(pool: PgPoo
     )
     .await;
 
-    assert_eq!(dashboard["counts"]["backlog"], 7);
+    assert_eq!(dashboard["counts"]["ideas"], 7);
     assert_eq!(
-        titles(&dashboard["recent_backlog"]),
+        titles(&dashboard["recent_ideas"]),
         vec!["idea-6", "idea-5", "idea-4", "idea-3", "idea-2"]
     );
 }
@@ -386,7 +386,7 @@ async fn dashboard_is_isolated_per_user(pool: PgPool) {
     .await;
     assert_eq!(dashboard_b["counts"]["total"], 0);
     assert_eq!(dashboard_b["stale"].as_array().unwrap().len(), 0);
-    for list in ["primary", "recent_backlog", "paths"] {
+    for list in ["primary", "recent_ideas", "paths"] {
         assert_eq!(dashboard_b[list].as_array().unwrap().len(), 0, "{list}");
     }
 }

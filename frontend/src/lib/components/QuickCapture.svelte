@@ -115,7 +115,7 @@
 						value={status}
 						onchange={(value) => (status = value)}
 						options={[
-							{ value: 'idea', label: 'Backlog' },
+							{ value: 'idea', label: 'Idea' },
 							{ value: 'queued', label: 'Queued' },
 							{ value: 'active', label: 'Active' }
 						]}

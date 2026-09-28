@@ -576,11 +576,11 @@ async fn attach_and_detach_topic_on_another_users_node_returns_404(pool: PgPool)
 }
 
 #[sqlx::test]
-async fn view_backlog_includes_every_idea_kind_node(pool: PgPool) {
+async fn view_ideas_includes_every_idea_kind_node(pool: PgPool) {
     let app = app(pool);
-    let token = signup(&app, "viewbacklog@example.com").await;
+    let token = signup(&app, "viewideas@example.com").await;
 
-    create_node(&app, &token, json!({"kind": "idea", "title": "backlog"})).await;
+    create_node(&app, &token, json!({"kind": "idea", "title": "an idea"})).await;
     create_node(
         &app,
         &token,
@@ -590,7 +590,7 @@ async fn view_backlog_includes_every_idea_kind_node(pool: PgPool) {
 
     let (_, list) = send(
         &app,
-        req("GET", "/api/nodes?view=backlog", Value::Null, Some(&token)),
+        req("GET", "/api/nodes?view=ideas", Value::Null, Some(&token)),
     )
     .await;
     let titles: Vec<String> = list
@@ -600,7 +600,7 @@ async fn view_backlog_includes_every_idea_kind_node(pool: PgPool) {
         .map(|n| n["title"].as_str().unwrap().to_owned())
         .collect();
     // Only idea-kind nodes; a project at status idea is committed work.
-    assert_eq!(titles, vec!["backlog".to_string()]);
+    assert_eq!(titles, vec!["an idea".to_string()]);
 }
 
 #[sqlx::test]
@@ -660,15 +660,15 @@ async fn view_all_matches_unfiltered_behavior(pool: PgPool) {
 async fn view_combines_with_explicit_status_filter(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "viewcombine@example.com").await;
-    create_node(&app, &token, json!({"kind": "idea", "title": "backlog"})).await;
+    create_node(&app, &token, json!({"kind": "idea", "title": "an idea"})).await;
 
-    // view=backlog implies kind=idea, which has no status; adding
+    // view=ideas implies kind=idea, which has no status; adding
     // status=active legitimately empties the result via AND.
     let (_, list) = send(
         &app,
         req(
             "GET",
-            "/api/nodes?view=backlog&status=active",
+            "/api/nodes?view=ideas&status=active",
             Value::Null,
             Some(&token),
         ),

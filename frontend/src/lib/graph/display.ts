@@ -40,10 +40,10 @@ export const TIER_COLOR: Record<NodeFocus, string> = {
 };
 
 /**
- * A backlog node: an idea-kind node. Ideas have no status or focus and stay
- * out of the board views - captured, but not promoted yet.
+ * An idea: uncommitted capture with no status or focus. Ideas stay out of the
+ * board views until promoted to a project/study/path.
  */
-export function isBacklog(node: NodeResponse): boolean {
+export function isIdea(node: NodeResponse): boolean {
 	return node.kind === 'idea';
 }
 
@@ -56,7 +56,7 @@ export type BorderStyle = {
  * Card border language. The line says what a node is (solid project/study,
  * dashed idea/path); only "paused" overrides it, with a dotted line. The
  * colour says how it's doing: warn while blocked, green once done, faded
- * while hidden (backlog ideas/archived), muted grey while queued or at idea
+ * while hidden (ideas/archived), muted grey while queued or at idea
  * status.
  */
 export function borderStyle(node: NodeResponse): BorderStyle {

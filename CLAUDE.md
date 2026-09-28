@@ -62,19 +62,23 @@ once. One graph per account; no collaboration features.
 
 ## Domain model & terminology
 
-- **Node kinds:** `idea` (uncommitted capture, no progress or
-  checklist), `project` (the only kind with a checklist), `study`
+- **Node kinds:** `idea` (uncommitted capture - no status, focus,
+  progress or checklist; DB CHECK enforces the status/focus part), `project` (the only kind with a checklist), `study`
   (courses/books/topics - the only kind with a tracked
   `progress_current`/`total`/`unit` counter), `path` (the only
   container kind - other nodes join it via `part_of`; paths can nest).
 - **Promote:** changing a node's `kind` in place (same row, same id,
   same edges) rather than recreating it. Changing kind drops data the
   new kind can't hold (e.g. leaving `project` deletes its checklist).
-- **Backlog:** any node with `status = idea`, regardless of kind.
+- **Ideas:** every `idea`-kind node - the Nodes page's Ideas tab,
+  hidden from board views unless "Show ideas" is on. Promoting (kind ->
+  project/study/path) gives it a status and focus (default `queued` /
+  `secondary`); demoting to idea clears both. The `idea` *status* is an
+  ordinary status of committed nodes.
 - **Focus tier:** `primary` / `secondary` / `background` - orthogonal
   to status, drives what surfaces on the dashboard.
 - **Blocked:** derived, never stored - a node with an unmet `requires`
-  edge to a non-`done` node.
+  edge to a non-`done` node (an idea counts as not done).
 - **Container progress:** derived from the done/not-done ratio of a
   path's `part_of` children. **Checklist progress:** derived from a
   project's checklist items. Both distinct from a study's own tracked
@@ -84,7 +88,8 @@ once. One graph per account; no collaboration features.
 - **Active period:** a `started_at -> ended_at` span of a node being
   worked on (`ended_at` null = ongoing). The first one opens on first
   activation; with "Track active periods" on, pausing/archiving closes it
-  and reactivating opens a new one. **Started** = the first period's start
+  and reactivating opens a new one (demoting to an idea always closes
+  it). **Started** = the first period's start
   and **Completed** = the last period's end while `done` - both derived,
   never stored; editing them moves those period edges.
 - **Stale:** an active/queued node whose last poke (or creation date)

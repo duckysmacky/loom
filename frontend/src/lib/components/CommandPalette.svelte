@@ -45,7 +45,7 @@
 			hint: 'page',
 			run: () => goto('/board/timeline')
 		},
-		{ id: 'go-nodes', label: 'Go to Nodes · Backlog', hint: 'page', run: () => goto('/nodes') },
+		{ id: 'go-nodes', label: 'Go to Nodes · Ideas', hint: 'page', run: () => goto('/nodes') },
 		{ id: 'go-settings', label: 'Go to Settings', hint: 'page', run: () => goto('/settings') },
 		{
 			id: 'capture',

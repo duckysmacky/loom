@@ -4,7 +4,7 @@ import {
 	fromDateInput,
 	incrementedProgress,
 	kindChangeLosses,
-	isBacklog,
+	isIdea,
 	borderStyle,
 	notesExcerpt,
 	progressText,
@@ -16,9 +16,9 @@ import {
 import { makeEdge, makeNode } from './fixtures';
 
 describe('display helpers', () => {
-	it('treats every idea-kind node as backlog, and nothing else', () => {
-		expect(isBacklog(makeNode({ kind: 'idea', status: null, focus: null }))).toBe(true);
-		expect(isBacklog(makeNode({ kind: 'project', status: 'idea' }))).toBe(false);
+	it('treats every idea-kind node as an idea, and nothing else', () => {
+		expect(isIdea(makeNode({ kind: 'idea', status: null, focus: null }))).toBe(true);
+		expect(isIdea(makeNode({ kind: 'project', status: 'idea' }))).toBe(false);
 	});
 
 	it('picks the border line from the kind, with paused as the one override', () => {

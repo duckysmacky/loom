@@ -59,7 +59,7 @@
 		activeChips.length > 0 ||
 			boardFilters.search !== '' ||
 			boardFilters.showArchived ||
-			boardFilters.showBacklog
+			boardFilters.showIdeas
 	);
 </script>
 
@@ -94,7 +94,7 @@
 	{/each}
 
 	<label class="archived">
-		<input type="checkbox" bind:checked={boardFilters.showBacklog} /> Show backlog
+		<input type="checkbox" bind:checked={boardFilters.showIdeas} /> Show ideas
 	</label>
 
 	<label class="archived">

@@ -11,7 +11,7 @@
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	/**
-	 * Takes an idea out of the backlog in place - same row, same id, same
+	 * Promotes an idea in place - same row, same id, same
 	 * edges - by giving it a real kind, a status (queued/active) and a focus
 	 * tier in one PATCH. Ideas have none of those until promoted.
 	 */
@@ -38,15 +38,15 @@
 		const updated = await graph.mutate(() => nodesApi.update(node!.id, { kind, status, focus }));
 		saving = false;
 		if (updated) {
-			notify(`Moved “${updated.title}” out of the backlog as ${kind}`);
+			notify(`Promoted “${updated.title}” to ${kind}`);
 			onclose();
 		}
 	}
 </script>
 
-<Modal open={node !== null} {onclose} label="Take out of backlog" width={460}>
+<Modal open={node !== null} {onclose} label="Promote idea" width={460}>
 	<div class="dialog">
-		<div class="label">Take out of backlog</div>
+		<div class="label">Promote idea</div>
 		<div class="title">{node?.title}</div>
 
 		<div class="field-group">

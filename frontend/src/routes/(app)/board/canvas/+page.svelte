@@ -4,7 +4,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { edgesApi, nodesApi } from '$lib/api/endpoints';
-	import { isBacklog } from '$lib/graph/display';
+	import { isIdea } from '$lib/graph/display';
 	import {
 		CANVAS_NODE_HEIGHT,
 		CANVAS_NODE_WIDTH,
@@ -32,12 +32,12 @@
 	let zoom = $state(1);
 	let pendingConnection = $state<Connection | null>(null);
 
-	// Backlog ideas leave the canvas unless "Show backlog" is on, and archived
+	// Ideas leave the canvas unless "Show ideas" is on, and archived
 	// nodes leave it unless the filters ask for them. Every other
 	// non-matching node stays in place, dimmed, so the graph's shape doesn't
 	// jump around while filtering.
 	const hidden = (node: NodeResponse) =>
-		(isBacklog(node) && !boardFilters.showBacklog) ||
+		(isIdea(node) && !boardFilters.showIdeas) ||
 		(node.status === 'archived' &&
 			!boardFilters.showArchived &&
 			!boardFilters.statuses.includes('archived'));

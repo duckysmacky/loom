@@ -203,10 +203,10 @@ pub struct UpdateNodeRequest {
 #[ts(export)]
 #[serde(rename_all = "snake_case")]
 #[schemars(
-    description = "`backlog` = idea-kind nodes, `archived` = status archived, `all` = no preset"
+    description = "`ideas` = idea-kind nodes, `archived` = status archived, `all` = no preset"
 )]
 pub enum NodeView {
-    Backlog,
+    Ideas,
     All,
     Archived,
 }

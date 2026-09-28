@@ -14,7 +14,7 @@ A flexible manager for everything you're building, studying, and dreaming up.
   - [Topics](#topics)
   - [Pokes & staleness](#pokes--staleness)
   - [Views](#views)
-  - [Backlog & promoting](#backlog--promoting)
+  - [Ideas & promoting](#ideas--promoting)
   - [Quick capture, command palette, and detail panel](#quick-capture-command-palette-and-detail-panel)
   - [Settings](#settings)
   - [MCP Server](#mcp-server)
@@ -68,7 +68,7 @@ can't:
 
 | Kind | For | Can track |
 |---|---|---|
-| **Idea** | A loosely captured, uncommitted thought | - |
+| **Idea** | A loosely captured, uncommitted thought | - (no status or focus either) |
 | **Project** | Something being actively built | A checklist |
 | **Study** | A course, book, or topic | A progress counter (e.g. "15 of 30 chapters") |
 | **Path** | A learning path or roadmap | Other nodes nested inside it (paths can nest too) |
@@ -77,8 +77,8 @@ Promoting an idea to project/study/path changes its kind in place - same
 node, same connections - and drops only what the new kind genuinely can't
 hold (leaving a project behind drops its checklist, for instance).
 
-Every node also has a **status** (idea -> queued -> active -> paused -> done,
-plus archived) and a **focus** tier (primary / secondary / background,
+Every node except an idea also has a **status** (idea -> queued -> active ->
+paused -> done, plus archived) and a **focus** tier (primary / secondary / background,
 independent of status) that decides what surfaces on the dashboard, plus
 notes, an accent color, and free-form topics.
 
@@ -110,7 +110,7 @@ going stale, with a poke button right there.
 ### Views
 
 - **Dashboard** - your primary-focus nodes (actionable first, blocked
-  after), what's going stale, your backlog, and your paths, at a glance.
+  after), what's going stale, your latest ideas, and your paths, at a glance.
 - **Organized board** - a card grid, grouped by focus, kind, status,
   or tag.
 - **Canvas board** - a draggable node graph: position and path 
@@ -122,11 +122,12 @@ going stale, with a poke button right there.
 All three board views share one filter/search bar (kind, status, focus,
 topic, search), so switching views never resets what you're looking at.
 
-### Backlog & promoting
+### Ideas & promoting
 
-Anything with status "idea" - whatever its kind - lives in the Backlog
-tab of the Nodes page, out of the way of the board. Promoting it opens a
-dialog to set its real kind, status, and focus in one step.
+Ideas are uncommitted captures: they have no status and no focus tier,
+and live in the Ideas tab of the Nodes page, out of the way of the board
+(the board's "Show ideas" switch brings them in). Promoting an idea opens
+a dialog to set its real kind, status, and focus in one step.
 
 ### Quick capture, command palette, and detail panel
 
