@@ -1,11 +1,12 @@
 <script lang="ts">
-	import { Panel, useSvelteFlow } from '@xyflow/svelte';
+	import { Panel, useNodesInitialized, useSvelteFlow } from '@xyflow/svelte';
 	import { page } from '$app/state';
 	import { CANVAS_NODE_HEIGHT, CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 
 	let { zoom }: { zoom: number } = $props();
 
 	const flow = useSvelteFlow();
+	const initialized = useNodesInitialized();
 
 	const MIN_ZOOM_PERCENT = 20;
 	const MAX_ZOOM_PERCENT = 200;
@@ -24,17 +25,27 @@
 		flow.setZoom(clamped / 100, { duration: 200 });
 	}
 
-	// "Open in canvas" deep link: /board/canvas?focus=<node id> centres on it.
+	// "Open in canvas" deep link: /board/canvas?focus=<node id> centres on it
+	// once. Other URL changes (opening a node's detail sets ?node=) and graph
+	// updates must not move the camera again.
+	const focusId = $derived(page.url.searchParams.get('focus'));
+	let centredOn: string | null = null;
 	$effect(() => {
-		const focusId = page.url.searchParams.get('focus');
-		const target = focusId ? flow.getNode(focusId) : undefined;
-		if (target) {
-			flow.setCenter(
-				target.position.x + CANVAS_NODE_WIDTH / 2,
-				target.position.y + CANVAS_NODE_HEIGHT / 2,
-				{ zoom: 1.2, duration: 300 }
-			);
-		}
+		if (!focusId || focusId === centredOn) return;
+		// Waits (reruns) until the node is on the canvas; absolute position,
+		// since a node inside a path stores one relative to its box.
+		// After the first measurement, so the initial fit-view doesn't override it.
+		if (!initialized.current || !flow.getNode(focusId)) return;
+		const target = flow.getInternalNode(focusId);
+		if (!target) return;
+		centredOn = focusId;
+		const { x, y } = target.internals.positionAbsolute;
+		requestAnimationFrame(() =>
+			flow.setCenter(x + CANVAS_NODE_WIDTH / 2, y + CANVAS_NODE_HEIGHT / 2, {
+				zoom: 1.2,
+				duration: 300
+			})
+		);
 	});
 </script>
 
