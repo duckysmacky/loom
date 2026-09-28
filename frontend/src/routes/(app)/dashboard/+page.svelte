@@ -2,6 +2,7 @@
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import AnimatedNumber from '$lib/components/ui/AnimatedNumber.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { dashboardApi, nodesApi } from '$lib/api/endpoints';
 	import {
@@ -12,13 +13,24 @@
 		relativeDays,
 		shortDate
 	} from '$lib/graph/display';
+	import { parentPathOf } from '$lib/graph/paths';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { isPathCollapsed, togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	let dashboard = $state<DashboardResponse | null>(null);
+
+	// Paths nest: list the outermost ones, and the rest inside them.
+	const parentOf = $derived(parentPathOf(graph.edges));
+	const topPaths = $derived.by(() => {
+		const listed = new Set(dashboard?.paths.map((path) => path.id));
+		return dashboard?.paths.filter((path) => !listed.has(parentOf.get(path.id) ?? '')) ?? [];
+	});
+	const insideOf = (pathId: string) =>
+		graph.nodes.filter((node) => parentOf.get(node.id) === pathId && node.kind !== 'idea');
 	let loadFailed = $state(false);
 	let ideaTitle = $state('');
 
@@ -168,21 +180,8 @@
 					<div class="panel">
 						<h2 class="panel-title">Paths</h2>
 						<ul class="rows">
-							{#each dashboard.paths as node (node.id)}
-								{@const progress = progressPair(node)}
-								<li>
-									<button type="button" class="path" onclick={() => openNode(node.id)}>
-										<span class="row-title">{node.title}</span>
-										{#if progress}
-											<span class="path-progress">
-												<ProgressBar value={progress[0]} total={progress[1]} height={8} />
-												<span class="row-meta">{progressText(node)}</span>
-											</span>
-										{:else}
-											<span class="row-meta">no steps yet</span>
-										{/if}
-									</button>
-								</li>
+							{#each topPaths as node (node.id)}
+								{@render pathItem(node)}
 							{/each}
 						</ul>
 					</div>
@@ -191,6 +190,47 @@
 		</div>
 	{/if}
 </div>
+
+{#snippet pathItem(node: NodeResponse)}
+	{@const progress = progressPair(node)}
+	{@const inside = insideOf(node.id)}
+	{@const collapsed = isPathCollapsed('dashboard', node.id)}
+	<li>
+		<div class="path-row">
+			{#if inside.length}
+				<CollapseToggle {collapsed} ontoggle={() => togglePathCollapsed('dashboard', node.id)} />
+			{/if}
+			<button type="button" class="path" onclick={() => openNode(node.id)}>
+				<span class="row-title">{node.title}</span>
+				{#if progress}
+					<span class="path-progress">
+						<ProgressBar value={progress[0]} total={progress[1]} height={8} />
+						<span class="row-meta">{progressText(node)}</span>
+					</span>
+				{:else}
+					<span class="row-meta">no steps yet</span>
+				{/if}
+			</button>
+		</div>
+		{#if !collapsed && inside.length}
+			<ul class="rows nested">
+				{#each inside as child (child.id)}
+					{#if child.kind === 'path'}
+						{@render pathItem(child)}
+					{:else}
+						<li>
+							<button type="button" class="path-child" onclick={() => openNode(child.id)}>
+								<span class="dot" style:background={accentColor(child)}></span>
+								<span class="row-title">{child.title}</span>
+								<span class="row-meta">{progressText(child) ?? child.status}</span>
+							</button>
+						</li>
+					{/if}
+				{/each}
+			</ul>
+		{/if}
+	</li>
+{/snippet}
 
 <style>
 	.page {
@@ -347,6 +387,40 @@
 	.path {
 		width: 100%;
 		gap: 9px;
+	}
+
+	.path-row {
+		display: flex;
+		align-items: flex-start;
+		gap: 8px;
+	}
+
+	.nested {
+		margin: 10px 0 0 14px;
+		padding-left: 12px;
+		border-left: var(--border-width-hair) solid var(--line);
+		gap: 10px;
+	}
+
+	.path-child {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		width: 100%;
+		border: none;
+		background: none;
+		padding: 0;
+		text-align: left;
+	}
+
+	.path-child .row-title {
+		flex: 1;
+		min-width: 0;
+		font-size: 13px;
+	}
+
+	.path-child:hover .row-title {
+		color: var(--accent);
 	}
 
 	.path-progress {

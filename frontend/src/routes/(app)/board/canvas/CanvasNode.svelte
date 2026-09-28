@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
+	import { togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import {
 		TIER_COLOR,
@@ -44,6 +46,10 @@ top/bottom pair so related cards connect vertically. -->
 		>
 		<span class="kind">{kind}</span>
 		<Badge status={node.status} blocked={node.blocked} />
+		{#if kind === 'path'}
+			<!-- Only a collapsed path renders as a card. -->
+			<CollapseToggle collapsed ontoggle={() => togglePathCollapsed('canvas', node.id)} />
+		{/if}
 	</div>
 	<div class="title">{node.title}</div>
 	{#if progress}

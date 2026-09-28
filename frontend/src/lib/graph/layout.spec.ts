@@ -51,6 +51,14 @@ describe('layoutPositions', () => {
 	});
 });
 
+describe('layoutCanvas with collapsed paths', () => {
+	it('sizes a collapsed path like a card', () => {
+		const path = makeNode({ id: 'path', kind: 'path', canvas_width: 900, canvas_height: 600 });
+		const placement = layoutCanvas([path], [], new Set(['path'])).get('path')!;
+		expect(placement.size).toEqual({ width: CANVAS_NODE_WIDTH, height: CANVAS_NODE_HEIGHT });
+	});
+});
+
 describe('flowDirection', () => {
 	it('flips requires so the arrow runs prerequisite to dependent', () => {
 		expect(flowDirection(makeEdge('dependent', 'prerequisite', 'requires'))).toEqual({

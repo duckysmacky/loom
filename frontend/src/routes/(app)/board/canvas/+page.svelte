@@ -11,10 +11,12 @@
 		flowDirection,
 		layoutCanvas
 	} from '$lib/graph/layout';
+	import { rerouteEdges, standIns } from '$lib/graph/collapse';
 	import { ancestorPaths, nestingDepth, parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { boardFilters, matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { isPathCollapsed } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -50,9 +52,22 @@
 	const pinning = new Set<string>();
 
 	$effect(() => {
-		const shown = graph.nodes.filter((node) => !hidden(node));
+		const parentOf = parentPathOf(graph.edges);
+		// A collapsed path is a single card: what's inside it leaves the
+		// canvas and its connections are drawn to the card instead.
+		const collapsed = new Set(
+			graph.nodes
+				.filter((node) => node.kind === 'path' && isPathCollapsed('canvas', node.id))
+				.map((node) => node.id)
+		);
+		const standIn = standIns(
+			graph.nodes.map((node) => node.id),
+			parentOf,
+			collapsed
+		);
+		const shown = graph.nodes.filter((node) => !hidden(node) && !standIn.has(node.id));
 		const shownIds = new Set(shown.map((node) => node.id));
-		const placements = layoutCanvas(shown, graph.edges);
+		const placements = layoutCanvas(shown, graph.edges, collapsed);
 
 		for (const node of shown) {
 			if (node.canvas_x !== null || pinning.has(node.id)) continue;
@@ -66,13 +81,12 @@
 		);
 
 		// xyflow needs a parent listed before its children.
-		const parentOf = parentPathOf(graph.edges);
 		const parentsFirst = shown.toSorted(
 			(left, right) => nestingDepth(left.id, parentOf) - nestingDepth(right.id, parentOf)
 		);
 		nodes = parentsFirst.map((node) => {
 			const { position, size, parentId } = placements.get(node.id)!;
-			const isPath = node.kind === 'path';
+			const isPath = node.kind === 'path' && !collapsed.has(node.id);
 			return {
 				id: node.id,
 				type: isPath ? ('loomPath' as const) : ('loom' as const),
@@ -91,10 +105,9 @@
 			return placement.position.y + (placement.parentId ? absoluteY(placement.parentId) : 0);
 		};
 		// part_of is drawn as containment (the box), not as a line.
-		edges = graph.edges
-			.filter((edge) => edge.kind !== 'part_of')
-			.filter((edge) => shownIds.has(edge.from_node_id) && shownIds.has(edge.to_node_id))
-			.map((edge) => {
+		edges = rerouteEdges(graph.edges, standIn)
+			.filter(({ edge }) => shownIds.has(edge.from_node_id) && shownIds.has(edge.to_node_id))
+			.map(({ edge, merged, rerouted }) => {
 				let { source, target } = flowDirection(edge);
 				const related = edge.kind === 'related';
 				// related has no arrow: draw it from the upper card down so the
@@ -102,12 +115,17 @@
 				// y get an S-curve; compare |dx| to |dy| and fall back to the
 				// left/right handles if that matters.
 				if (related && absoluteY(source) > absoluteY(target)) [source, target] = [target, source];
-				const unmet =
-					edge.kind === 'requires' && graph.nodeById.get(edge.to_node_id)?.status !== 'done';
+				const unmet = merged.some(
+					(underlying) =>
+						underlying.kind === 'requires' &&
+						graph.nodeById.get(underlying.to_node_id)?.status !== 'done'
+				);
 				return {
 					id: edge.id,
 					source,
 					target,
+					// A line standing in for hidden connections isn't one edge to delete.
+					deletable: !rerouted,
 					...(related ? { sourceHandle: 'bottom', targetHandle: 'top' } : {}),
 					type: 'loom' as const,
 					zIndex: 1,
@@ -167,7 +185,8 @@
 			const size = sizeOf(moved);
 			const centre = { x: topLeft.x + size.width / 2, y: topLeft.y + size.height / 2 };
 			const target = nodes
-				.filter((candidate) => candidate.type === 'loomPath' && candidate.id !== moved.id)
+				// Expanded path boxes, and collapsed paths' cards (drop onto one to join it).
+				.filter((candidate) => candidate.data.node.kind === 'path' && candidate.id !== moved.id)
 				.filter((candidate) => !ancestorPaths(candidate.id, parentOf).includes(moved.id))
 				.filter((candidate) => {
 					const origin = absolute(candidate.id);
@@ -198,10 +217,14 @@
 				if (target) {
 					await edgesApi.create({ from_node_id: moved.id, to_node_id: target.id, kind: 'part_of' });
 				}
-				await nodesApi.update(moved.id, {
-					canvas_x: Math.round(topLeft.x - base.x),
-					canvas_y: Math.round(topLeft.y - base.y)
-				});
+				// Inside a collapsed path there's nowhere to put it yet: joining
+				// resets its position, and it's laid out when the path expands.
+				if (target?.type !== 'loom') {
+					await nodesApi.update(moved.id, {
+						canvas_x: Math.round(topLeft.x - base.x),
+						canvas_y: Math.round(topLeft.y - base.y)
+					});
+				}
 				const movedTitle = moved.data.node.title;
 				notify(
 					target

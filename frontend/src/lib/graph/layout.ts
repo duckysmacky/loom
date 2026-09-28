@@ -91,11 +91,13 @@ export type CanvasPlacement = {
  * Lays out the whole canvas, paths included. Each path is a box whose
  * children are positioned relative to it; boxes without a saved size grow
  * to fit their children. Containers are laid out innermost first so a
- * path's size is known before its own siblings are placed.
+ * path's size is known before its own siblings are placed. A `collapsed`
+ * path is a plain card: its contents are expected to be left out of `nodes`.
  */
 export function layoutCanvas(
 	nodes: NodeResponse[],
-	edges: EdgeResponse[]
+	edges: EdgeResponse[],
+	collapsed: Set<string> = new Set()
 ): Map<string, CanvasPlacement> {
 	const shownIds = new Set(nodes.map((node) => node.id));
 	const parentOf = new Map(
@@ -108,7 +110,7 @@ export function layoutCanvas(
 	const layoutContainer = (containerId: string | undefined, visiting: Set<string>) => {
 		const siblings = nodes.filter((node) => parentOf.get(node.id) === containerId);
 		for (const sibling of siblings) {
-			if (sibling.kind === 'path' && !visiting.has(sibling.id)) {
+			if (sibling.kind === 'path' && !collapsed.has(sibling.id) && !visiting.has(sibling.id)) {
 				layoutContainer(sibling.id, new Set([...visiting, sibling.id]));
 			}
 		}

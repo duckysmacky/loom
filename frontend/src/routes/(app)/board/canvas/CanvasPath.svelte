@@ -1,6 +1,8 @@
 <script lang="ts">
 	import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
+	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
+	import { togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import { KIND_GLYPH, TIER_COLOR, borderStyle, progressText } from '$lib/graph/display';
 	import { PATH_MIN_HEIGHT, PATH_MIN_WIDTH } from '$lib/graph/layout';
@@ -48,6 +50,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	style:border-top-color={TIER_COLOR[node.focus ?? 'background']}
 >
 	<div class="head path-head" title="Open path">
+		<CollapseToggle collapsed={false} ontoggle={() => togglePathCollapsed('canvas', node.id)} />
 		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
 		<Badge status={node.status} blocked={node.blocked} />
 		<span class="title">{node.title}</span>

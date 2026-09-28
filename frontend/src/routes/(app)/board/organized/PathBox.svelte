@@ -2,6 +2,7 @@
 	import { flip } from 'svelte/animate';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
+	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import {
 		KIND_GLYPH,
@@ -12,6 +13,7 @@
 		tierBorderWidth
 	} from '$lib/graph/display';
 	import { openNode } from '$lib/navigation';
+	import { isPathCollapsed, togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import {
 		dragOverSlot,
@@ -37,76 +39,105 @@
 	const progress = $derived(progressPair(path));
 	const border = $derived(borderStyle(path));
 	const zone = $derived<DropZone>({ kind: 'path', pathId: path.id });
-</script>
+	const collapsed = $derived(isPathCollapsed('organized', path.id));
+	const toggle = () => togglePathCollapsed('organized', path.id);
 
-<!-- A path is a box its nodes sit inside; sub-paths nest as boxes within it.
-The translucent fill stacks, so deeper nesting reads darker. -->
-<!-- svelte-ignore a11y_no_static_element_interactions -->
-<section
-	class="path-box line-{border.line} tone-{border.tone}"
-	class:drop-target={dragState.draggedId && dragState.draggedId !== path.id}
-	style:border-top-color={TIER_COLOR[path.focus ?? 'background']}
-	style:border-left-width={tierBorderWidth(path.focus)}
-	style:border-right-width={tierBorderWidth(path.focus)}
-	style:border-bottom-width={tierBorderWidth(path.focus)}
-	ondragover={(event) => dragState.draggedId && event.preventDefault()}
-	ondrop={(event) => {
+	function dropInside(event: DragEvent) {
 		event.preventDefault();
 		event.stopPropagation();
 		dropAtEnd(
 			zone,
 			inside.map((node) => node.id)
 		);
-	}}
->
-	<button type="button" class="head" onclick={() => openNode(path.id)}>
-		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
-		<Badge status={path.status} blocked={path.blocked} />
-		<span class="title">{path.title}</span>
-		{#if progress}
-			<span class="progress">
-				<ProgressBar value={progress[0]} total={progress[1]} />
-				<span>{progressText(path)}</span>
-			</span>
-		{/if}
-	</button>
+	}
+</script>
 
-	{#if inside.length}
-		<div class="inside">
-			{#each inside as node (node.id)}
-				<!-- svelte-ignore a11y_no_static_element_interactions -->
-				<div
-					class={node.kind === 'path' ? 'path-slot' : 'card-slot'}
-					class:dragging={dragState.draggedId === node.id}
-					class:drop-before={dragState.overId === node.id && dragState.overBefore}
-					class:drop-after={dragState.overId === node.id && !dragState.overBefore}
-					draggable="true"
-					ondragstart={() => startDrag(node.id)}
-					ondragover={(event) => dragOverSlot(node.id, event)}
-					ondrop={(event) => {
-						event.preventDefault();
-						event.stopPropagation();
-						dropOnCard(
-							node,
-							zone,
-							inside.map((n) => n.id)
-						);
-					}}
-					ondragend={endDrag}
-					animate:flip={{ duration: 200 }}
-				>
-					{#if node.kind === 'path'}
-						<PathBox path={node} {childrenOf} />
-					{:else}
-						<NodeCard {node} />
-					{/if}
-				</div>
-			{/each}
+{#if collapsed}
+	<!-- Collapsed: just the path's own card; dropping a node on it still
+	     puts the node inside. -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="collapsed"
+		class:drop-target={dragState.draggedId && dragState.draggedId !== path.id}
+		ondragover={(event) => dragState.draggedId && event.preventDefault()}
+		ondrop={dropInside}
+	>
+		<NodeCard node={path}>
+			<div class="expand">
+				<CollapseToggle
+					collapsed
+					ontoggle={toggle}
+					label={inside.length ? `${inside.length} inside` : 'empty'}
+				/>
+			</div>
+		</NodeCard>
+	</div>
+{:else}
+	<!-- A path is a box its nodes sit inside; sub-paths nest as boxes within it.
+The translucent fill stacks, so deeper nesting reads darker. -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<section
+		class="path-box line-{border.line} tone-{border.tone}"
+		class:drop-target={dragState.draggedId && dragState.draggedId !== path.id}
+		style:border-top-color={TIER_COLOR[path.focus ?? 'background']}
+		style:border-left-width={tierBorderWidth(path.focus)}
+		style:border-right-width={tierBorderWidth(path.focus)}
+		style:border-bottom-width={tierBorderWidth(path.focus)}
+		ondragover={(event) => dragState.draggedId && event.preventDefault()}
+		ondrop={dropInside}
+	>
+		<div class="head-row">
+			<CollapseToggle collapsed={false} ontoggle={toggle} />
+			<button type="button" class="head" onclick={() => openNode(path.id)}>
+				<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
+				<Badge status={path.status} blocked={path.blocked} />
+				<span class="title">{path.title}</span>
+				{#if progress}
+					<span class="progress">
+						<ProgressBar value={progress[0]} total={progress[1]} />
+						<span>{progressText(path)}</span>
+					</span>
+				{/if}
+			</button>
 		</div>
-	{:else}
-		<p class="empty">Empty path. Add nodes from its detail view, or drag them into this box.</p>
-	{/if}
-</section>
+
+		{#if inside.length}
+			<div class="inside">
+				{#each inside as node (node.id)}
+					<!-- svelte-ignore a11y_no_static_element_interactions -->
+					<div
+						class={node.kind === 'path' ? 'path-slot' : 'card-slot'}
+						class:dragging={dragState.draggedId === node.id}
+						class:drop-before={dragState.overId === node.id && dragState.overBefore}
+						class:drop-after={dragState.overId === node.id && !dragState.overBefore}
+						draggable="true"
+						ondragstart={() => startDrag(node.id)}
+						ondragover={(event) => dragOverSlot(node.id, event)}
+						ondrop={(event) => {
+							event.preventDefault();
+							event.stopPropagation();
+							dropOnCard(
+								node,
+								zone,
+								inside.map((n) => n.id)
+							);
+						}}
+						ondragend={endDrag}
+						animate:flip={{ duration: 200 }}
+					>
+						{#if node.kind === 'path'}
+							<PathBox path={node} {childrenOf} />
+						{:else}
+							<NodeCard {node} />
+						{/if}
+					</div>
+				{/each}
+			</div>
+		{:else}
+			<p class="empty">Empty path. Add nodes from its detail view, or drag them into this box.</p>
+		{/if}
+	</section>
+{/if}
 
 <style>
 	/* Only as wide as its contents (cards wrap once it reaches the page edge). */
@@ -118,6 +149,26 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		border: var(--border-width) dashed var(--node-path);
 		border-top: 5px solid;
 		padding: 0 14px 14px;
+	}
+
+	.collapsed {
+		width: var(--card-w);
+		height: var(--card-h);
+	}
+
+	.collapsed.drop-target {
+		outline: var(--border-width) dashed var(--node-path);
+		outline-offset: 3px;
+	}
+
+	.expand {
+		margin-top: 8px;
+	}
+
+	.head-row {
+		display: flex;
+		align-items: center;
+		gap: 10px;
 	}
 
 	.head {
