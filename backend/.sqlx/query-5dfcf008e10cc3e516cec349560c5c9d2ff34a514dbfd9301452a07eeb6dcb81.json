@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT status AS \"status?: NodeStatus\", kind AS \"kind: NodeKind\", COUNT(*) AS \"count!\"\n        FROM nodes\n        WHERE user_id = $1\n        GROUP BY status, kind\n        ",
+  "query": "\n        SELECT status AS \"status?: NodeStatus\", kind AS \"kind!: NodeKind\", COUNT(*) AS \"count!\"\n        FROM node_rows\n        WHERE user_id = $1\n        GROUP BY status, kind\n        ",
   "describe": {
     "columns": [
       {
@@ -23,14 +23,14 @@
         },
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "status"
           }
         }
       },
       {
         "ordinal": 1,
-        "name": "kind: NodeKind",
+        "name": "kind!: NodeKind",
         "type_info": {
           "Custom": {
             "name": "node_kind",
@@ -46,7 +46,7 @@
         },
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "kind"
           }
         }
@@ -65,9 +65,9 @@
     },
     "nullable": [
       true,
-      false,
+      true,
       null
     ]
   },
-  "hash": "7b6ee7e9762139227584e5fbc132b02a60d2fb94139bc6e279a4282129d4ad7c"
+  "hash": "5dfcf008e10cc3e516cec349560c5c9d2ff34a514dbfd9301452a07eeb6dcb81"
 }

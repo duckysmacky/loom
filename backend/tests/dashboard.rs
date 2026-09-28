@@ -329,12 +329,7 @@ async fn paths_list_open_path_kind_nodes_with_progress(pool: PgPool) {
     let app = app(pool.clone());
     let token = signup(&app, "paths@example.com").await;
 
-    let path = create_node(
-        &app,
-        &token,
-        json!({"kind": "path", "title": "path", "status": "active"}),
-    )
-    .await;
+    let path = create_node(&app, &token, json!({"kind": "path", "title": "path"})).await;
     let done_child = create_node(
         &app,
         &token,
@@ -353,10 +348,16 @@ async fn paths_list_open_path_kind_nodes_with_progress(pool: PgPool) {
     let archived_path = create_node(
         &app,
         &token,
-        json!({"kind": "path", "title": "archived-path", "status": "archived"}),
+        json!({"kind": "path", "title": "archived-path"}),
     )
     .await;
-    let archived_child = create_node(&app, &token, json!({"kind": "study", "title": "c"})).await;
+    // Everything inside archived, so the path's derived status is archived.
+    let archived_child = create_node(
+        &app,
+        &token,
+        json!({"kind": "study", "title": "c", "status": "archived"}),
+    )
+    .await;
     add_edge(&app, &token, &archived_child, &archived_path, "part_of").await;
 
     let (_, dashboard) = send(

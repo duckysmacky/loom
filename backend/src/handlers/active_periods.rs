@@ -7,7 +7,8 @@ use crate::middleware::auth_user::AuthUser;
 use crate::models::active_period::{
     ActivePeriodResponse, CreateActivePeriodRequest, UpdateActivePeriodRequest,
 };
-use crate::repo::active_periods;
+use crate::models::node::NodeKind;
+use crate::repo::{active_periods, nodes};
 use crate::state::AppState;
 
 pub async fn list(
@@ -32,6 +33,14 @@ pub async fn create(
     {
         return Err(ApiError::InvalidInput(
             "ended_at must not be before started_at",
+        ));
+    }
+    let node = nodes::get_node(user_id, &state.pool, node_id)
+        .await?
+        .ok_or(ApiError::NotFound)?;
+    if node.kind == NodeKind::Path {
+        return Err(ApiError::InvalidInput(
+            "a path's active periods come from the nodes inside it",
         ));
     }
     let period = active_periods::create_period(

@@ -1,10 +1,33 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT status AS \"status?: NodeStatus\" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE",
+  "query": "SELECT kind AS \"kind: NodeKind\", status AS \"status?: NodeStatus\" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
+        "name": "kind: NodeKind",
+        "type_info": {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
         "name": "status?: NodeStatus",
         "type_info": {
           "Custom": {
@@ -36,8 +59,9 @@
       ]
     },
     "nullable": [
+      false,
       true
     ]
   },
-  "hash": "f194c6c347ee7a063747321ee214551c9541176a8b4cd0e4836ef7de1fc57f1e"
+  "hash": "f0f330506505fb27956f3f99b5d1ae7cbf5038a053ce89f8184e290b1514bae1"
 }

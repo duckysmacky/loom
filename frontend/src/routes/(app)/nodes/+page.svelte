@@ -236,7 +236,7 @@
 							<span onclick={(event) => event.stopPropagation()}>
 								{#if isIdea(node)}
 									<Button variant="poke" onclick={() => (promoting = node)}>To board</Button>
-								{:else if node.status === 'archived'}
+								{:else if node.status === 'archived' && node.kind !== 'path'}
 									<Button variant="poke" onclick={() => restore(node)}>Restore</Button>
 								{/if}
 							</span>

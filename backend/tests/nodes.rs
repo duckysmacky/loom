@@ -1417,3 +1417,127 @@ async fn promoting_an_idea_defaults_and_demoting_clears_and_closes_period(pool: 
     assert_eq!(periods.len(), 1);
     assert!(!periods[0]["ended_at"].is_null());
 }
+
+async fn patch(app: &axum::Router, token: &str, node_id: &str, body: Value) -> (StatusCode, Value) {
+    send(
+        app,
+        req("PATCH", &format!("/api/nodes/{node_id}"), body, Some(token)),
+    )
+    .await
+}
+
+async fn put_inside(app: &axum::Router, token: &str, child: &str, path: &str) {
+    let (status, _) = send(
+        app,
+        req(
+            "POST",
+            "/api/edges",
+            json!({"from_node_id": child, "to_node_id": path, "kind": "part_of"}),
+            Some(token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+}
+
+#[sqlx::test]
+async fn path_status_and_dates_are_not_writable(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pathwrites@example.com").await;
+
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": "path", "title": "P", "status": "active"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+
+    let path = create_node(&app, &token, json!({"kind": "path", "title": "P"})).await;
+    let path_id = path["id"].as_str().unwrap();
+    for body in [
+        json!({"status": "done"}),
+        json!({"started_at": "2026-09-01T00:00:00Z"}),
+        json!({"completed_at": "2026-09-01T00:00:00Z"}),
+    ] {
+        assert_eq!(
+            patch(&app, &token, path_id, body.clone()).await.0,
+            StatusCode::BAD_REQUEST,
+            "{body}"
+        );
+    }
+    let project_id = project(&app, &token).await;
+    assert_eq!(
+        patch(
+            &app,
+            &token,
+            &project_id,
+            json!({"kind": "path", "status": "active"})
+        )
+        .await
+        .0,
+        StatusCode::BAD_REQUEST
+    );
+    let (status, body) = patch(&app, &token, path_id, json!({"focus": "primary"})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["focus"], "primary");
+
+    let (status, _) = send(
+        &app,
+        req(
+            "POST",
+            &format!("/api/nodes/{path_id}/periods"),
+            json!({"started_at": "2026-09-01T00:00:00Z"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test]
+async fn path_dates_derive_from_what_is_inside(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pathdates@example.com").await;
+    let path = create_node(&app, &token, json!({"kind": "path", "title": "P"})).await;
+    let path_id = path["id"].as_str().unwrap();
+    let step = project(&app, &token).await;
+    put_inside(&app, &token, &step, path_id).await;
+
+    patch_status(&app, &token, &step, "active", true).await;
+    let done = patch_status(&app, &token, &step, "done", true).await;
+
+    let (_, path) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{path_id}"),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(path["status"], "done");
+    assert_eq!(path["started_at"], done["started_at"]);
+    assert_eq!(path["completed_at"], done["completed_at"]);
+}
+
+#[sqlx::test]
+async fn leaving_path_kind_keeps_the_derived_status(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "leavepath@example.com").await;
+    let path = create_node(&app, &token, json!({"kind": "path", "title": "P"})).await;
+    let path_id = path["id"].as_str().unwrap();
+    let step = project(&app, &token).await;
+    put_inside(&app, &token, &step, path_id).await;
+    patch_status(&app, &token, &step, "active", true).await;
+
+    let (status, body) = patch(&app, &token, path_id, json!({"kind": "project"})).await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(body["status"], "active");
+    assert!(!body["started_at"].is_null());
+}

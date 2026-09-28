@@ -41,7 +41,10 @@
 		saving = true;
 		const created = await graph.mutate(async () => {
 			const node = await nodesApi.create(
-				kind === 'idea' ? { kind, title: trimmed } : { kind, title: trimmed, focus, status }
+				// Ideas take neither status nor focus; a path's status is derived.
+				kind === 'idea'
+					? { kind, title: trimmed }
+					: { kind, title: trimmed, focus, ...(kind === 'path' ? {} : { status }) }
 			);
 			for (const topicId of topicIds) await nodesApi.attachTopic(node.id, topicId);
 			return node;
@@ -103,19 +106,21 @@
 						]}
 					/>
 				</div>
-				<div class="group">
-					<span class="label">Status</span>
-					<SegmentedControl
-						label="Status"
-						value={status}
-						onchange={(value) => (status = value)}
-						options={[
-							{ value: 'idea', label: 'Idea' },
-							{ value: 'queued', label: 'Queued' },
-							{ value: 'active', label: 'Active' }
-						]}
-					/>
-				</div>
+				{#if kind !== 'path'}
+					<div class="group">
+						<span class="label">Status</span>
+						<SegmentedControl
+							label="Status"
+							value={status}
+							onchange={(value) => (status = value)}
+							options={[
+								{ value: 'idea', label: 'Idea' },
+								{ value: 'queued', label: 'Queued' },
+								{ value: 'active', label: 'Active' }
+							]}
+						/>
+					</div>
+				{/if}
 			{/if}
 		</div>
 

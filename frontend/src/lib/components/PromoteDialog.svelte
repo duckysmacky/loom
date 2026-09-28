@@ -35,7 +35,9 @@
 	async function promote() {
 		if (!node) return;
 		saving = true;
-		const updated = await graph.mutate(() => nodesApi.update(node!.id, { kind, status, focus }));
+		const updated = await graph.mutate(() =>
+			nodesApi.update(node!.id, { kind, focus, ...(kind === 'path' ? {} : { status }) })
+		);
 		saving = false;
 		if (updated) {
 			notify(`Promoted “${updated.title}” to ${kind}`);
@@ -65,18 +67,21 @@
 		{#if losses.length}
 			<p class="losses">Switching kind removes {losses.join(' and ')}.</p>
 		{/if}
-		<div class="field-group">
-			<span class="label">Status</span>
-			<SegmentedControl
-				label="Status"
-				value={status}
-				onchange={(value) => (status = value)}
-				options={[
-					{ value: 'queued', label: 'Queued' },
-					{ value: 'active', label: 'Active' }
-				]}
-			/>
-		</div>
+		<!-- A path's status is derived from what's inside it. -->
+		{#if kind !== 'path'}
+			<div class="field-group">
+				<span class="label">Status</span>
+				<SegmentedControl
+					label="Status"
+					value={status}
+					onchange={(value) => (status = value)}
+					options={[
+						{ value: 'queued', label: 'Queued' },
+						{ value: 'active', label: 'Active' }
+					]}
+				/>
+			</div>
+		{/if}
 		<div class="field-group">
 			<span class="label">Focus tier</span>
 			<SegmentedControl

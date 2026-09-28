@@ -251,10 +251,10 @@ pub async fn update_node(
 
     let mut tx = pool.begin().await?;
 
-    // The pre-update status, locked in the same transaction - the period
-    // sync below needs to know which transition just happened.
-    let Some(old_status) = sqlx::query_scalar!(
-        r#"SELECT status AS "status?: NodeStatus" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
+    // The pre-update kind and status, locked in the same transaction - the
+    // period sync below needs to know which transition just happened.
+    let Some(old) = sqlx::query!(
+        r#"SELECT kind AS "kind: NodeKind", status AS "status?: NodeStatus" FROM nodes WHERE id = $1 AND user_id = $2 FOR UPDATE"#,
         node_id,
         user_id,
     )
@@ -263,6 +263,13 @@ pub async fn update_node(
     else {
         return Ok(None);
     };
+    // A path's stored status is unused (its status is derived) and it has no
+    // periods: leaving path kind starts its period history fresh.
+    let old_status = if old.kind == NodeKind::Path {
+        None
+    } else {
+        old.status
+    };
 
     let row = sqlx::query!(
         r#"
@@ -270,8 +277,12 @@ pub async fn update_node(
             kind = COALESCE($3, kind),
             -- Ideas have no status/focus: becoming one clears both, and
             -- promoting one defaults to queued/secondary unless given.
+            -- A path leaving path kind keeps the status derived from what's
+            -- inside it (still attached here; released below).
             status = CASE
                 WHEN COALESCE($3, kind) = 'idea' THEN NULL
+                WHEN kind = 'path' AND COALESCE($3, kind) <> 'path'
+                    THEN COALESCE($4, path_status(id))
                 ELSE COALESCE($4, status, 'queued')
             END,
             focus = CASE
@@ -334,15 +345,17 @@ pub async fn update_node(
     // Started/completed are the edges of the active periods: a status change
     // moves them first, then an explicit date in the request wins, as the
     // old auto-stamped columns did.
-    active_periods::sync_status_transition(
-        user_id,
-        &mut tx,
-        node_id,
-        old_status,
-        row.status,
-        request.track_active_periods,
-    )
-    .await?;
+    if row.kind != NodeKind::Path {
+        active_periods::sync_status_transition(
+            user_id,
+            &mut tx,
+            node_id,
+            old_status,
+            row.status,
+            request.track_active_periods,
+        )
+        .await?;
+    }
     if let Some(started_at) = request.started_at {
         active_periods::set_started(user_id, &mut tx, node_id, started_at).await?;
     }
@@ -355,12 +368,13 @@ pub async fn update_node(
         checklist::delete_all_for_node(user_id, &mut tx, node_id).await?;
     }
     // Only paths contain nodes: a node that stops being one lets go of them.
-    // A path's pokes come from the nodes inside it, so one that becomes a
-    // path drops its own.
+    // A path's pokes and periods come from the nodes inside it, so one that
+    // becomes a path drops its own.
     if row.kind != NodeKind::Path {
         edges::release_children(user_id, &mut tx, node_id).await?;
     } else {
         pokes::delete_all_for_node(user_id, &mut tx, node_id).await?;
+        active_periods::set_started(user_id, &mut tx, node_id, None).await?;
     }
     tx.commit().await?;
 

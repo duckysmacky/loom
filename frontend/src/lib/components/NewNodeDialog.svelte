@@ -100,7 +100,9 @@
 				title: trimmed,
 				notes: notes.trim() || null,
 				color,
-				...(committed ? { status, focus } : {}),
+				// Ideas take neither status nor focus; a path's status is derived.
+				...(committed ? { focus } : {}),
+				...(committed && kind !== 'path' ? { status } : {}),
 				...(kind === 'study' && progressTotal
 					? {
 							progress_current: progressCurrent ?? 0,
@@ -121,7 +123,7 @@
 					});
 				}
 				for (const topicId of topicIds) await nodesApi.attachTopic(node.id, topicId);
-				if (committed && started) {
+				if (committed && kind !== 'path' && started) {
 					await nodesApi.update(node.id, { started_at: fromDateInput(started) });
 				}
 			} catch (error) {
@@ -176,19 +178,21 @@
 
 		{#if committed}
 			<div class="row">
-				<div class="group">
-					<span class="label">Status</span>
-					<SegmentedControl
-						label="Status"
-						value={status}
-						onchange={(value) => (status = value)}
-						options={[
-							{ value: 'idea', label: 'Idea' },
-							{ value: 'queued', label: 'Queued' },
-							{ value: 'active', label: 'Active' }
-						]}
-					/>
-				</div>
+				{#if kind !== 'path'}
+					<div class="group">
+						<span class="label">Status</span>
+						<SegmentedControl
+							label="Status"
+							value={status}
+							onchange={(value) => (status = value)}
+							options={[
+								{ value: 'idea', label: 'Idea' },
+								{ value: 'queued', label: 'Queued' },
+								{ value: 'active', label: 'Active' }
+							]}
+						/>
+					</div>
+				{/if}
 				<div class="group">
 					<span class="label">Focus</span>
 					<SegmentedControl
@@ -202,10 +206,12 @@
 						]}
 					/>
 				</div>
-				<label class="group">
-					<span class="label">Started</span>
-					<input class="field" type="date" bind:value={started} />
-				</label>
+				{#if kind !== 'path'}
+					<label class="group">
+						<span class="label">Started</span>
+						<input class="field" type="date" bind:value={started} />
+					</label>
+				{/if}
 			</div>
 		{/if}
 

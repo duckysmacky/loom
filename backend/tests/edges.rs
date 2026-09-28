@@ -507,6 +507,109 @@ async fn container_progress_skips_ideas(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn path_status_follows_what_is_inside(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pathstatus@example.com").await;
+
+    // (statuses of the nodes inside, expected path status)
+    let cases: [(&[&str], &str); 8] = [
+        (&[], "queued"),
+        (&["queued"], "queued"),
+        (&["idea"], "queued"),
+        (&["active", "done"], "active"),
+        (&["paused", "done", "queued"], "paused"),
+        (&["queued", "done"], "queued"),
+        (&["done", "archived"], "done"),
+        (&["archived", "archived"], "archived"),
+    ];
+    for (inside, expected) in cases {
+        let path = create_path(&app, &token, "P").await;
+        for status in inside {
+            let child = create_node_with(
+                &app,
+                &token,
+                json!({"kind": "project", "title": "c", "status": status}),
+            )
+            .await;
+            create_edge(&app, &token, &child, &path, "part_of").await;
+        }
+        assert_eq!(
+            get_node(&app, &token, &path).await["status"],
+            *expected,
+            "{inside:?}"
+        );
+    }
+
+    // Ideas are skipped; nested paths are walked through.
+    let outer = create_path(&app, &token, "Outer").await;
+    let inner = create_path(&app, &token, "Inner").await;
+    let done = create_node_with(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "d", "status": "done"}),
+    )
+    .await;
+    let idea = create_node_with(&app, &token, json!({"kind": "idea", "title": "i"})).await;
+    create_edge(&app, &token, &inner, &outer, "part_of").await;
+    create_edge(&app, &token, &done, &outer, "part_of").await;
+    create_edge(&app, &token, &idea, &outer, "part_of").await;
+    assert_eq!(get_node(&app, &token, &outer).await["status"], "done");
+    let active = create_node_with(
+        &app,
+        &token,
+        json!({"kind": "study", "title": "a", "status": "active"}),
+    )
+    .await;
+    create_edge(&app, &token, &active, &inner, "part_of").await;
+    assert_eq!(get_node(&app, &token, &outer).await["status"], "active");
+
+    // A done nested path counts as a done child.
+    set_status(&app, &token, &active, "done").await;
+    assert_eq!(
+        get_node(&app, &token, &outer).await["container_progress"],
+        json!({"done": 2, "total": 2})
+    );
+}
+
+#[sqlx::test]
+async fn requiring_a_path_blocks_until_everything_inside_is_done(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "requirespath@example.com").await;
+    let dependent = create_node(&app, &token, "D").await;
+    let path = create_path(&app, &token, "P").await;
+    let step = create_node(&app, &token, "S").await;
+    create_edge(&app, &token, &step, &path, "part_of").await;
+    create_edge(&app, &token, &dependent, &path, "requires").await;
+
+    assert_eq!(get_node(&app, &token, &dependent).await["blocked"], true);
+    set_status(&app, &token, &step, "done").await;
+    assert_eq!(get_node(&app, &token, &dependent).await["blocked"], false);
+}
+
+#[sqlx::test]
+async fn status_filters_use_derived_path_status(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pathfilter@example.com").await;
+    let path = create_path(&app, &token, "P").await;
+    let step = create_node(&app, &token, "S").await;
+    create_edge(&app, &token, &step, &path, "part_of").await;
+    set_status(&app, &token, &step, "archived").await;
+
+    let (_, archived) = send(
+        &app,
+        req("GET", "/api/nodes?view=archived", Value::Null, Some(&token)),
+    )
+    .await;
+    assert!(archived.as_array().unwrap().iter().any(|n| n["id"] == path));
+    let (_, queued) = send(
+        &app,
+        req("GET", "/api/nodes?status=queued", Value::Null, Some(&token)),
+    )
+    .await;
+    assert!(!queued.as_array().unwrap().iter().any(|n| n["id"] == path));
+}
+
+#[sqlx::test]
 async fn list_nodes_agrees_with_get_node_on_derived_fields(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "consistency@example.com").await;

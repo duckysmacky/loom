@@ -219,7 +219,8 @@
 					{/if}
 
 					<DetailNotes {node} />
-					{#if node.kind !== 'idea'}
+					<!-- Ideas have no periods; a path's come from the nodes inside it. -->
+					{#if node.kind !== 'idea' && node.kind !== 'path'}
 						<DetailActivePeriods {node} />
 					{/if}
 					{#if node.kind === 'path'}
@@ -233,7 +234,12 @@
 
 				<aside class="side">
 					<!-- Ideas have no status or focus until promoted. -->
-					{#if node.status}
+					{#if node.kind === 'path'}
+						<div class="control">
+							<span class="label">Status</span>
+							<span class="computed">{node.status} · derived from what's inside</span>
+						</div>
+					{:else if node.status}
 						<label class="control">
 							<span class="label">Status</span>
 							<select
@@ -299,7 +305,8 @@
 					</dl>
 
 					<!-- Stamped automatically on status changes; editable when the
-					     real dates differ (e.g. something started before it was logged). -->
+					     real dates differ (e.g. something started before it was logged).
+					     A path's dates come from the nodes inside it. -->
 					{#if node.kind !== 'idea'}
 						<div class="dates">
 							<label class="control">
@@ -308,6 +315,7 @@
 									class="field"
 									type="date"
 									value={toDateInput(node.started_at)}
+									disabled={node.kind === 'path'}
 									onchange={(event) =>
 										update(node, { started_at: fromDateInput(event.currentTarget.value) })}
 								/>
@@ -318,7 +326,7 @@
 									class="field"
 									type="date"
 									value={toDateInput(node.completed_at)}
-									disabled={node.status !== 'done'}
+									disabled={node.kind === 'path' || node.status !== 'done'}
 									title={node.status === 'done'
 										? undefined
 										: 'Only done nodes have a completion date'}
@@ -344,7 +352,9 @@
 						>
 							Open in canvas
 						</Button>
-						{#if node.status === 'archived'}
+						{#if node.kind === 'path'}
+							<!-- Archived only when everything inside it is. -->
+						{:else if node.status === 'archived'}
 							<Button variant="quiet" onclick={() => update(node, { status: 'queued' })}>
 								Restore
 							</Button>

@@ -131,7 +131,12 @@ async function applyDrop({ node, zone, siblingIds, beforeId }: DropRequest) {
 		if (zone.kind === 'section') {
 			if (zone.grouping === 'focus' && takesTier && zone.sectionId !== node.focus) {
 				await nodesApi.update(node.id, { focus: zone.sectionId as NodeFocus });
-			} else if (zone.grouping === 'status' && takesTier && zone.sectionId !== node.status) {
+			} else if (
+				zone.grouping === 'status' &&
+				takesTier &&
+				node.kind !== 'path' &&
+				zone.sectionId !== node.status
+			) {
 				await nodesApi.update(node.id, { status: zone.sectionId as NodeStatus });
 			} else if (zone.grouping === 'kind' && zone.sectionId !== node.kind) {
 				await nodesApi.update(node.id, { kind: zone.sectionId as NodeKind });

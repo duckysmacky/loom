@@ -76,8 +76,8 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
     let rows = sqlx::query_as!(
         Row,
         r#"
-        SELECT status AS "status?: NodeStatus", kind AS "kind: NodeKind", COUNT(*) AS "count!"
-        FROM nodes
+        SELECT status AS "status?: NodeStatus", kind AS "kind!: NodeKind", COUNT(*) AS "count!"
+        FROM node_rows
         WHERE user_id = $1
         GROUP BY status, kind
         "#,

@@ -44,6 +44,9 @@ pub async fn create(
     if request.kind == NodeKind::Idea && (request.status.is_some() || request.focus.is_some()) {
         return Err(IDEAS_HAVE_NO_STATUS);
     }
+    if request.kind == NodeKind::Path && request.status.is_some() {
+        return Err(PATH_STATE_DERIVED);
+    }
 
     let node = nodes::create_node(user_id, &state.pool, &request)
         .await
@@ -84,7 +87,10 @@ pub async fn update(
         || matches!(request.progress_total, Some(Some(_)))
         || matches!(request.progress_unit, Some(Some(_)));
     let sets_status = request.status.is_some() || request.focus.is_some();
-    if sets_progress || sets_status {
+    // Focus stays editable on a path; status and dates are derived.
+    let sets_path_state =
+        request.status.is_some() || request.started_at.is_some() || request.completed_at.is_some();
+    if sets_progress || sets_status || sets_path_state {
         let resulting_kind = match request.kind {
             Some(kind) => kind,
             None => {
@@ -99,6 +105,9 @@ pub async fn update(
         }
         if sets_status && resulting_kind == NodeKind::Idea {
             return Err(IDEAS_HAVE_NO_STATUS);
+        }
+        if sets_path_state && resulting_kind == NodeKind::Path {
+            return Err(PATH_STATE_DERIVED);
         }
     }
 
@@ -196,6 +205,8 @@ const MAX_PROGRESS_UNIT_LEN: usize = 40;
 /// Kinds are strict: only study nodes carry a tracked progress counter.
 const ONLY_STUDY_PROGRESS: ApiError = ApiError::InvalidInput("only study nodes track progress");
 const IDEAS_HAVE_NO_STATUS: ApiError = ApiError::InvalidInput("ideas have no status or focus");
+const PATH_STATE_DERIVED: ApiError =
+    ApiError::InvalidInput("a path's status and dates come from the nodes inside it");
 
 /// Trims the progress label; blank means "no label" (stored as NULL).
 fn clean_progress_unit(unit: Option<String>) -> Result<Option<String>, ApiError> {
