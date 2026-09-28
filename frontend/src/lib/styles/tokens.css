@@ -30,6 +30,8 @@
 	--scrim: rgba(19, 35, 57, 0.28);
 	/* Translucent path-box fill (path accent at low alpha): nested boxes stack. */
 	--path-fill: rgba(107, 123, 98, 0.1);
+	/* A collapsed path's card: the path green, opaque (theme-aware via --surface). */
+	--path-card: color-mix(in srgb, var(--node-path) 12%, var(--surface));
 	--selection-tint: rgba(47, 111, 176, 0.08);
 	/* precedes edges: a plain "do first" line - white on the dark sheet,
 	   faint ink here, where white would vanish into the paper. */

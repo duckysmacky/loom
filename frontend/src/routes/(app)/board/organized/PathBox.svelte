@@ -63,13 +63,10 @@
 		ondrop={dropInside}
 	>
 		<NodeCard node={path}>
-			<div class="expand">
-				<CollapseToggle
-					collapsed
-					ontoggle={toggle}
-					label={inside.length ? `${inside.length} inside` : 'empty'}
-				/>
-			</div>
+			{#snippet lead()}
+				<CollapseToggle collapsed ontoggle={toggle} />
+			{/snippet}
+			<div class="inside-count">{inside.length ? `${inside.length} inside` : 'empty'}</div>
 		</NodeCard>
 	</div>
 {:else}
@@ -161,8 +158,10 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		outline-offset: 3px;
 	}
 
-	.expand {
+	.inside-count {
 		margin-top: 8px;
+		font: 600 10.5px/1 var(--font-mono);
+		color: var(--node-path);
 	}
 
 	.head-row {

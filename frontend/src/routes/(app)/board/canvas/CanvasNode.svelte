@@ -2,6 +2,7 @@
 	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
+	import { graph } from '$lib/stores/graph.svelte';
 	import { togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import {
@@ -22,6 +23,9 @@
 	const kind = $derived(node.kind);
 	const border = $derived(borderStyle(node));
 	const progress = $derived(progressPair(node));
+	const insideCount = $derived(
+		graph.edges.filter((edge) => edge.kind === 'part_of' && edge.to_node_id === node.id).length
+	);
 </script>
 
 <!-- Target handle on the left, source on the right: edges run prerequisite
@@ -32,6 +36,7 @@ top/bottom pair so related cards connect vertically. -->
 <Handle type="target" position={Position.Top} id="top" />
 <div
 	class="canvas-node line-{border.line} tone-{border.tone}"
+	class:path={kind === 'path'}
 	class:dimmed={data.dimmed}
 	class:selected
 	style:width="{CANVAS_NODE_WIDTH}px"
@@ -41,17 +46,20 @@ top/bottom pair so related cards connect vertically. -->
 	style:border-bottom-width={tierBorderWidth(node.focus)}
 >
 	<div class="head">
+		{#if kind === 'path'}
+			<!-- Only a collapsed path renders as a card. -->
+			<CollapseToggle collapsed ontoggle={() => togglePathCollapsed('canvas', node.id)} />
+		{/if}
 		<!-- The kind glyph doubles as the accent swatch. -->
 		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
 		>
 		<span class="kind">{kind}</span>
 		<Badge status={node.status} blocked={node.blocked} />
-		{#if kind === 'path'}
-			<!-- Only a collapsed path renders as a card. -->
-			<CollapseToggle collapsed ontoggle={() => togglePathCollapsed('canvas', node.id)} />
-		{/if}
 	</div>
 	<div class="title">{node.title}</div>
+	{#if kind === 'path'}
+		<div class="inside-count">{insideCount ? `${insideCount} inside` : 'empty'}</div>
+	{/if}
 	{#if progress}
 		<div class="progress">
 			<ProgressBar value={progress[0]} total={progress[1]} height={5} />
@@ -111,6 +119,23 @@ top/bottom pair so related cards connect vertically. -->
 	.tone-faded {
 		border-color: var(--line);
 		opacity: 0.7;
+	}
+
+	/* A collapsed path keeps its green, opaque. */
+	.path {
+		background: var(--path-card);
+	}
+
+	.path:not(.tone-warn):not(.tone-ok) {
+		border-left-color: var(--node-path);
+		border-right-color: var(--node-path);
+		border-bottom-color: var(--node-path);
+	}
+
+	.inside-count {
+		margin-top: 6px;
+		font: 600 9.5px/1 var(--font-mono);
+		color: var(--node-path);
 	}
 
 	.selected {

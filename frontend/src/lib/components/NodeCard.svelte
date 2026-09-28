@@ -27,12 +27,15 @@
 		node,
 		feature = false,
 		showPoke = prefs.pokeFromCards,
+		lead,
 		children
 	}: {
 		node: NodeResponse;
 		/** Dashboard-size card with the notes excerpt and "touched" line. */
 		feature?: boolean;
 		showPoke?: boolean;
+		/** Rendered first in the head row (e.g. a path's expand toggle). */
+		lead?: Snippet;
 		children?: Snippet;
 	} = $props();
 
@@ -72,6 +75,7 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 <div
 	class="card line-{border.line} tone-{border.tone}"
 	class:feature
+	class:path={kind === 'path'}
 	style:border-width={tierBorderWidth(node.focus)}
 	role="button"
 	tabindex="0"
@@ -84,6 +88,7 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 	}}
 >
 	<div class="head">
+		{@render lead?.()}
 		<!-- The kind glyph doubles as the accent swatch. -->
 		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
 		>
@@ -186,6 +191,15 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 	.card.tone-faded {
 		border-color: var(--line);
 		opacity: 0.7;
+	}
+
+	/* A path keeps its green (opaque here, translucent only as a box). */
+	.card.path {
+		background: var(--path-card);
+	}
+
+	.card.path:not(.tone-warn):not(.tone-ok) {
+		border-color: var(--node-path);
 	}
 
 	.feature {

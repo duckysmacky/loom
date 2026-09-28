@@ -3,11 +3,7 @@
 	 * Expand/collapse switch for a path. Stops the click from reaching the
 	 * card, header or canvas node it sits in (those open the node).
 	 */
-	let {
-		collapsed,
-		ontoggle,
-		label = ''
-	}: { collapsed: boolean; ontoggle: () => void; label?: string } = $props();
+	let { collapsed, ontoggle }: { collapsed: boolean; ontoggle: () => void } = $props();
 </script>
 
 <button
@@ -21,7 +17,6 @@
 	}}
 >
 	<span class="glyph" aria-hidden="true">{collapsed ? '+' : '−'}</span>
-	{#if label}<span>{label}</span>{/if}
 </button>
 
 <style>
