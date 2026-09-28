@@ -40,6 +40,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	onResizeEnd={(_, params) => saveSize(params)}
 />
 <Handle type="target" position={Position.Left} />
+<Handle type="target" position={Position.Top} id="top" />
 <div
 	class="path-box line-{border.line} tone-{border.tone}"
 	class:dimmed={data.dimmed}
@@ -54,6 +55,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	</div>
 </div>
 <Handle type="source" position={Position.Right} />
+<Handle type="source" position={Position.Bottom} id="bottom" />
 
 <style>
 	.path-box {

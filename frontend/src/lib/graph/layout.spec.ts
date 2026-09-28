@@ -26,6 +26,15 @@ describe('layoutPositions', () => {
 		expect(positions.get('course')!.x).toBeLessThan(positions.get('renderer')!.x);
 	});
 
+	it('stacks related nodes in one column', () => {
+		const positions = layoutPositions(
+			[makeNode({ id: 'a' }), makeNode({ id: 'b' })],
+			[makeEdge('a', 'b', 'related')]
+		);
+		expect(positions.get('a')!.x).toBe(positions.get('b')!.x);
+		expect(positions.get('a')!.y).not.toBe(positions.get('b')!.y);
+	});
+
 	it('parks auto-laid-out nodes below every placed node', () => {
 		const placed = makeNode({ id: 'placed', canvas_x: 0, canvas_y: 500 });
 		const fresh = makeNode({ id: 'fresh' });

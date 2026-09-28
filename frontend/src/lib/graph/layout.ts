@@ -19,6 +19,8 @@ export type Size = { width: number; height: number };
  * Canvas edges always point prerequisite → dependent / child → container, so
  * the graph reads left to right: `requires` is stored dependent → prerequisite
  * and is flipped here; `part_of` and `related` keep their stored direction.
+ * `related` is not an order, so auto-layout leaves it out and stacks related
+ * nodes in one column instead.
  */
 export function flowDirection(edge: EdgeResponse): { source: string; target: string } {
 	return edge.kind === 'requires'
@@ -60,6 +62,8 @@ export function layoutPositions(
 	const unplacedIds = new Set(unplaced.map((node) => node.id));
 	for (const node of unplaced) layoutGraph.setNode(node.id, { ...sizeOf(node) });
 	for (const edge of edges) {
+		// related isn't an order: leave it out so dagre keeps both in one rank (stacked).
+		if (edge.kind === 'related') continue;
 		const { source, target } = flowDirection(edge);
 		if (unplacedIds.has(source) && unplacedIds.has(target)) layoutGraph.setEdge(source, target);
 	}

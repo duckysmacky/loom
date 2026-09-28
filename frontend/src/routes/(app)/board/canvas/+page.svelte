@@ -84,18 +84,31 @@
 				deletable: false
 			};
 		});
+		// Placements are relative to the parent path; walk up for the canvas y.
+		const absoluteY = (id: string): number => {
+			const placement = placements.get(id);
+			if (!placement) return 0;
+			return placement.position.y + (placement.parentId ? absoluteY(placement.parentId) : 0);
+		};
 		// part_of is drawn as containment (the box), not as a line.
 		edges = graph.edges
 			.filter((edge) => edge.kind !== 'part_of')
 			.filter((edge) => shownIds.has(edge.from_node_id) && shownIds.has(edge.to_node_id))
 			.map((edge) => {
-				const { source, target } = flowDirection(edge);
+				let { source, target } = flowDirection(edge);
+				const related = edge.kind === 'related';
+				// related has no arrow: draw it from the upper card down so the
+				// curve never loops back. ponytail: cards side by side at the same
+				// y get an S-curve; compare |dx| to |dy| and fall back to the
+				// left/right handles if that matters.
+				if (related && absoluteY(source) > absoluteY(target)) [source, target] = [target, source];
 				const unmet =
 					edge.kind === 'requires' && graph.nodeById.get(edge.to_node_id)?.status !== 'done';
 				return {
 					id: edge.id,
 					source,
 					target,
+					...(related ? { sourceHandle: 'bottom', targetHandle: 'top' } : {}),
 					type: 'loom' as const,
 					zIndex: 1,
 					data: {
@@ -204,8 +217,9 @@
 
 	const title = (id: string | undefined) => (id ? graph.nodeById.get(id)?.title : '') ?? '';
 
-	// A drag from S's right handle to T's left handle offers the relationships
-	// that match the canvas's left-to-right reading.
+	// A drag from S's source handle (right or bottom) to T's target handle
+	// (left or top) offers the relationships that match the canvas's
+	// left-to-right reading.
 	const connectionOptions = $derived.by(() => {
 		if (!pendingConnection) return [];
 		const { source, target } = pendingConnection;
