@@ -90,6 +90,8 @@ Nodes connect with directed edges:
   **blocked** until the required one is done.
 - **Inside a path** - nests a node inside a path/roadmap container. A
   node lives in only one path at a time.
+- **Precedes** - a soft "do this first" order between two nodes. It
+  never blocks; cycles are rejected.
 - **Related** - a soft, non-blocking association.
 
 ### Topics

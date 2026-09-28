@@ -45,6 +45,9 @@ criteria.
   order: "Lesson 2 requires Lesson 1". Cycles are rejected.
 - `part_of`: `from` is a child of the path `to`. The target must be a `path`. A node sits in at
   most one path. Cycles are rejected.
+- `precedes`: `from` should be worked on before `to`. An organizational "do this first" order
+  that never blocks anything. Cycles are rejected. Prefer `requires` only for real
+  prerequisites, and `precedes` when the order is just a suggestion.
 - `related`: a soft link with no effect. Cycles are allowed.
 
 **Derived fields.** These are computed and read-only, so never try to set them:
@@ -124,6 +127,8 @@ For "Create a learning path for X":
      - each step `part_of` the path
      - `requires` edges for the order: `{"from": "s2", "to": "s1", "kind": "requires"}`. Add
        these only where a real prerequisite exists; parallel steps get none.
+     - `precedes` edges (`{"from": "s1", "to": "s2", "kind": "precedes"}`) where the order is
+       only a recommendation.
      - optionally `related` links to existing nodes, using their ids.
 4. Lay it out as a diagram (see [Placing nodes](#placing-nodes-on-the-canvas)): each step goes
    in the column after its prerequisites, parallel steps are stacked, and the path box sits
@@ -175,13 +180,14 @@ Inside a path, positions are relative to the box, whose content starts at **(24,
 56 px above that is its header. Top-level nodes and boxes are absolute. A box fits its children
 unless it has `canvas_width` / `canvas_height`, so leave the size unset.
 
-**Lay it out like a diagram.** The canvas draws `requires` arrows left to right, so positions
-should show the dependency structure:
+**Lay it out like a diagram.** The canvas draws `requires` and `precedes` arrows left to right,
+so positions should show the dependency structure:
 
-- **Blocking goes horizontally.** A node sits in the column to the right of everything it
-  requires: `x = 24 + rank × 270`, where rank 0 means it requires nothing in the path and
+- **Order goes horizontally.** A node sits in the column to the right of everything it
+  requires or that precedes it: `x = 24 + rank × 270`, where rank 0 means it requires nothing in the path and
   otherwise it's one more than its highest-ranked prerequisite.
-- **Parallel or related goes vertically.** Nodes in the same column are stacked
+- **Parallel or related goes vertically.** The canvas connects related cards top to bottom.
+  Nodes in the same column are stacked
   `y = 56 + row × 136`. Never string independent nodes along one row, because that reads as an
   order that doesn't exist.
 - **Centre a node on what it connects to.** Its y is the middle of its prerequisites' y

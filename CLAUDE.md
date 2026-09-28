@@ -91,8 +91,9 @@ once. One graph per account; no collaboration features.
   is more than 14 days old.
 - **Accent:** the user-assigned node color.
 - **Edges:** `requires` (hard, blocking - cycles rejected), `part_of`
-  (child -> its path, cycles rejected, one path per node), `related`
-  (soft, cycles allowed). Always directed forward from the node being
+  (child -> its path, cycles rejected, one path per node), `precedes`
+  (soft "do from before to" order, never blocks, cycles rejected),
+  `related` (soft, cycles allowed). Always directed forward from the node being
   edited.
 
 ## Core rules

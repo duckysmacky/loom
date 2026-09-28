@@ -45,7 +45,9 @@ clears progress, leaving path releases its children).
 
 Edges always point from the node being described: `requires` (from depends on \
 to - `from` is blocked until `to` is done; cycles rejected), `part_of` (from is a \
-child of the path `to`; one path per node; cycles rejected), `related` (soft link).
+child of the path `to`; one path per node; cycles rejected), `precedes` (from \
+should be worked on before to - an organizational order that never blocks; \
+cycles rejected), `related` (soft link).
 
 Derived, read-only fields: blocked, container_progress (done/total of a path's \
 children), checklist_progress, last_poked_at. A poke is an \"I worked on this\" \
@@ -57,11 +59,13 @@ build several connected nodes at once (e.g. a learning path). Null fields are \
 omitted from results.
 
 Canvas positions (canvas_x/canvas_y, and canvas_width/canvas_height for path \
-boxes) are optional: the Board lays unplaced nodes out left to right on its own. \
-To arrange nodes deliberately, pass x/y to loom_create_subgraph or use \
-loom_place_nodes, and lay them out like a diagram: a node goes in the column to \
-the right of what it requires, parallel or related nodes are stacked vertically \
-in one column, and a node sits level with the middle of its prerequisites.";
+boxes) are optional: the Board orders unplaced nodes left to right along \
+`requires`/`precedes` and stacks `related` ones on its own. To arrange nodes \
+deliberately, pass x/y to loom_create_subgraph or use loom_place_nodes, and lay \
+them out like a diagram: a node goes in the column to the right of what it \
+requires or what precedes it, parallel or related nodes are stacked vertically \
+in one column (the canvas joins related cards top to bottom), and a node sits \
+level with the middle of its prerequisites.";
 
 /// Keys that only matter to the web app - noise for an agent. (Canvas
 /// positions stay: agents can read and set them.)
@@ -366,8 +370,9 @@ impl LoomServer {
     }
 
     /// Connects two nodes. `requires`: `from` depends on `to` (e.g. lesson 2
-    /// requires lesson 1). `part_of`: `from` joins the path `to`. `related`:
-    /// a soft link.
+    /// requires lesson 1). `part_of`: `from` joins the path `to`. `precedes`:
+    /// `from` should be done before `to` (a soft order, never blocks).
+    /// `related`: a soft link.
     #[tool(annotations(
         title = "Create edge",
         read_only_hint = false,
@@ -629,7 +634,7 @@ impl LoomServer {
     /// Creates several nodes and the edges between them in one call - e.g.
     /// a learning path: one `path` node, its `study`/`project` steps each
     /// `part_of` the path, and `requires` edges for the order (step 2
-    /// requires step 1). Nodes get a local `ref`; edges connect refs or
+    /// requires step 1; `precedes` when the order is only a suggestion). Nodes get a local `ref`; edges connect refs or
     /// existing node ids. All or nothing: on any error everything created
     /// by this call is deleted again. Nodes may carry an optional canvas
     /// position (`x`/`y`, plus `width`/`height` for paths - see

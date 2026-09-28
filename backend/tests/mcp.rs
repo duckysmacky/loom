@@ -163,6 +163,13 @@ async fn lists_tools(pool: PgPool) {
     ] {
         assert!(names.contains(&expected), "missing {expected} in {names:?}");
     }
+    let create_edge = body["result"]["tools"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .find(|tool| tool["name"] == "loom_create_edge")
+        .unwrap();
+    assert!(create_edge["inputSchema"].to_string().contains("precedes"));
 }
 
 #[sqlx::test]
