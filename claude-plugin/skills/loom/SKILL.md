@@ -25,7 +25,7 @@ Every item is a **node**, and nodes are connected by **edges**. You work with it
 | `idea`    | An uncommitted capture                      | Notes only - no status, no focus tier                                                   |
 | `project` | Something to build or do                    | A **checklist**                                                                         |
 | `study`   | A course, book, video series or topic       | A **progress counter**: `progress_current` / `progress_total` / `progress_unit` (e.g. 3 / 12 "chapters") |
-| `path`    | A container, like a learning path or roadmap | **Children**: other nodes join it with a `part_of` edge. Paths can nest.               |
+| `path`    | A container, like a learning path or roadmap | **Children**: other nodes join it with a `part_of` edge. Paths can nest. Status, dates and last touch are derived from what's inside. |
 
 **Ideas** are every `idea`-kind node: the user's Ideas list, kept off the board until promoted.
 They have **no status and no focus**. Sending either for an idea is an error, and results omit
@@ -57,12 +57,19 @@ criteria.
 **Derived fields.** These are computed and read-only, so never try to set them:
 
 - `blocked`
-- `container_progress`: done/total of a path's children
+- `container_progress`: done/total of a path's children (ideas skipped)
+- `path_progress`: every study counter and project checklist inside a path, summed (12/15 +
+  3/5 = 15/20)
+- a path's `status`: anything active inside makes it `active`, else anything paused makes it
+  `paused`, else anything still to do (or nothing at all) makes it `queued`; once everything is
+  finished it's `archived` if all of it is, `done` otherwise. Ideas are skipped, nested paths
+  walked through. Never send a status or start/completion date for a path.
 - `checklist_progress`
 - `last_poked_at`
 
 **Pokes and staleness.** A **poke** is an "I worked on this" log entry. An `active` or `queued`
-node with no poke for 14 days is **stale**.
+node with no poke for 14 days is **stale**. Paths can't be poked: a path's last touch is the
+latest poke on anything inside it.
 
 **Promoting** means changing a node's `kind` in place, keeping the same id and edges. The node
 loses whatever the new kind can't hold:
@@ -154,7 +161,7 @@ here end at y = 320.
 ```json
 {
   "nodes": [
-    {"ref": "path", "kind": "path", "title": "Learn async Rust", "status": "queued",
+    {"ref": "path", "kind": "path", "title": "Learn async Rust",
      "notes": "Goal: write and debug async services with Tokio.", "x": 0, "y": 400},
     {"ref": "book", "kind": "study", "title": "Asynchronous Programming in Rust (book)",
      "status": "queued", "progress_current": 0, "progress_total": 10, "progress_unit": "chapters",

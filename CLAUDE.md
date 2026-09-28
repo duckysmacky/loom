@@ -82,7 +82,13 @@ once. One graph per account; no collaboration features.
 - **Container progress:** derived from the done/not-done ratio of a
   path's `part_of` children. **Checklist progress:** derived from a
   project's checklist items. Both distinct from a study's own tracked
-  counter.
+  counter. **Path progress:** every study counter and project checklist
+  inside a path (nested paths included) summed.
+- **Path rollups:** a path's status (active > paused > queued/empty >
+  all-archived > done), last touched and started/completed are derived
+  from the nodes inside it (recursively); paths have no pokes, periods
+  or writable status of their own. Every path rollup skips idea-kind
+  nodes.
 - **Poke:** an append-only "I worked on this" log entry, decoupled from
   `updated_at`. **Last touched** = `MAX(poked_at)`, derived.
 - **Active period:** a `started_at -> ended_at` span of a node being
@@ -107,8 +113,10 @@ once. One graph per account; no collaboration features.
   extracted once via middleware from the verified JWT. Repository-layer
   functions take `user_id` first, always - this is the actual security
   model (no roles/permissions system exists).
-- Derived state (`blocked`, container/checklist progress, last-touched,
-  started/completed) is computed at query time, never written to a column.
+- Derived state (`blocked`, container/checklist/path progress,
+  last-touched, started/completed, a path's status) is computed at query
+  time, never written to a column - node reads go through the `node_rows`
+  view.
 - Kind capabilities are enforced in both the handlers (400s) and DB
   constraints - don't relax one without the other.
 - Never edit an applied migration; add a new one.

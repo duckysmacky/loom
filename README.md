@@ -71,7 +71,7 @@ can't:
 | **Idea** | A loosely captured, uncommitted thought | - (no status or focus either) |
 | **Project** | Something being actively built | A checklist |
 | **Study** | A course, book, or topic | A progress counter (e.g. "15 of 30 chapters") |
-| **Path** | A learning path or roadmap | Other nodes nested inside it (paths can nest too) |
+| **Path** | A learning path or roadmap | Other nodes nested inside it (paths can nest too); its status, dates, last touch and overall progress all come from what's inside |
 
 Promoting an idea to project/study/path changes its kind in place - same
 node, same connections - and drops only what the new kind genuinely can't
@@ -113,6 +113,8 @@ going stale, with a poke button right there.
   after), what's going stale, your latest ideas, and your paths, at a glance.
 - **Organized board** - a card grid, grouped by focus, kind, status,
   or tag.
+- Paths expand and collapse: collapsed (a single card) by default on the
+  dashboard and organized board, expanded on the canvas.
 - **Canvas board** - a draggable node graph: position and path 
   membership persist, path boxes resize, and dragging between handles
   creates connections.

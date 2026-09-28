@@ -46,7 +46,11 @@ kind (\"promoting\") keeps its id and edges but drops data the new kind can't \
 hold (leaving project deletes its checklist, leaving study clears progress, \
 leaving path releases its children). Promoting an idea sets status queued and \
 focus secondary unless given; turning a node into an idea clears both and ends \
-its open active period.
+its open active period. A path's status is derived from the nodes inside it \
+(nested paths walked through, ideas skipped): anything active -> active, else \
+anything paused -> paused, else anything still to do (or nothing inside) -> \
+queued, else archived when everything is archived, otherwise done. Sending a \
+status or start/completion date for a path is an error; its focus is editable.
 
 Edges always point from the node being described: `requires` (from depends on \
 to - `from` is blocked until `to` is done, and an idea is never done; cycles \
@@ -56,8 +60,11 @@ should be worked on before to - an organizational order that never blocks; \
 cycles rejected), `related` (soft link).
 
 Derived, read-only fields: blocked, container_progress (done/total of a path's \
-children), checklist_progress, last_poked_at. A poke is an \"I worked on this\" \
-log entry; nodes active/queued with no poke for 14 days are stale.
+children, ideas skipped), path_progress (every study counter and project \
+checklist inside a path summed, e.g. 12/15 + 3/5 = 15/20), checklist_progress, \
+last_poked_at. A poke is an \"I worked on this\" log entry; nodes active/queued \
+with no poke for 14 days are stale. Paths can't be poked: a path's \
+last_poked_at, started_at and completed_at come from the nodes inside it.
 
 Read before you write: call loom_get_graph or loom_list_nodes to find existing \
 nodes and topics instead of creating duplicates. Use loom_create_subgraph to \
@@ -306,7 +313,7 @@ impl LoomServer {
     }
 
     /// Creates one node, optionally with checklist items (projects only) and
-    /// topics. To create several connected nodes use loom_create_subgraph.
+    /// topics. No status for ideas or paths (a path's is derived). To create several connected nodes use loom_create_subgraph.
     #[tool(annotations(
         title = "Create node",
         read_only_hint = false,
@@ -327,7 +334,8 @@ impl LoomServer {
     /// project deletes its checklist, leaving study clears progress,
     /// leaving path releases its children. Promoting an idea gives it
     /// status `queued` / focus `secondary` unless set; changing kind to
-    /// `idea` clears both. Ideas reject status/focus.
+    /// `idea` clears both. Ideas reject status/focus; paths reject status
+    /// and dates (derived from the nodes inside).
     #[tool(annotations(title = "Update node", read_only_hint = false, destructive_hint = true))]
     async fn loom_update_node(
         &self,
@@ -363,6 +371,7 @@ impl LoomServer {
     }
 
     /// Logs a poke ("I worked on this") on a node, resetting its staleness.
+    /// Not for paths: poke the nodes inside instead.
     #[tool(annotations(title = "Poke node", read_only_hint = false, destructive_hint = false))]
     async fn loom_poke_node(
         &self,

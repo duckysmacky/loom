@@ -226,6 +226,20 @@ async fn create_subgraph_builds_a_learning_path(pool: PgPool) {
         path["structuredContent"]["node"]["container_progress"],
         json!({"done": 0, "total": 2})
     );
+    // 0/12 chapters + 0/2 checklist items.
+    assert_eq!(
+        path["structuredContent"]["node"]["path_progress"],
+        json!({"done": 0, "total": 14})
+    );
+
+    let poked = call(
+        &app,
+        &token,
+        "loom_poke_node",
+        json!({"node_id": ids["path"]}),
+    )
+    .await;
+    assert!(is_error(&poked));
 }
 
 #[sqlx::test]
