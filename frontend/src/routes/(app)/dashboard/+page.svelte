@@ -49,12 +49,8 @@
 			});
 	});
 
-	const actionableCount = $derived(
-		dashboard?.primary.filter((node) => node.status === 'active' && !node.blocked).length ?? 0
-	);
-	const blockedPrimaryCount = $derived(
-		dashboard?.primary.filter((node) => node.blocked).length ?? 0
-	);
+	const actionableCount = $derived(dashboard?.active.filter((node) => !node.blocked).length ?? 0);
+	const blockedActiveCount = $derived(dashboard?.active.filter((node) => node.blocked).length ?? 0);
 
 	const tiles = $derived(
 		dashboard
@@ -98,23 +94,23 @@
 		</div>
 
 		<div class="columns">
-			<section aria-labelledby="primary-heading">
+			<section aria-labelledby="active-heading">
 				<div class="section-head">
 					<span class="bar"></span>
-					<h2 class="title" id="primary-heading">Primary focus</h2>
-					<span class="meta">{actionableCount} actionable · {blockedPrimaryCount} blocked</span>
+					<h2 class="title" id="active-heading">Active</h2>
+					<span class="meta">{actionableCount} actionable · {blockedActiveCount} blocked</span>
 				</div>
 
-				{#if dashboard.primary.length}
-					<div class="primary">
-						{#each dashboard.primary as node (node.id)}
+				{#if dashboard.active.length}
+					<div class="active-nodes">
+						{#each dashboard.active as node (node.id)}
 							<NodeCard {node} feature />
 						{/each}
 					</div>
 				{:else}
 					<div class="empty">
-						Nothing is in the primary tier. Set a node's focus tier to <strong>Primary</strong> from
-						its detail panel, or browse everything on the <a href="/board/organized">board</a>.
+						Nothing is active right now. Set a node's status to <strong>Active</strong> from its
+						detail panel, or browse everything on the <a href="/board/organized">board</a>.
 					</div>
 				{/if}
 			</section>
@@ -281,7 +277,7 @@
 		margin: 0;
 	}
 
-	.primary {
+	.active-nodes {
 		margin-top: 12px;
 		display: flex;
 		flex-direction: column;

@@ -30,17 +30,22 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
         .filter(|node| node.blocked)
         .count() as i64;
 
-    let mut primary: Vec<NodeResponse> = all_nodes
+    // Everything being worked on (a path is active when something inside it
+    // is): primary tier first, then secondary, background; unblocked before
+    // blocked within a tier.
+    let mut active: Vec<NodeResponse> = all_nodes
         .iter()
-        .filter(in_play)
-        .filter(|node| node.focus == Some(NodeFocus::Primary))
+        .filter(|node| node.status == Some(NodeStatus::Active))
         .cloned()
         .collect();
     // Stable sort - within a rank the listing's newest-first order holds.
-    primary.sort_by_key(|node| match (node.status, node.blocked) {
-        (Some(NodeStatus::Active), false) => 0,
-        (_, true) => 1,
-        _ => 2,
+    active.sort_by_key(|node| {
+        let tier = match node.focus {
+            Some(NodeFocus::Primary) => 0,
+            Some(NodeFocus::Secondary) => 1,
+            _ => 2,
+        };
+        (tier, node.blocked)
     });
 
     let recent_ideas = all_nodes
@@ -60,7 +65,7 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
     Ok(DashboardResponse {
         counts,
         stale,
-        primary,
+        active,
         recent_ideas,
         paths,
     })

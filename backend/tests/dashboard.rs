@@ -235,9 +235,9 @@ fn titles(list: &Value) -> Vec<String> {
 }
 
 #[sqlx::test]
-async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) {
+async fn active_list_ranks_by_tier_then_unblocked(pool: PgPool) {
     let app = app(pool.clone());
-    let token = signup(&app, "primary@example.com").await;
+    let token = signup(&app, "activelist@example.com").await;
 
     create_node(
         &app,
@@ -271,6 +271,26 @@ async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) 
         json!({"kind": "project", "title": "secondary", "status": "active", "focus": "secondary"}),
     )
     .await;
+    create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "paused", "status": "paused", "focus": "primary"}),
+    )
+    .await;
+    // A path is active when something inside it is.
+    let path = create_node(
+        &app,
+        &token,
+        json!({"kind": "path", "title": "path", "focus": "background"}),
+    )
+    .await;
+    let inside = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "inside", "status": "active", "focus": "background"}),
+    )
+    .await;
+    add_edge(&app, &token, &inside, &path, "part_of").await;
 
     let (_, dashboard) = send(
         &app,
@@ -279,14 +299,10 @@ async fn primary_list_includes_blocked_and_ranks_actionable_first(pool: PgPool) 
     .await;
 
     assert_eq!(
-        titles(&dashboard["primary"]),
-        vec![
-            "good".to_string(),
-            "blocked".to_string(),
-            "queued".to_string()
-        ]
+        titles(&dashboard["active"]),
+        vec!["good", "blocked", "secondary", "inside", "path"]
     );
-    assert_eq!(dashboard["primary"][1]["blocked"], true);
+    assert_eq!(dashboard["active"][1]["blocked"], true);
     assert_eq!(dashboard["counts"]["blocked"], 1);
 }
 
@@ -379,6 +395,12 @@ async fn dashboard_is_isolated_per_user(pool: PgPool) {
     let token_a = signup(&app, "dashowner@example.com").await;
     let token_b = signup(&app, "dashintruder@example.com").await;
     create_node(&app, &token_a, json!({"kind": "idea", "title": "mine"})).await;
+    create_node(
+        &app,
+        &token_a,
+        json!({"kind": "project", "title": "mine-active", "status": "active"}),
+    )
+    .await;
 
     let (_, dashboard_b) = send(
         &app,
@@ -387,7 +409,7 @@ async fn dashboard_is_isolated_per_user(pool: PgPool) {
     .await;
     assert_eq!(dashboard_b["counts"]["total"], 0);
     assert_eq!(dashboard_b["stale"].as_array().unwrap().len(), 0);
-    for list in ["primary", "recent_ideas", "paths"] {
+    for list in ["active", "recent_ideas", "paths"] {
         assert_eq!(dashboard_b[list].as_array().unwrap().len(), 0, "{list}");
     }
 }

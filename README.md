@@ -109,8 +109,9 @@ going stale, with a poke button right there.
 
 ### Views
 
-- **Dashboard** - your primary-focus nodes (actionable first, blocked
-  after), what's going stale, your latest ideas, and your paths, at a glance.
+- **Dashboard** - your active nodes (primary focus first, then secondary
+  and background; unblocked before blocked), what's going stale, your
+  latest ideas, and your paths, at a glance.
 - **Organized board** - a card grid, grouped by focus, kind, status,
   or tag.
 - Paths expand and collapse: collapsed (a single card) by default on the

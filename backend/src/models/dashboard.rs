@@ -49,16 +49,16 @@ pub struct DashboardCounts {
 }
 
 /// The `/api/dashboard` response - everything the dashboard shows, in one
-/// payload ("control panel for what's up right now"). Only the primary focus
-/// tier is here; the other tiers belong to the board's Organized view.
+/// payload ("control panel for what's up right now"). Only active nodes are
+/// listed; everything else belongs to the board.
 #[derive(Debug, Clone, Serialize, TS)]
 #[ts(export)]
 pub struct DashboardResponse {
     pub counts: DashboardCounts,
     pub stale: Vec<NodeResponse>,
-    /// Every `focus=primary` node not done/archived, blocked ones included -
-    /// actionable (active + unblocked) first, then blocked, then the rest.
-    pub primary: Vec<NodeResponse>,
+    /// Every active node (paths by derived status), blocked included - by
+    /// focus tier, unblocked before blocked within a tier.
+    pub active: Vec<NodeResponse>,
     /// The newest unpromoted ideas, newest first.
     pub recent_ideas: Vec<NodeResponse>,
     /// `kind=path` nodes not done/archived, newest first.
