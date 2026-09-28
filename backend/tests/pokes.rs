@@ -248,3 +248,78 @@ async fn missing_or_garbage_token_returns_401(pool: PgPool) {
     .await;
     assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
 }
+
+async fn create_kind(app: &axum::Router, token: &str, kind: &str) -> String {
+    let (status, body) = send(
+        app,
+        req(
+            "POST",
+            "/api/nodes",
+            json!({"kind": kind, "title": kind}),
+            Some(token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    body["id"].as_str().unwrap().to_owned()
+}
+
+async fn put_inside(app: &axum::Router, token: &str, child: &str, path: &str) {
+    let (status, _) = send(
+        app,
+        req(
+            "POST",
+            "/api/edges",
+            json!({"from_node_id": child, "to_node_id": path, "kind": "part_of"}),
+            Some(token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+}
+
+#[sqlx::test]
+async fn poking_a_path_returns_400(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pokepath@example.com").await;
+    let path = create_kind(&app, &token, "path").await;
+
+    let (status, _) = poke(&app, &token, &path).await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test]
+async fn path_last_poked_at_is_latest_inside_recursively_skipping_ideas(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pathpokes@example.com").await;
+    let outer = create_kind(&app, &token, "path").await;
+    let inner = create_kind(&app, &token, "path").await;
+    let direct = create_kind(&app, &token, "project").await;
+    let nested = create_kind(&app, &token, "study").await;
+    let idea = create_kind(&app, &token, "idea").await;
+    put_inside(&app, &token, &direct, &outer).await;
+    put_inside(&app, &token, &inner, &outer).await;
+    put_inside(&app, &token, &nested, &inner).await;
+    put_inside(&app, &token, &idea, &outer).await;
+
+    assert!(get_node(&app, &token, &outer).await["last_poked_at"].is_null());
+
+    poke(&app, &token, &direct).await;
+    poke(&app, &token, &nested).await;
+    let nested_touch = get_node(&app, &token, &nested).await["last_poked_at"].clone();
+    assert_eq!(
+        get_node(&app, &token, &outer).await["last_poked_at"],
+        nested_touch
+    );
+    assert_eq!(
+        get_node(&app, &token, &inner).await["last_poked_at"],
+        nested_touch
+    );
+
+    // Ideas don't count towards the path.
+    poke(&app, &token, &idea).await;
+    assert_eq!(
+        get_node(&app, &token, &outer).await["last_poked_at"],
+        nested_touch
+    );
+}

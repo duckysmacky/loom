@@ -410,3 +410,26 @@ async fn missing_or_garbage_token_returns_401(pool: PgPool) {
     .await;
     assert_eq!(garbage_status, StatusCode::UNAUTHORIZED);
 }
+
+#[sqlx::test]
+async fn stale_path_uses_pokes_inside(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "stalepath@example.com").await;
+
+    let empty = create_node(&app, &token, json!({"kind": "path", "title": "empty"})).await;
+    backdate_created_at(&pool, &empty, 20).await;
+    let busy = create_node(&app, &token, json!({"kind": "path", "title": "busy"})).await;
+    backdate_created_at(&pool, &busy, 20).await;
+    let inside = create_node(&app, &token, json!({"kind": "project", "title": "inside"})).await;
+    add_edge(&app, &token, &inside, &busy, "part_of").await;
+    poke_and_backdate(&app, &pool, &token, &inside, 1).await;
+
+    let (_, dashboard) = send(
+        &app,
+        req("GET", "/api/dashboard", Value::Null, Some(&token)),
+    )
+    .await;
+    let stale = titles(&dashboard["stale"]);
+    assert!(stale.contains(&"empty".to_string()));
+    assert!(!stale.contains(&"busy".to_string()));
+}

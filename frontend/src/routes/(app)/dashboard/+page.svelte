@@ -6,6 +6,7 @@
 	import { dashboardApi, nodesApi } from '$lib/api/endpoints';
 	import {
 		accentColor,
+		canPoke,
 		progressPair,
 		progressText,
 		relativeDays,
@@ -123,7 +124,9 @@
 												: `never touched · ${shortDate(node.created_at)}`}
 										</span>
 									</button>
-									<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
+									{#if canPoke(node)}
+										<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
+									{/if}
 								</li>
 							{/each}
 						</ul>

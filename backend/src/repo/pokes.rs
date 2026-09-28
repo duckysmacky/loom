@@ -1,4 +1,4 @@
-use sqlx::PgPool;
+use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::models::poke::PokeResponse;
@@ -56,4 +56,25 @@ pub async fn list_pokes(
     .await?;
 
     Ok(Some(pokes))
+}
+
+/// Drops every poke on a node, inside the caller's transaction - a node that
+/// becomes a path takes its last touch from the nodes inside it instead.
+pub async fn delete_all_for_node(
+    user_id: Uuid,
+    connection: &mut PgConnection,
+    node_id: Uuid,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        DELETE FROM pokes p
+        USING nodes n
+        WHERE p.node_id = $2 AND n.id = p.node_id AND n.user_id = $1
+        "#,
+        user_id,
+        node_id,
+    )
+    .execute(connection)
+    .await?;
+    Ok(())
 }

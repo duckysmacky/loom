@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+	canPoke,
 	accentColor,
 	fromDateInput,
 	incrementedProgress,
@@ -38,6 +39,13 @@ describe('display helpers', () => {
 		expect(borderStyle(makeNode({ status: 'queued' })).tone).toBe('muted');
 		expect(borderStyle(makeNode({ status: 'paused' })).tone).toBe('frame');
 		expect(borderStyle(makeNode({ status: 'active' })).tone).toBe('frame');
+	});
+
+	it('pokes only open, non-path nodes', () => {
+		expect(canPoke(makeNode({ status: 'queued' }))).toBe(true);
+		expect(canPoke(makeNode({ status: 'done' }))).toBe(false);
+		expect(canPoke(makeNode({ kind: 'path', status: 'active' }))).toBe(false);
+		expect(canPoke(makeNode({ kind: 'idea', status: null, focus: null }))).toBe(false);
 	});
 
 	it('uses the node color, falling back to the kind default', () => {

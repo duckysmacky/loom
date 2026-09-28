@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        DELETE FROM pokes p\n        USING nodes n\n        WHERE p.node_id = $2 AND n.id = p.node_id AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8dea4dd473068333661a699905655bb8168a1c04620e6a415fb892b59a511898"
+}

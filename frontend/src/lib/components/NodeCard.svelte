@@ -4,6 +4,7 @@
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
+		canPoke,
 		accentColor,
 		KIND_GLYPH,
 		borderStyle,
@@ -41,9 +42,7 @@
 		requirementsOf(node.id, graph.edges, graph.nodeById).filter((requirement) => !requirement.met)
 	);
 	const progress = $derived(progressPair(node));
-	const pokeable = $derived(
-		showPoke && (node.status === 'active' || node.status === 'queued' || node.status === 'paused')
-	);
+	const pokeable = $derived(showPoke && canPoke(node));
 
 	const nextProgress = $derived(incrementedProgress(node));
 

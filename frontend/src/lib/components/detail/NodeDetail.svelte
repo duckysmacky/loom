@@ -12,6 +12,7 @@
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
+		canPoke,
 		accentColor,
 		fromDateInput,
 		incrementedProgress,
@@ -289,8 +290,10 @@
 					<dl class="stats">
 						<dt class="label">Last touched</dt>
 						<dd>{node.last_poked_at ? relativeDays(node.last_poked_at) : 'never'}</dd>
-						<dt class="label">Pokes</dt>
-						<dd>{pokeCount ?? '–'}</dd>
+						{#if node.kind !== 'path'}
+							<dt class="label">Pokes</dt>
+							<dd>{pokeCount ?? '–'}</dd>
+						{/if}
 						<dt class="label">Created</dt>
 						<dd>{shortDate(node.created_at)}</dd>
 					</dl>
@@ -332,7 +335,7 @@
 							<span class="not-actionable">Not actionable yet</span>
 						{:else if node.kind === 'idea'}
 							<Button variant="poke" onclick={() => (promoting = node)}>Move to board</Button>
-						{:else if node.status && ['active', 'queued', 'paused'].includes(node.status)}
+						{:else if canPoke(node)}
 							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
 						{/if}
 						<Button

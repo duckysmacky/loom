@@ -6,7 +6,7 @@ use crate::models::node::{
     CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
     Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
-use crate::repo::{active_periods, checklist, edges};
+use crate::repo::{active_periods, checklist, edges, pokes};
 
 /// Query target for every node-returning query, all of which read the
 /// `node_rows` view (every derived column in one place) - flat fields only,
@@ -355,8 +355,12 @@ pub async fn update_node(
         checklist::delete_all_for_node(user_id, &mut tx, node_id).await?;
     }
     // Only paths contain nodes: a node that stops being one lets go of them.
+    // A path's pokes come from the nodes inside it, so one that becomes a
+    // path drops its own.
     if row.kind != NodeKind::Path {
         edges::release_children(user_id, &mut tx, node_id).await?;
+    } else {
+        pokes::delete_all_for_node(user_id, &mut tx, node_id).await?;
     }
     tx.commit().await?;
 

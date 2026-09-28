@@ -92,6 +92,17 @@ export function tierBorderWidth(focus: NodeFocus | null): string {
 	}[focus ?? 'background'];
 }
 
+/**
+ * Whether a node takes a poke: it's being worked on or lined up, and it's
+ * not a path (a path's last touch comes from the nodes inside it).
+ */
+export function canPoke(node: NodeResponse): boolean {
+	return (
+		node.kind !== 'path' &&
+		(node.status === 'active' || node.status === 'queued' || node.status === 'paused')
+	);
+}
+
 /** Typographic kind marks (the design system uses glyphs, never icons). */
 export const KIND_GLYPH: Record<NodeResponse['kind'], string> = {
 	project: '■',
