@@ -53,7 +53,8 @@
 		</label>
 		<button type="button" aria-label="Zoom in" onclick={() => flow.zoomIn()}>+</button>
 		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}>Fit</button>
-		<span class="hint">drag to pan · scroll to zoom · handle to connect</span>
+		<span class="hint">drag to pan · shift-drag to select · scroll to zoom · handle to connect</span
+		>
 	</div>
 </Panel>
 

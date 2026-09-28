@@ -423,13 +423,19 @@ pub async fn clear_order(user_id: Uuid, pool: &PgPool) -> Result<(), sqlx::Error
 }
 
 pub async fn delete_node(user_id: Uuid, pool: &PgPool, node_id: Uuid) -> Result<bool, sqlx::Error> {
+    let mut tx = pool.begin().await?;
+    // A deleted path lets go of its children first: their positions were
+    // relative to its box, so they go back to unplaced instead of landing
+    // somewhere odd. A no-op for anything but a path.
+    edges::release_children(user_id, &mut tx, node_id).await?;
     let result = sqlx::query!(
         "DELETE FROM nodes WHERE user_id = $1 AND id = $2",
         user_id,
         node_id,
     )
-    .execute(pool)
+    .execute(&mut *tx)
     .await?;
+    tx.commit().await?;
 
     Ok(result.rows_affected() == 1)
 }

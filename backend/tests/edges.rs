@@ -832,3 +832,38 @@ async fn canvas_size_is_a_positive_pair(pool: PgPool) {
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
 }
+
+#[sqlx::test]
+async fn deleting_a_path_unplaces_its_children(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "deletepath@example.com").await;
+    let path = create_path(&app, &token, "P").await;
+    let child = create_node(&app, &token, "C").await;
+    create_edge(&app, &token, &child, &path, "part_of").await;
+    let (status, _) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{child}"),
+            json!({"canvas_x": 30.0, "canvas_y": 70.0}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+
+    let (status, _) = send(
+        &app,
+        req(
+            "DELETE",
+            &format!("/api/nodes/{path}"),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NO_CONTENT);
+    let child = get_node(&app, &token, &child).await;
+    assert!(child["canvas_x"].is_null());
+    assert!(child["canvas_y"].is_null());
+}

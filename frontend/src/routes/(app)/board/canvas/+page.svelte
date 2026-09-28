@@ -2,6 +2,7 @@
 	import '@xyflow/svelte/dist/base.css';
 	import { Background, SvelteFlow, useSvelteFlow, type Connection } from '@xyflow/svelte';
 	import { page } from '$app/state';
+	import { untrack } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { edgesApi, nodesApi } from '$lib/api/endpoints';
@@ -30,6 +31,7 @@
 	import CanvasNode from './CanvasNode.svelte';
 	import CanvasPath from './CanvasPath.svelte';
 	import type { LoomFlowEdge, LoomFlowNode } from './types';
+	import SelectionBar from './SelectionBar.svelte';
 	import UnplacedPanel, { UNPLACED_DRAG_TYPE } from './UnplacedPanel.svelte';
 
 	const nodeTypes = { loom: CanvasNode, loomPath: CanvasPath };
@@ -97,6 +99,10 @@
 			drawn.filter((node) => !matchesBoardFilters(node)).map((node) => node.id)
 		);
 
+		// Rebuilding the list after every save would drop the selection.
+		const selectedIds = untrack(
+			() => new Set(nodes.filter((flowNode) => flowNode.selected).map((flowNode) => flowNode.id))
+		);
 		// xyflow needs a parent listed before its children.
 		const parentsFirst = drawn.toSorted(
 			(left, right) => nestingDepth(left.id, parentOf) - nestingDepth(right.id, parentOf)
@@ -112,6 +118,7 @@
 				// Path boxes have an explicit size (resizable); cards size themselves.
 				...(isPath ? { width: size.width, height: size.height } : {}),
 				data: { node, dimmed: dimmedIds.has(node.id) },
+				selected: selectedIds.has(node.id),
 				deletable: false
 			};
 		});
@@ -155,19 +162,33 @@
 			});
 	});
 
-	async function persistPosition(nodeId: string, position: { x: number; y: number }) {
+	const selected = $derived(nodes.filter((flowNode) => flowNode.selected));
+
+	/**
+	 * Saves several positions at once. Position changes no derived state, so
+	 * the cache is patched in place instead of refetching the whole graph -
+	 * all in the same tick, so moved nodes don't snap back one by one.
+	 */
+	async function savePositions(moves: { id: string; position: Point }[]) {
+		if (!moves.length) return;
 		try {
-			const updated = await nodesApi.update(nodeId, {
-				canvas_x: Math.round(position.x),
-				canvas_y: Math.round(position.y)
-			});
-			// Position changes no derived state - patch the cache in place
-			// instead of refetching the whole graph.
-			graph.replaceNode(updated);
+			const saved = await Promise.all(
+				moves.map(({ id, position }) =>
+					nodesApi.update(id, {
+						canvas_x: Math.round(position.x),
+						canvas_y: Math.round(position.y)
+					})
+				)
+			);
+			for (const node of saved) graph.replaceNode(node);
 		} catch (error) {
 			notifyError(error);
+			await graph.load();
 		}
 	}
+
+	const persistPosition = (nodeId: string, position: Point) =>
+		savePositions([{ id: nodeId, position }]);
 
 	const sizeOf = (flowNode: LoomFlowNode) => ({
 		width: flowNode.width ?? flowNode.measured?.width ?? CANVAS_NODE_WIDTH,
@@ -194,10 +215,15 @@
 	 * The innermost path under `point` that `nodeId` could join: expanded
 	 * path boxes, and collapsed paths' cards (dropping onto one joins it).
 	 */
-	function pathAt(point: Point, nodeId: string): LoomFlowNode | undefined {
+	function pathAt(
+		point: Point,
+		nodeId: string,
+		skip: Set<string> = new Set()
+	): LoomFlowNode | undefined {
 		const parentOf = parentPathOf(graph.edges);
 		return nodes
 			.filter((candidate) => candidate.data.node.kind === 'path' && candidate.id !== nodeId)
+			.filter((candidate) => !skip.has(candidate.id))
 			.filter((candidate) => !ancestorPaths(candidate.id, parentOf).includes(nodeId))
 			.filter((candidate) => {
 				const origin = absolute(candidate.id);
@@ -257,7 +283,8 @@
 	async function settleDrag({ nodes: dragged }: { nodes: LoomFlowNode[] }) {
 		const parentOf = parentPathOf(graph.edges);
 		const draggedIds = new Set(dragged.map((flowNode) => flowNode.id));
-		let membershipChanged = false;
+		const stayed: { id: string; position: Point }[] = [];
+		const moves: string[] = [];
 
 		for (const moved of dragged) {
 			// Moving along with a dragged ancestor: its relative position is unchanged.
@@ -265,27 +292,32 @@
 
 			const topLeft = absolute(moved.id);
 			const size = sizeOf(moved);
+			// Paths moving along in the same drag can't catch their fellow travellers.
 			const target = pathAt(
 				{ x: topLeft.x + size.width / 2, y: topLeft.y + size.height / 2 },
-				moved.id
+				moved.id,
+				draggedIds
 			);
 
 			if (target?.id === moved.parentId) {
-				await persistPosition(moved.id, moved.position);
+				stayed.push({ id: moved.id, position: moved.position });
 				continue;
 			}
 
-			membershipChanged = true;
 			if (await changePath(moved.id, target, topLeft)) {
 				const movedTitle = moved.data.node.title;
-				notify(
+				moves.push(
 					target
 						? `Moved “${movedTitle}” into “${target.data.node.title}”`
 						: `Moved “${movedTitle}” out of its path`
 				);
 			}
 		}
-		if (membershipChanged) await graph.load();
+		await savePositions(stayed);
+		if (moves.length) {
+			notify(moves.length === 1 ? moves[0] : `Moved ${moves.length} nodes between paths`);
+			await graph.load();
+		}
 	}
 
 	/**
@@ -393,6 +425,9 @@
 			deleteKey={['Delete', 'Backspace']}
 			proOptions={{ hideAttribution: true }}
 			onnodeclick={({ node, event }) => {
+				// Ctrl/Cmd-click toggles a node in the selection (Shift-drag draws a
+				// selection box) instead of opening it.
+				if (event.shiftKey || event.ctrlKey || event.metaKey) return;
 				// A path box opens only from its header; clicking the body just
 				// selects it (for resizing) without popping the detail view.
 				const onHeader = (event.target as Element | null)?.closest('.path-head');
@@ -403,7 +438,11 @@
 				pendingConnection = connection;
 				return false;
 			}}
-			onbeforedelete={async ({ edges: doomed }) => ({ nodes: [], edges: doomed })}
+			// Keyboard Delete removes connections only. A box selection also
+			// selects every attached edge, so it does nothing while nodes are
+			// selected - those are deleted from the selection bar.
+			onbeforedelete={async ({ edges: doomed }) =>
+				selected.length ? false : { nodes: [], edges: doomed }}
 			ondelete={deleteEdges}
 			onmove={(_, viewport) => (zoom = viewport.zoom)}
 			ondragover={(event: DragEvent) => {
@@ -422,6 +461,7 @@
 		>
 			<Background patternColor="var(--grid-dot)" bgColor="var(--bg)" gap={26} size={1.4} />
 			<CanvasControls {zoom} />
+			<SelectionBar {selected} />
 		</SvelteFlow>
 	</div>
 	{#if !prefs.autoPlace}

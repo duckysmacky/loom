@@ -119,7 +119,9 @@ going stale, with a poke button right there.
 - **Canvas board** - a draggable node graph: position and path 
   membership persist, path boxes resize, and dragging between handles
   creates connections. New nodes wait in an Unplaced side panel until
-  you drag them in (or turn on auto-place in Settings).
+  you drag them in (or turn on auto-place in Settings). Shift-drag or
+  Ctrl-click to select several nodes, then move, unplace or delete them
+  together.
 - **Timeline board** - bars from started to completed (or to now),
   with a marker for the last time you poked each one.
 
