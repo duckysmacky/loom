@@ -68,6 +68,25 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
+				<span class="row-label">Auto-place on canvas</span>
+				<span class="row-help"
+					>Lay out new and unplaced nodes on the canvas automatically and pin them where they land.
+					Off: they wait in the canvas's Unplaced panel until you drag them in.</span
+				>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.autoPlace}
+				onchange={(event) => {
+					prefs.autoPlace = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
 				<span class="row-label">Poke from cards</span>
 				<span class="row-help">Show the Poke button on dashboard and board cards.</span>
 			</span>

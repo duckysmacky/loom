@@ -101,6 +101,8 @@ once. One graph per account; no collaboration features.
 - **Stale:** an active/queued node whose last poke (or creation date)
   is more than 14 days old.
 - **Accent:** the user-assigned node color.
+- **Unplaced:** `canvas_x/y` NULL - listed in the canvas's side panel
+  instead of drawn (unless the "Auto-place on canvas" setting is on).
 - **Edges:** `requires` (hard, blocking - cycles rejected), `part_of`
   (child -> its path, cycles rejected, one path per node), `precedes`
   (soft "do from before to" order, never blocks, cycles rejected),

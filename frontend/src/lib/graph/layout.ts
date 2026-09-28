@@ -1,7 +1,7 @@
 import dagre from '@dagrejs/dagre';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
-import { parentPathOf } from './paths';
+import { ancestorPaths, parentPathOf } from './paths';
 
 export const CANVAS_NODE_WIDTH = 190;
 export const CANVAS_NODE_HEIGHT = 96;
@@ -78,6 +78,27 @@ export function layoutPositions(
 		positions.set(node.id, { x: x - width / 2 + offsetX, y: y - height / 2 + offsetY });
 	}
 	return positions;
+}
+
+export const isPlaced = (node: NodeResponse) => node.canvas_x !== null && node.canvas_y !== null;
+
+/**
+ * Without auto-placement the canvas draws a node only when it and every path
+ * around it are placed. Unplaced nodes wait in the side panel; a placed node
+ * inside an unplaced path waits for its path. Paths outside `nodes` (hidden)
+ * don't count.
+ */
+export function splitPlaced(
+	nodes: NodeResponse[],
+	parentOf: Map<string, string>
+): { placed: NodeResponse[]; unplaced: NodeResponse[] } {
+	const byId = new Map(nodes.map((node) => [node.id, node]));
+	const placed = nodes.filter(
+		(node) =>
+			isPlaced(node) &&
+			ancestorPaths(node.id, parentOf).every((id) => !byId.has(id) || isPlaced(byId.get(id)!))
+	);
+	return { placed, unplaced: nodes.filter((node) => !isPlaced(node)) };
 }
 
 export type CanvasPlacement = {

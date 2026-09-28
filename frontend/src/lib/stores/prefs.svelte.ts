@@ -26,6 +26,9 @@ export type Prefs = {
 	 * `loadPrefs` keeps working. ponytail: keys of deleted paths linger.
 	 */
 	collapsedPaths: Record<string, boolean>;
+	/** The canvas lays out and pins unplaced nodes itself; off: they wait in its Unplaced panel. */
+	autoPlace: boolean;
+	unplacedPanelOpen: boolean;
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
@@ -45,7 +48,9 @@ const DEFAULTS: Prefs = {
 	recentColors: [],
 	pokeSetsActive: false,
 	trackActivePeriods: true,
-	collapsedPaths: {}
+	collapsedPaths: {},
+	autoPlace: false,
+	unplacedPanelOpen: true
 };
 
 function loadPrefs(): Prefs {

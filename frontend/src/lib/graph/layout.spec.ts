@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { makeEdge, makeNode } from './fixtures';
+import { parentPathOf } from './paths';
 import {
 	CANVAS_NODE_HEIGHT,
 	CANVAS_NODE_WIDTH,
@@ -7,7 +8,8 @@ import {
 	PATH_PADDING,
 	flowDirection,
 	layoutCanvas,
-	layoutPositions
+	layoutPositions,
+	splitPlaced
 } from './layout';
 
 describe('layoutPositions', () => {
@@ -106,5 +108,45 @@ describe('layoutCanvas', () => {
 		expect(placements.get('inner')!.parentId).toBe('outer');
 		expect(placements.get('leaf')!.parentId).toBe('inner');
 		expect(placements.get('inner')!.size.width).toBeGreaterThan(CANVAS_NODE_WIDTH);
+	});
+});
+
+describe('splitPlaced', () => {
+	const at = { canvas_x: 0, canvas_y: 0 };
+	const ids = (list: { id: string }[]) => list.map((node) => node.id);
+
+	it('draws placed nodes and sends unplaced ones to the panel', () => {
+		const { placed, unplaced } = splitPlaced(
+			[makeNode({ id: 'placed', ...at }), makeNode({ id: 'loose' })],
+			new Map()
+		);
+		expect(ids(placed)).toEqual(['placed']);
+		expect(ids(unplaced)).toEqual(['loose']);
+	});
+
+	it('holds back placed nodes inside an unplaced path', () => {
+		const nodes = [
+			makeNode({ id: 'path', kind: 'path' }),
+			makeNode({ id: 'child', ...at }),
+			makeNode({ id: 'orphan', ...at })
+		];
+		const parentOf = parentPathOf([
+			makeEdge('child', 'path', 'part_of'),
+			makeEdge('orphan', 'hidden', 'part_of')
+		]);
+		const { placed, unplaced } = splitPlaced(nodes, parentOf);
+		// A path that isn't in the list (hidden) doesn't hold its child back.
+		expect(ids(placed)).toEqual(['orphan']);
+		expect(ids(unplaced)).toEqual(['path']);
+	});
+
+	it('lists unplaced children of placed paths', () => {
+		const nodes = [makeNode({ id: 'path', kind: 'path', ...at }), makeNode({ id: 'child' })];
+		const { placed, unplaced } = splitPlaced(
+			nodes,
+			parentPathOf([makeEdge('child', 'path', 'part_of')])
+		);
+		expect(ids(placed)).toEqual(['path']);
+		expect(ids(unplaced)).toEqual(['child']);
 	});
 });
