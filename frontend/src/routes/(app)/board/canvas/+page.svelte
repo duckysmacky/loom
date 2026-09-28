@@ -13,9 +13,11 @@
 		PATH_HEADER,
 		PATH_PADDING,
 		flowDirection,
+		grownToFit,
 		layoutCanvas,
 		splitPlaced,
-		type Point
+		type Point,
+		type Size
 	} from '$lib/graph/layout';
 	import { rerouteEdges, standIns } from '$lib/graph/collapse';
 	import { ancestorPaths, nestingDepth, parentPathOf } from '$lib/graph/paths';
@@ -274,6 +276,46 @@
 		}
 	}
 
+	const cardSize: Size = { width: CANVAS_NODE_WIDTH, height: CANVAS_NODE_HEIGHT };
+
+	/**
+	 * Notes how big `target`'s box must be to hold a child at `position`
+	 * (relative to the box). Boxes without a saved size already fit their
+	 * children (layoutCanvas), so only resized ones are tracked.
+	 */
+	function noteFit(
+		growth: Map<string, Size>,
+		target: LoomFlowNode | undefined,
+		position: Point,
+		size: Size
+	) {
+		if (!prefs.pathAutoExpand || target?.type !== 'loomPath') return;
+		if (target.data.node.canvas_width === null) return;
+		growth.set(target.id, grownToFit(growth.get(target.id) ?? sizeOf(target), position, size));
+	}
+
+	/** Saves the grown sizes noted by `noteFit`. */
+	async function growPaths(growth: Map<string, Size>) {
+		for (const [pathId, size] of growth) {
+			const path = graph.nodeById.get(pathId);
+			if (
+				path?.canvas_width === Math.round(size.width) &&
+				path.canvas_height === Math.round(size.height)
+			)
+				continue;
+			try {
+				graph.replaceNode(
+					await nodesApi.update(pathId, {
+						canvas_width: Math.round(size.width),
+						canvas_height: Math.round(size.height)
+					})
+				);
+			} catch (error) {
+				notifyError(error);
+			}
+		}
+	}
+
 	/**
 	 * Drag stop doubles as "drop into / out of a path": the innermost path box
 	 * under the node's centre becomes its parent. Same parent → just save the
@@ -285,6 +327,7 @@
 		const draggedIds = new Set(dragged.map((flowNode) => flowNode.id));
 		const stayed: { id: string; position: Point }[] = [];
 		const moves: string[] = [];
+		const growth = new Map<string, Size>();
 
 		for (const moved of dragged) {
 			// Moving along with a dragged ancestor: its relative position is unchanged.
@@ -301,9 +344,14 @@
 
 			if (target?.id === moved.parentId) {
 				stayed.push({ id: moved.id, position: moved.position });
+				noteFit(growth, target, moved.position, size);
 				continue;
 			}
 
+			if (target) {
+				const base = absolute(target.id);
+				noteFit(growth, target, { x: topLeft.x - base.x, y: topLeft.y - base.y }, size);
+			}
 			if (await changePath(moved.id, target, topLeft)) {
 				const movedTitle = moved.data.node.title;
 				moves.push(
@@ -314,6 +362,7 @@
 			}
 		}
 		await savePositions(stayed);
+		await growPaths(growth);
 		if (moves.length) {
 			notify(moves.length === 1 ? moves[0] : `Moved ${moves.length} nodes between paths`);
 			await graph.load();
@@ -328,9 +377,13 @@
 	 */
 	async function placeNode(nodeId: string, pointer?: Point) {
 		const parentId = parentPathOf(graph.edges).get(nodeId);
+		const growth = new Map<string, Size>();
 		if (!pointer) {
 			if (parentId) {
-				await persistPosition(nodeId, { x: PATH_PADDING, y: PATH_HEADER });
+				const position = { x: PATH_PADDING, y: PATH_HEADER };
+				noteFit(growth, flowNodeById.get(parentId), position, cardSize);
+				await persistPosition(nodeId, position);
+				await growPaths(growth);
 				return;
 			}
 			const rect = canvasElement!.getBoundingClientRect();
@@ -346,10 +399,14 @@
 		}
 		const topLeft = { x: pointer.x - CANVAS_NODE_WIDTH / 2, y: pointer.y - CANVAS_NODE_HEIGHT / 2 };
 		const target = pathAt(pointer, nodeId);
+		const base = target ? absolute(target.id) : { x: 0, y: 0 };
+		const position = { x: topLeft.x - base.x, y: topLeft.y - base.y };
+		noteFit(growth, target, position, cardSize);
 		if (target?.id === parentId) {
-			const base = target ? absolute(target.id) : { x: 0, y: 0 };
-			await persistPosition(nodeId, { x: topLeft.x - base.x, y: topLeft.y - base.y });
+			await persistPosition(nodeId, position);
+			await growPaths(growth);
 		} else if (await changePath(nodeId, target, topLeft)) {
+			await growPaths(growth);
 			await graph.load();
 		}
 	}

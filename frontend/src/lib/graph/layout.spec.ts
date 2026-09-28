@@ -7,6 +7,7 @@ import {
 	PATH_HEADER,
 	PATH_PADDING,
 	flowDirection,
+	grownToFit,
 	layoutCanvas,
 	layoutPositions,
 	splitPlaced
@@ -148,5 +149,21 @@ describe('splitPlaced', () => {
 		);
 		expect(ids(placed)).toEqual(['path']);
 		expect(ids(unplaced)).toEqual(['child']);
+	});
+});
+
+describe('grownToFit', () => {
+	const box = { width: 400, height: 300 };
+	const card = { width: CANVAS_NODE_WIDTH, height: CANVAS_NODE_HEIGHT };
+
+	it('leaves a box alone when the child fits', () => {
+		expect(grownToFit(box, { x: 24, y: 56 }, card)).toEqual(box);
+	});
+
+	it('grows right and down past the child, keeping the padding', () => {
+		expect(grownToFit(box, { x: 350, y: 280 }, card)).toEqual({
+			width: 350 + CANVAS_NODE_WIDTH + PATH_PADDING,
+			height: 280 + CANVAS_NODE_HEIGHT + PATH_PADDING
+		});
 	});
 });

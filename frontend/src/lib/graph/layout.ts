@@ -80,6 +80,18 @@ export function layoutPositions(
 	return positions;
 }
 
+/**
+ * A path box's size grown to hold a child at `position` (relative to the box).
+ * ponytail: grows right/down only; overflow past the top/left edge would
+ * mean moving the box and every child in it.
+ */
+export function grownToFit(box: Size, position: Point, size: Size): Size {
+	return {
+		width: Math.max(box.width, position.x + size.width + PATH_PADDING),
+		height: Math.max(box.height, position.y + size.height + PATH_PADDING)
+	};
+}
+
 export const isPlaced = (node: NodeResponse) => node.canvas_x !== null && node.canvas_y !== null;
 
 /**

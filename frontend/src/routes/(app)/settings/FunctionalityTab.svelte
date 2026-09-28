@@ -87,6 +87,24 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
+				<span class="row-label">Grow paths to fit</span>
+				<span class="row-help"
+					>Dropping a node into a path box that's too small for it makes the box bigger.</span
+				>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.pathAutoExpand}
+				onchange={(event) => {
+					prefs.pathAutoExpand = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
 				<span class="row-label">Poke from cards</span>
 				<span class="row-help">Show the Poke button on dashboard and board cards.</span>
 			</span>

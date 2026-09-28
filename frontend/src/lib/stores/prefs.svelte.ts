@@ -29,6 +29,8 @@ export type Prefs = {
 	/** The canvas lays out and pins unplaced nodes itself; off: they wait in its Unplaced panel. */
 	autoPlace: boolean;
 	unplacedPanelOpen: boolean;
+	/** Dropping a node into a path box too small for it grows the box. */
+	pathAutoExpand: boolean;
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
@@ -50,7 +52,8 @@ const DEFAULTS: Prefs = {
 	trackActivePeriods: true,
 	collapsedPaths: {},
 	autoPlace: false,
-	unplacedPanelOpen: true
+	unplacedPanelOpen: true,
+	pathAutoExpand: true
 };
 
 function loadPrefs(): Prefs {
