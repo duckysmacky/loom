@@ -6,6 +6,7 @@
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { dashboardApi, nodesApi } from '$lib/api/endpoints';
 	import {
+		TIER_COLOR,
 		accentColor,
 		canPoke,
 		progressPair,
@@ -50,6 +51,15 @@
 	});
 
 	const actionableCount = $derived(dashboard?.active.filter((node) => !node.blocked).length ?? 0);
+	// The active list arrives ordered by tier; split it into one group per tier.
+	const activeTiers = $derived(
+		(['primary', 'secondary', 'background'] as const)
+			.map((tier) => ({
+				tier,
+				nodes: dashboard?.active.filter((node) => node.focus === tier) ?? []
+			}))
+			.filter((group) => group.nodes.length)
+	);
 	const blockedActiveCount = $derived(dashboard?.active.filter((node) => node.blocked).length ?? 0);
 
 	const tiles = $derived(
@@ -102,11 +112,18 @@
 				</div>
 
 				{#if dashboard.active.length}
-					<div class="active-nodes">
-						{#each dashboard.active as node (node.id)}
-							<NodeCard {node} feature />
-						{/each}
-					</div>
+					{#each activeTiers as group (group.tier)}
+						<div class="tier-head">
+							<span class="tier-bar" style:background={TIER_COLOR[group.tier]}></span>
+							{group.tier}
+							<span class="tier-count">{group.nodes.length}</span>
+						</div>
+						<div class="active-nodes">
+							{#each group.nodes as node (node.id)}
+								<NodeCard {node} feature />
+							{/each}
+						</div>
+					{/each}
 				{:else}
 					<div class="empty">
 						Nothing is active right now. Set a node's status to <strong>Active</strong> from its
@@ -277,8 +294,28 @@
 		margin: 0;
 	}
 
+	.tier-head {
+		display: flex;
+		align-items: center;
+		gap: 8px;
+		margin-top: 18px;
+		font: 700 10.5px/1 var(--font-mono);
+		letter-spacing: 0.12em;
+		text-transform: uppercase;
+		color: var(--ink-2);
+	}
+
+	.tier-bar {
+		width: 14px;
+		height: 3px;
+	}
+
+	.tier-count {
+		color: var(--ink-3);
+	}
+
 	.active-nodes {
-		margin-top: 12px;
+		margin-top: 10px;
 		display: flex;
 		flex-direction: column;
 		gap: 12px;
