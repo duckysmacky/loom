@@ -31,6 +31,9 @@
 	/* Translucent path-box fill (path accent at low alpha): nested boxes stack. */
 	--path-fill: rgba(107, 123, 98, 0.1);
 	--selection-tint: rgba(47, 111, 176, 0.08);
+	/* precedes edges: a plain "do first" line - white on the dark sheet,
+	   faint ink here, where white would vanish into the paper. */
+	--edge-precedes: rgba(19, 35, 57, 0.4);
 
 	--side: #132339;
 	--side-ink: #a8bbd0;
@@ -105,6 +108,7 @@
 	--scrim: rgba(3, 8, 15, 0.55);
 	--path-fill: rgba(143, 163, 130, 0.12);
 	--selection-tint: rgba(93, 157, 221, 0.12);
+	--edge-precedes: #ffffff;
 
 	--side: #0a1322;
 	--side-ink: #92a3b7;

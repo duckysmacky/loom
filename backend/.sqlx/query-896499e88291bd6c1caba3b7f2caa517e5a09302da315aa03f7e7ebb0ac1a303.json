@@ -46,7 +46,8 @@
               "Enum": [
                 "requires",
                 "part_of",
-                "related"
+                "related",
+                "precedes"
               ]
             }
           }
@@ -81,7 +82,8 @@
               "Enum": [
                 "requires",
                 "part_of",
-                "related"
+                "related",
+                "precedes"
               ]
             }
           }

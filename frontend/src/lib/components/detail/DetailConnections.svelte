@@ -14,6 +14,8 @@
 	const RELATIONS = {
 		requires: { label: 'Requires', kind: 'requires', outgoing: true },
 		required_by: { label: 'Required by', kind: 'requires', outgoing: false },
+		precedes: { label: 'Comes before', kind: 'precedes', outgoing: true },
+		preceded_by: { label: 'Comes after', kind: 'precedes', outgoing: false },
 		part_of: { label: 'Inside path', kind: 'part_of', outgoing: true },
 		contains: { label: 'Contains', kind: 'part_of', outgoing: false },
 		related: { label: 'Related', kind: 'related', outgoing: true }
@@ -33,9 +35,13 @@
 						? outgoing
 							? 'requires'
 							: 'required_by'
-						: outgoing
-							? 'part_of'
-							: 'contains';
+						: edge.kind === 'precedes'
+							? outgoing
+								? 'precedes'
+								: 'preceded_by'
+							: outgoing
+								? 'part_of'
+								: 'contains';
 			// A path's contents have their own section (DetailContains).
 			if (relation === 'contains') return [];
 			// Only this node's own requirements can block it.

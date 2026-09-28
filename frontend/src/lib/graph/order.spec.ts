@@ -11,6 +11,12 @@ describe('dependencyOrder', () => {
 		expect(ids(dependencyOrder(nodes, edges))).toEqual(['opengl', 'renderer', 'axum']);
 	});
 
+	it('puts a node right after the node that precedes it', () => {
+		const nodes = ['second', 'other', 'first'].map((id) => makeNode({ id }));
+		const edges = [makeEdge('first', 'second', 'precedes')];
+		expect(ids(dependencyOrder(nodes, edges))).toEqual(['first', 'second', 'other']);
+	});
+
 	it('follows chains and keeps the original order otherwise', () => {
 		const nodes = ['engine', 'renderer', 'course', 'other'].map((id) => makeNode({ id }));
 		const edges = [

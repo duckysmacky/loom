@@ -74,7 +74,12 @@
 		);
 	});
 
-	const LINK_MARKS: Record<EdgeKind, string> = { requires: '⟵', part_of: '↳', related: '┈' };
+	const LINK_MARKS: Record<EdgeKind, string> = {
+		requires: '⟵',
+		part_of: '↳',
+		related: '┈',
+		precedes: '⟶'
+	};
 
 	function linksOf(node: NodeResponse) {
 		return graph.edges

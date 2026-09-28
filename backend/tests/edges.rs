@@ -305,6 +305,45 @@ async fn blocked_reflects_requires_target_status(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn precedes_cycle_rejected(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "precedescycle@example.com").await;
+    let a = create_node(&app, &token, "A").await;
+    let b = create_node(&app, &token, "B").await;
+    let c = create_node(&app, &token, "C").await;
+
+    assert_eq!(
+        create_edge(&app, &token, &a, &b, "precedes").await.0,
+        StatusCode::CREATED
+    );
+    assert_eq!(
+        create_edge(&app, &token, &b, &c, "precedes").await.0,
+        StatusCode::CREATED
+    );
+
+    let (status, _) = create_edge(&app, &token, &c, &a, "precedes").await;
+    assert_eq!(status, StatusCode::CONFLICT);
+    let (status, _) = create_edge(&app, &token, &b, &a, "precedes").await;
+    assert_eq!(status, StatusCode::CONFLICT);
+}
+
+#[sqlx::test]
+async fn precedes_does_not_block(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "precedesblock@example.com").await;
+    let a = create_node(&app, &token, "A").await;
+    let b = create_node(&app, &token, "B").await;
+
+    assert_eq!(
+        create_edge(&app, &token, &a, &b, "precedes").await.0,
+        StatusCode::CREATED
+    );
+
+    assert_eq!(get_node(&app, &token, &a).await["blocked"], false);
+    assert_eq!(get_node(&app, &token, &b).await["blocked"], false);
+}
+
+#[sqlx::test]
 async fn container_progress_reflects_children(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "container@example.com").await;

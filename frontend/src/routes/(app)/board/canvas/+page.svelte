@@ -228,6 +228,10 @@
 				label: `${title(target)} requires ${title(source)}`,
 				request: { from_node_id: target, to_node_id: source, kind: 'requires' }
 			},
+			{
+				label: `${title(source)} comes before ${title(target)}`,
+				request: { from_node_id: source, to_node_id: target, kind: 'precedes' }
+			},
 			...(graph.nodeById.get(target)?.kind === 'path'
 				? [
 						{

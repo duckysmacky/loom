@@ -26,6 +26,14 @@ describe('layoutPositions', () => {
 		expect(positions.get('course')!.x).toBeLessThan(positions.get('renderer')!.x);
 	});
 
+	it('lays a node left of what it precedes', () => {
+		const positions = layoutPositions(
+			[makeNode({ id: 'later' }), makeNode({ id: 'first' })],
+			[makeEdge('first', 'later', 'precedes')]
+		);
+		expect(positions.get('first')!.x).toBeLessThan(positions.get('later')!.x);
+	});
+
 	it('stacks related nodes in one column', () => {
 		const positions = layoutPositions(
 			[makeNode({ id: 'a' }), makeNode({ id: 'b' })],

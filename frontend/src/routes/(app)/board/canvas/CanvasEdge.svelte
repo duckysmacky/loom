@@ -28,19 +28,25 @@
 		kind === 'requires' && unmet
 			? 'requires · unmet'
 			: selected
-				? { requires: 'requires · met', part_of: 'part of', related: 'related' }[kind]
+				? {
+						requires: 'requires · met',
+						part_of: 'part of',
+						related: 'related',
+						precedes: 'precedes'
+					}[kind]
 				: null
 	);
 </script>
 
 <!-- requires: strong directional line (warn while unmet); part_of: a heavy
-double rail into the container, reading as nesting; related: light dots. -->
+double rail into the container, reading as nesting; related: light dots;
+precedes: a plain arrowed line, an order that never blocks. -->
 <g class="edge {kind}" class:unmet class:dimmed={data?.dimmed} class:selected>
 	{#if kind === 'part_of'}
 		<path class="rail-outer" d={geometry[0]} />
 	{/if}
 	<BaseEdge {id} path={geometry[0]} interactionWidth={16} />
-	{#if kind === 'requires'}
+	{#if kind === 'requires' || kind === 'precedes'}
 		<path class="arrow" d={arrowHead} />
 	{/if}
 	{#if kind === 'part_of'}
@@ -92,6 +98,15 @@ double rail into the container, reading as nesting; related: light dots. -->
 		stroke-width: 1.5;
 		stroke-dasharray: 2 5;
 		stroke-linecap: round;
+	}
+
+	.precedes :global(.svelte-flow__edge-path) {
+		stroke: var(--edge-precedes);
+		stroke-width: 1.5;
+	}
+
+	.precedes .arrow {
+		fill: var(--edge-precedes);
 	}
 
 	.selected:not(.part_of) :global(.svelte-flow__edge-path),

@@ -12,6 +12,7 @@ pub enum EdgeKind {
     Requires,
     PartOf,
     Related,
+    Precedes,
 }
 
 #[derive(Debug, Clone, Serialize, sqlx::FromRow, TS)]

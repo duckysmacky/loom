@@ -2,20 +2,26 @@ import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
 /**
- * Reorders `nodes` so every node comes after the nodes it `requires` (among
- * those in the same list), so a blocked card sits right after its blocker and
- * a tier reads as a sequence. Otherwise keeps the incoming order; cycle-safe.
+ * Reorders `nodes` so every node comes after the nodes it `requires` and the
+ * nodes that `precede` it (among those in the same list), so a blocked card
+ * sits right after its blocker and a tier reads as a sequence. Otherwise keeps
+ * the incoming order; cycle-safe.
  */
 export function dependencyOrder(nodes: NodeResponse[], edges: EdgeResponse[]): NodeResponse[] {
 	const indexById = new Map(nodes.map((node, index) => [node.id, index]));
 	const prerequisites = new Map<string, number[]>();
 	for (const edge of edges) {
-		const prerequisite = indexById.get(edge.to_node_id);
-		if (edge.kind !== 'requires' || prerequisite === undefined) continue;
-		if (!indexById.has(edge.from_node_id)) continue;
-		const list = prerequisites.get(edge.from_node_id) ?? [];
-		list.push(prerequisite);
-		prerequisites.set(edge.from_node_id, list);
+		if (edge.kind !== 'requires' && edge.kind !== 'precedes') continue;
+		// requires: from waits on to. precedes: from goes before to.
+		const [earlier, later] =
+			edge.kind === 'requires'
+				? [edge.to_node_id, edge.from_node_id]
+				: [edge.from_node_id, edge.to_node_id];
+		const earlierIndex = indexById.get(earlier);
+		if (earlierIndex === undefined || !indexById.has(later)) continue;
+		const list = prerequisites.get(later) ?? [];
+		list.push(earlierIndex);
+		prerequisites.set(later, list);
 	}
 
 	const ordered: NodeResponse[] = [];

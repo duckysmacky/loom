@@ -57,9 +57,13 @@ pub async fn create_edge(
     // `requires` cycles would make `blocked` unsatisfiable forever; `part_of`
     // cycles would make container progress meaningless (a container whose
     // progress derives from a child that's itself derived from it) and
-    // break canvas nesting. `related` is a soft, non-hierarchical
+    // break canvas nesting. `precedes` cycles would make its "do this
+    // first" order meaningless. `related` is a soft, non-hierarchical
     // association - cycles there are fine.
-    if matches!(request.kind, EdgeKind::Requires | EdgeKind::PartOf) {
+    if matches!(
+        request.kind,
+        EdgeKind::Requires | EdgeKind::PartOf | EdgeKind::Precedes
+    ) {
         // Serializes concurrent same-kind edge inserts for this user so two
         // requests can't both pass the cycle check below before either
         // commits. Per-user, not global - cheap at this app's scale.

@@ -63,6 +63,7 @@
 		<div class="entry"><span class="swatch requires-unmet"></span>requires · unmet</div>
 		<div class="entry"><span class="swatch requires-met"></span>requires · met</div>
 		<div class="entry"><span class="swatch path-box"></span>path · drop nodes inside</div>
+		<div class="entry"><span class="swatch precedes"></span>precedes · do first</div>
 		<div class="entry"><span class="swatch related"></span>related</div>
 	</div>
 </Panel>
@@ -158,6 +159,11 @@
 		height: 12px;
 		background: var(--path-fill);
 		border: 1.5px dashed var(--node-path);
+	}
+
+	.precedes {
+		height: 2px;
+		background: var(--edge-precedes);
 	}
 
 	.related {

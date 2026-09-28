@@ -24,7 +24,8 @@
               "Enum": [
                 "requires",
                 "part_of",
-                "related"
+                "related",
+                "precedes"
               ]
             }
           }
