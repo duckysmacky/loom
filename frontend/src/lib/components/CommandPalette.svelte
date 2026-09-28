@@ -53,6 +53,12 @@
 			hint: 'N',
 			run: () => (overlays.captureOpen = true)
 		},
+		{
+			id: 'new',
+			label: 'New node',
+			hint: 'Shift N',
+			run: () => (overlays.newOpen = true)
+		},
 		{ id: 'sign-out', label: 'Sign out', hint: 'account', run: logout }
 	];
 

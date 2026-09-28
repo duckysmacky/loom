@@ -2,6 +2,7 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	import TopicToggles from '$lib/components/TopicToggles.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -32,12 +33,6 @@
 		status = 'queued';
 		topicIds = [];
 	});
-
-	function toggleTopic(topicId: string) {
-		topicIds = topicIds.includes(topicId)
-			? topicIds.filter((id) => id !== topicId)
-			: [...topicIds, topicId];
-	}
 
 	async function capture(event: SubmitEvent) {
 		event.preventDefault();
@@ -124,25 +119,7 @@
 			{/if}
 		</div>
 
-		{#if graph.topics.length}
-			<div class="group">
-				<span class="label">Topics</span>
-				<div class="topics">
-					{#each graph.topics as topic (topic.id)}
-						<button
-							type="button"
-							class="topic"
-							class:selected={topicIds.includes(topic.id)}
-							aria-pressed={topicIds.includes(topic.id)}
-							onclick={() => toggleTopic(topic.id)}
-						>
-							{#if topic.color}<span class="swatch" style:background={topic.color}></span>{/if}
-							{topic.name}
-						</button>
-					{/each}
-				</div>
-			</div>
-		{/if}
+		<TopicToggles bind:selected={topicIds} />
 
 		<div class="actions">
 			<span class="hint">↵ to capture · esc to close</span>
@@ -184,34 +161,6 @@
 		flex-direction: column;
 		gap: 8px;
 		align-items: flex-start;
-	}
-
-	.topics {
-		display: flex;
-		gap: 6px;
-		flex-wrap: wrap;
-	}
-
-	.topic {
-		display: inline-flex;
-		align-items: center;
-		gap: 5px;
-		padding: 6px 9px;
-		border: var(--border-width-hair) solid var(--line);
-		background: var(--surface);
-		font: 500 10.5px/1 var(--font-mono);
-		color: var(--ink-2);
-	}
-
-	.topic.selected {
-		border-color: var(--ink);
-		background: var(--ink);
-		color: var(--on-ink);
-	}
-
-	.swatch {
-		width: 7px;
-		height: 7px;
 	}
 
 	.actions {

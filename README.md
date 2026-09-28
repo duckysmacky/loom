@@ -131,8 +131,11 @@ a dialog to set its real kind, status, and focus in one step.
 
 ### Quick capture, command palette, and detail panel
 
-- Press **N** anywhere to quick-capture a new node (title, kind, focus,
-  and an option to start it immediately).
+- Press **N** anywhere to quick-capture an idea (title and topics; pick
+  another kind to also set its focus and status).
+- Press **Shift+N** (or **New** in the top bar) for the full constructor:
+  kind, notes, accent, status, focus, start date, checklist or progress,
+  connections, and topics in one form.
 - Press **Ctrl+K** for a command palette: fuzzy node search plus
   navigation, capture, and sign-out commands.
 - Click any node to open its detail panel as a deep-linkable slide-over

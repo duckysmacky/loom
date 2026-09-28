@@ -21,6 +21,7 @@
 	</button>
 
 	<div class="actions">
+		<Button variant="quiet" onclick={() => (overlays.newOpen = true)}>New</Button>
 		<Button variant="accent" onclick={() => (overlays.captureOpen = true)}>
 			+<span class="capture-label"> Quick capture</span>
 		</Button>

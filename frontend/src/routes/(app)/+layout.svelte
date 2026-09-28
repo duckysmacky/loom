@@ -3,6 +3,7 @@
 	import { page } from '$app/state';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
 	import NodeDetail from '$lib/components/detail/NodeDetail.svelte';
+	import NewNodeDialog from '$lib/components/NewNodeDialog.svelte';
 	import QuickCapture from '$lib/components/QuickCapture.svelte';
 	import Toaster from '$lib/components/Toaster.svelte';
 	import { overlays } from '$lib/stores/ui.svelte';
@@ -26,7 +27,8 @@
 			overlays.paletteOpen = !overlays.paletteOpen;
 			return;
 		}
-		// Plain "N" opens quick capture - Ctrl+N is reserved by browsers.
+		// Plain "N" opens quick capture, Shift+N the full New form - Ctrl+N
+		// is reserved by browsers.
 		const target = event.target as HTMLElement;
 		const typing = target.isContentEditable || target.matches('input, textarea, select');
 		const modified = event.metaKey || event.ctrlKey || event.altKey;
@@ -37,7 +39,7 @@
 			!document.querySelector('dialog[open]')
 		) {
 			event.preventDefault();
-			overlays.captureOpen = true;
+			overlays[event.shiftKey ? 'newOpen' : 'captureOpen'] = true;
 		}
 	}
 
@@ -72,6 +74,7 @@
 	</div>
 	<NodeDetail />
 	<QuickCapture />
+	<NewNodeDialog />
 	<CommandPalette />
 	<Toaster />
 {/if}
