@@ -40,3 +40,19 @@
 	font: 500 11.5px/1.4 var(--font-display);
 	color: var(--ink-2);
 }
+
+/* A settings row that is one on/off switch. */
+.settings-row .toggle {
+	flex: 1;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	gap: 16px;
+	cursor: pointer;
+}
+
+.settings-row .toggle input {
+	width: 18px;
+	height: 18px;
+	accent-color: var(--accent);
+}

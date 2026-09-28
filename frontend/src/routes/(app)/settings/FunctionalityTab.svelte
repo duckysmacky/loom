@@ -154,20 +154,3 @@
 		</label>
 	</div>
 </section>
-
-<style>
-	.toggle {
-		flex: 1;
-		display: flex;
-		align-items: center;
-		justify-content: space-between;
-		gap: 16px;
-		cursor: pointer;
-	}
-
-	.toggle input {
-		width: 18px;
-		height: 18px;
-		accent-color: var(--accent);
-	}
-</style>

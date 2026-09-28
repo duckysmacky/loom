@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/svelte';
+	import { prefs } from '$lib/stores/prefs.svelte';
 	import type { LoomFlowEdge } from './types';
 
 	let {
@@ -23,18 +24,12 @@
 	const arrowHead = $derived(
 		`M ${targetX} ${targetY} L ${targetX - 9} ${targetY - 5} L ${targetX - 9} ${targetY + 5} Z`
 	);
-	// Unmet requirements are always labelled; other edges only when selected.
+	// Optional (Settings > Appearance): whether a requirement is met already
+	// shows in the line's colour, so the label only names the connection.
 	const label = $derived(
-		kind === 'requires' && unmet
-			? 'requires · unmet'
-			: selected
-				? {
-						requires: 'requires · met',
-						part_of: 'part of',
-						related: 'related',
-						precedes: 'precedes'
-					}[kind]
-				: null
+		prefs.showEdgeLabels
+			? { requires: 'requires', part_of: 'part of', related: 'related', precedes: 'next' }[kind]
+			: null
 	);
 </script>
 

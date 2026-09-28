@@ -44,4 +44,23 @@
 			]}
 		/>
 	</div>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
+				<span class="row-label">Connection labels</span>
+				<span class="row-help"
+					>Name each connection on the canvas (requires, next, related) in small text above its
+					line.</span
+				>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.showEdgeLabels}
+				onchange={(event) => {
+					prefs.showEdgeLabels = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
 </section>

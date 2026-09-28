@@ -31,6 +31,8 @@ export type Prefs = {
 	unplacedPanelOpen: boolean;
 	/** Dropping a node into a path box too small for it grows the box. */
 	pathAutoExpand: boolean;
+	/** Canvas connections carry a small text label (requires / next / related). */
+	showEdgeLabels: boolean;
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
@@ -53,7 +55,8 @@ const DEFAULTS: Prefs = {
 	collapsedPaths: {},
 	autoPlace: false,
 	unplacedPanelOpen: true,
-	pathAutoExpand: true
+	pathAutoExpand: true,
+	showEdgeLabels: false
 };
 
 function loadPrefs(): Prefs {

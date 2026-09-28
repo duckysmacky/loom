@@ -105,5 +105,10 @@
   "103": "state.rs",
   "104": "AppState",
   "105": "AuthUser",
-  "106": "$lib/graph/grouping"
+  "106": "$lib/graph/grouping",
+  "107": "oauth.rs",
+  "108": "AuthUser",
+  "109": "create",
+  "110": "create",
+  "111": "get"
 }
