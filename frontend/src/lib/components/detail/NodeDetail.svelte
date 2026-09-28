@@ -339,15 +339,16 @@
 
 					<div class="actions">
 						<span class="label">Actions</span>
-						{#if blocked}
+						<!-- For an idea, promoting it is the main action. -->
+						{#if node.kind === 'idea'}
+							<Button variant="accent" onclick={() => (promoting = node)}>Move to board</Button>
+						{:else if blocked}
 							<span class="not-actionable">Not actionable yet</span>
-						{:else if node.kind === 'idea'}
-							<Button variant="poke" onclick={() => (promoting = node)}>Move to board</Button>
 						{:else if canPoke(node)}
 							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
 						{/if}
 						<Button
-							variant="accent"
+							variant={node.kind === 'idea' ? 'poke' : 'accent'}
 							onclick={() => goto(`/board/canvas?focus=${node.id}&node=${node.id}`)}
 						>
 							Open in canvas
