@@ -35,7 +35,7 @@ them.
 or `archived`. The `idea` status is an ordinary status, not the Ideas list.
 
 **Focus tier** is `primary`, `secondary` or `background`. It is separate from status, and it
-decides what the dashboard surfaces. Keep `primary` for the few things the user is actively
+orders the dashboard's list of active nodes. Keep `primary` for the few things the user is actively
 pushing.
 
 **Notes** are free-form Markdown. Use them for descriptions, links, resources and acceptance
@@ -86,7 +86,7 @@ the user what will be lost, and confirm before promoting.
 
 | Tool | Use it to |
 | --- | --- |
-| `loom_get_overview` | Get dashboard counts plus the primary, stale and recent-idea nodes and paths. Good for "what am I working on?" |
+| `loom_get_overview` | Get dashboard counts plus the active (primary focus first), stale and recent-idea nodes and paths. Good for "what am I working on?" |
 | `loom_get_graph` | Get every node, edge and topic. **Start here before any bulk change.** |
 | `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived`), or by a title `search`. |
 | `loom_get_node` | Get one node with its edges both ways, its checklist and recent pokes. |
@@ -184,9 +184,10 @@ here end at y = 320.
 
 ## Placing nodes on the canvas
 
-The Board canvas shows nodes as cards and paths as boxes around their children. Placement is
-optional: unplaced nodes get an automatic layout when the canvas opens. Place nodes when the
-arrangement matters, e.g. a new learning path or a cluster next to related work.
+The Board canvas shows nodes as cards and paths as boxes around their children. An unplaced
+node isn't drawn: it waits in the canvas's **Unplaced** side panel until the user drags it in
+(unless they turned on auto-place). So place what you create, e.g. a new learning path or a
+cluster next to related work.
 
 **Coordinates.** Pixels at a card's top-left, x right and y down. A card is **190 × 96**.
 Inside a path, positions are relative to the box, whose content starts at **(24, 56)**; the
@@ -216,7 +217,7 @@ new node goes beside the node it relates to.
 
 - On create: pass `x` / `y` on `loom_create_subgraph` nodes. They're applied after the edges.
 - Existing nodes: use `loom_place_nodes`. Fields you omit are left as they are; `x: null,
-  y: null` hands a node back to the automatic layout.
+  y: null` sends a node back to the Unplaced panel.
 - Joining or leaving a path clears a node's position, because it's relative to the box. Place
   the node again after changing a `part_of` edge.
 - Don't move nodes the user arranged by hand unless they ask.
@@ -231,8 +232,7 @@ new node goes beside the node it relates to.
 - **"I read two more chapters of Y"**: `loom_get_node` to read `progress_current`, then
   `loom_update_node` with the new value, then `loom_poke_node`.
 - **"What should I work on?"**: call `loom_get_overview`, then weigh these:
-  - primary-focus nodes
-  - active nodes that aren't blocked
+  - active nodes that aren't blocked, primary focus first
   - stale nodes
   - paths with little progress
 

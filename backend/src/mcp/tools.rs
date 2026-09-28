@@ -40,7 +40,7 @@ with a progress counter: progress_current/progress_total/progress_unit), `path` 
 
 Status (projects, studies and paths only): idea -> queued -> active -> paused -> \
 done, or archived. Focus tier (primary/secondary/background) is orthogonal to \
-status and drives the dashboard. Ideas have neither: sending status or focus for \
+status and orders the dashboard's list of active nodes. Ideas have neither: sending status or focus for \
 an idea is an error, and both are omitted from idea results. Changing a node's \
 kind (\"promoting\") keeps its id and edges but drops data the new kind can't \
 hold (leaving project deletes its checklist, leaving study clears progress, \
@@ -72,10 +72,11 @@ build several connected nodes at once (e.g. a learning path). Null fields are \
 omitted from results.
 
 Canvas positions (canvas_x/canvas_y, and canvas_width/canvas_height for path \
-boxes) are optional: the Board orders unplaced nodes left to right along \
-`requires`/`precedes` and stacks `related` ones on its own. To arrange nodes \
-deliberately, pass x/y to loom_create_subgraph or use loom_place_nodes, and lay \
-them out like a diagram: a node goes in the column to the right of what it \
+boxes) start empty: an unplaced node waits in the canvas's Unplaced side panel \
+until the user drags it in (unless they turned on auto-place, which orders \
+unplaced nodes left to right along `requires`/`precedes` and stacks `related` \
+ones). So place what you create: pass x/y to loom_create_subgraph or use \
+loom_place_nodes, and lay them out like a diagram: a node goes in the column to the right of what it \
 requires or what precedes it, parallel or related nodes are stacked vertically \
 in one column (the canvas joins related cards top to bottom), and a node sits \
 level with the middle of its prerequisites.";
@@ -168,8 +169,8 @@ pub struct SubgraphNode {
     #[serde(flatten)]
     pub node: CreateNodeParams,
     /// Optional canvas position, same rules as loom_place_nodes. Applied
-    /// after the edges, so joining a path doesn't reset it. Omit to let the
-    /// Board lay the node out automatically.
+    /// after the edges, so joining a path doesn't reset it. Omit to leave the
+    /// node in the canvas's Unplaced panel.
     #[serde(default)]
     pub x: Option<f64>,
     #[serde(default)]
@@ -206,7 +207,7 @@ pub struct NodePlacement {
     pub node_id: Uuid,
     /// Left edge. Inside a path it's relative to the path box's top-left
     /// (keep >= 24); otherwise absolute. Set `x` and `y` together; `null`
-    /// for both hands the node back to automatic layout, omitting both
+    /// for both sends the node back to the Unplaced panel, omitting both
     /// leaves the position as it is (e.g. to only resize a path).
     #[serde(default, deserialize_with = "deserialize_some")]
     #[schemars(with = "Option<f64>")]
@@ -247,8 +248,9 @@ impl LoomServer {
         State(self.state.clone())
     }
 
-    /// Dashboard summary: counts by status/kind, blocked count, primary-focus
-    /// nodes, stale nodes, recent ideas and paths.
+    /// Dashboard summary: counts by status/kind, blocked count, every active
+    /// node (primary focus first, unblocked before blocked), stale nodes,
+    /// recent ideas and paths.
     #[tool(annotations(title = "Get overview", read_only_hint = true))]
     async fn loom_get_overview(
         &self,

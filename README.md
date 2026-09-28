@@ -79,7 +79,7 @@ hold (leaving a project behind drops its checklist, for instance).
 
 Every node except an idea also has a **status** (idea -> queued -> active ->
 paused -> done, plus archived) and a **focus** tier (primary / secondary / background,
-independent of status) that decides what surfaces on the dashboard, plus
+independent of status) that orders what's active on the dashboard, plus
 notes, an accent color, and free-form topics.
 
 ### Connections

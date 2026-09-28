@@ -76,7 +76,7 @@ once. One graph per account; no collaboration features.
   `secondary`); demoting to idea clears both. The `idea` *status* is an
   ordinary status of committed nodes.
 - **Focus tier:** `primary` / `secondary` / `background` - orthogonal
-  to status, drives what surfaces on the dashboard.
+  to status, orders the dashboard's list of active nodes.
 - **Blocked:** derived, never stored - a node with an unmet `requires`
   edge to a non-`done` node (an idea counts as not done).
 - **Container progress:** derived from the done/not-done ratio of a
