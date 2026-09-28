@@ -3,7 +3,14 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
-	import { KIND_GLYPH, TIER_COLOR, borderStyle, tierBorderWidth } from '$lib/graph/display';
+	import {
+		KIND_GLYPH,
+		TIER_COLOR,
+		borderStyle,
+		progressPair,
+		progressText,
+		tierBorderWidth
+	} from '$lib/graph/display';
 	import { openNode } from '$lib/navigation';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import {
@@ -27,7 +34,7 @@
 	} = $props();
 
 	const inside = $derived(childrenOf(path.id));
-	const progress = $derived(path.container_progress);
+	const progress = $derived(progressPair(path));
 	const border = $derived(borderStyle(path));
 	const zone = $derived<DropZone>({ kind: 'path', pathId: path.id });
 </script>
@@ -58,8 +65,8 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		<span class="title">{path.title}</span>
 		{#if progress}
 			<span class="progress">
-				<ProgressBar value={progress.done} total={progress.total} />
-				<span>{progress.done} / {progress.total} done</span>
+				<ProgressBar value={progress[0]} total={progress[1]} />
+				<span>{progressText(path)}</span>
 			</span>
 		{/if}
 	</button>

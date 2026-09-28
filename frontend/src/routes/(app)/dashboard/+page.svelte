@@ -4,7 +4,13 @@
 	import Button from '$lib/components/ui/Button.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { dashboardApi, nodesApi } from '$lib/api/endpoints';
-	import { accentColor, relativeDays, shortDate } from '$lib/graph/display';
+	import {
+		accentColor,
+		progressPair,
+		progressText,
+		relativeDays,
+		shortDate
+	} from '$lib/graph/display';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
@@ -160,14 +166,14 @@
 						<h2 class="panel-title">Paths</h2>
 						<ul class="rows">
 							{#each dashboard.paths as node (node.id)}
-								{@const progress = node.container_progress}
+								{@const progress = progressPair(node)}
 								<li>
 									<button type="button" class="path" onclick={() => openNode(node.id)}>
 										<span class="row-title">{node.title}</span>
 										{#if progress}
 											<span class="path-progress">
-												<ProgressBar value={progress.done} total={progress.total} height={8} />
-												<span class="row-meta">{progress.done}/{progress.total}</span>
+												<ProgressBar value={progress[0]} total={progress[1]} height={8} />
+												<span class="row-meta">{progressText(node)}</span>
 											</span>
 										{:else}
 											<span class="row-meta">no steps yet</span>

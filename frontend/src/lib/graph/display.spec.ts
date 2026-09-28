@@ -74,6 +74,10 @@ describe('display helpers', () => {
 		);
 		expect(progressText(makeNode({ kind: 'project', ...everything }))).toBe('3 / 5 tasks');
 		expect(progressText(makeNode({ kind: 'path', ...everything }))).toBe('1 / 2 done');
+		const overall = { path_progress: { done: 15, total: 20 } };
+		expect(progressText(makeNode({ kind: 'path', ...everything, ...overall }))).toBe(
+			'15 / 20 · 1 / 2 done'
+		);
 		expect(progressText(makeNode({ kind: 'idea', ...everything }))).toBeNull();
 	});
 

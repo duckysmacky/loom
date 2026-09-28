@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { edgesApi } from '$lib/api/endpoints';
-	import { accentColor } from '$lib/graph/display';
+	import { accentColor, progressText } from '$lib/graph/display';
 	import { ancestorPaths, parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -38,10 +38,8 @@
 <section>
 	<div class="head">
 		<span class="label">Contains</span>
-		{#if inside.length}
-			<span class="count">
-				{inside.filter(({ child }) => child.status === 'done').length} / {inside.length} done
-			</span>
+		{#if progressText(node)}
+			<span class="count">{progressText(node)}</span>
 		{/if}
 	</div>
 	<ul class="list">

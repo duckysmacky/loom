@@ -404,6 +404,108 @@ async fn container_progress_reflects_children(pool: PgPool) {
     );
 }
 
+async fn create_node_with(app: &axum::Router, token: &str, body: Value) -> String {
+    let (status, body) = send(app, req("POST", "/api/nodes", body, Some(token))).await;
+    assert_eq!(status, StatusCode::CREATED, "{body}");
+    body["id"].as_str().unwrap().to_owned()
+}
+
+async fn add_checklist_item(app: &axum::Router, token: &str, node_id: &str, done: bool) {
+    let (status, item) = send(
+        app,
+        req(
+            "POST",
+            &format!("/api/nodes/{node_id}/checklist"),
+            json!({"title": "item"}),
+            Some(token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    if done {
+        let item_id = item["id"].as_str().unwrap();
+        let (status, _) = send(
+            app,
+            req(
+                "PATCH",
+                &format!("/api/checklist/{item_id}"),
+                json!({"done": true}),
+                Some(token),
+            ),
+        )
+        .await;
+        assert_eq!(status, StatusCode::OK);
+    }
+}
+
+#[sqlx::test]
+async fn path_progress_sums_inner_counters_recursively(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pathprogress@example.com").await;
+    let outer = create_path(&app, &token, "P").await;
+    let inner = create_path(&app, &token, "Q").await;
+    let empty = create_path(&app, &token, "E").await;
+    let study = create_node_with(
+        &app,
+        &token,
+        json!({"kind": "study", "title": "S", "progress_current": 12, "progress_total": 15}),
+    )
+    .await;
+    let project = create_node(&app, &token, "Checklist").await;
+    for done in [true, true, true, false, false] {
+        add_checklist_item(&app, &token, &project, done).await;
+    }
+    let counterless = create_node(&app, &token, "Counterless").await;
+    let idea = create_node_with(&app, &token, json!({"kind": "idea", "title": "I"})).await;
+
+    for (child, parent) in [
+        (&study, &outer),
+        (&inner, &outer),
+        (&idea, &outer),
+        (&project, &inner),
+        (&counterless, &inner),
+    ] {
+        assert_eq!(
+            create_edge(&app, &token, child, parent, "part_of").await.0,
+            StatusCode::CREATED
+        );
+    }
+
+    assert_eq!(
+        get_node(&app, &token, &outer).await["path_progress"],
+        json!({"done": 15, "total": 20})
+    );
+    assert_eq!(
+        get_node(&app, &token, &inner).await["path_progress"],
+        json!({"done": 3, "total": 5})
+    );
+    assert_eq!(
+        get_node(&app, &token, &empty).await["path_progress"],
+        Value::Null
+    );
+}
+
+#[sqlx::test]
+async fn container_progress_skips_ideas(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "containerideas@example.com").await;
+    let path = create_path(&app, &token, "P").await;
+    let done = create_node(&app, &token, "Done").await;
+    let idea = create_node_with(&app, &token, json!({"kind": "idea", "title": "I"})).await;
+    for child in [&done, &idea] {
+        assert_eq!(
+            create_edge(&app, &token, child, &path, "part_of").await.0,
+            StatusCode::CREATED
+        );
+    }
+    set_status(&app, &token, &done, "done").await;
+
+    assert_eq!(
+        get_node(&app, &token, &path).await["container_progress"],
+        json!({"done": 1, "total": 1})
+    );
+}
+
 #[sqlx::test]
 async fn list_nodes_agrees_with_get_node_on_derived_fields(pool: PgPool) {
     let app = app(pool);

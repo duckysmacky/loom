@@ -28,6 +28,7 @@ export function makeNode(overrides: Partial<NodeResponse> = {}): NodeResponse {
 		blocked: false,
 		container_progress: null,
 		checklist_progress: null,
+		path_progress: null,
 		last_poked_at: null,
 		...overrides
 	};

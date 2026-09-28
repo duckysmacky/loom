@@ -8,11 +8,12 @@ use crate::models::node::{
 };
 use crate::repo::{active_periods, checklist, edges};
 
-/// Query target for every node-returning query - flat fields only, since
-/// `query!`/`query_as!` map one SQL column to one struct field.
-/// `container_progress`'s nested shape has no single-column representation,
-/// so it's carried as two flat counts here and folded into
-/// `NodeResponse::container_progress` by `From<NodeRow>`.
+/// Query target for every node-returning query, all of which read the
+/// `node_rows` view (every derived column in one place) - flat fields only,
+/// since `query!`/`query_as!` map one SQL column to one struct field. The
+/// nested progress shapes have no single-column representation, so they're
+/// carried as flat counts here and folded into `NodeResponse` by
+/// `From<NodeRow>`.
 pub(crate) struct NodeRow {
     pub(crate) id: Uuid,
     pub(crate) kind: NodeKind,
@@ -40,6 +41,8 @@ pub(crate) struct NodeRow {
     pub(crate) checklist_total: i64,
     pub(crate) checklist_done: i64,
     pub(crate) last_poked_at: Option<DateTime<Utc>>,
+    pub(crate) path_progress_done: i64,
+    pub(crate) path_progress_total: i64,
 }
 
 impl From<NodeRow> for NodeResponse {
@@ -51,6 +54,10 @@ impl From<NodeRow> for NodeResponse {
         let checklist_progress = (row.checklist_total > 0).then_some(Progress {
             done: row.checklist_done,
             total: row.checklist_total,
+        });
+        let path_progress = (row.path_progress_total > 0).then_some(Progress {
+            done: row.path_progress_done,
+            total: row.path_progress_total,
         });
         NodeResponse {
             id: row.id,
@@ -76,6 +83,7 @@ impl From<NodeRow> for NodeResponse {
             blocked: row.blocked,
             container_progress,
             checklist_progress,
+            path_progress,
             last_poked_at: row.last_poked_at,
         }
     }
@@ -139,43 +147,25 @@ pub async fn list_nodes(
         NodeRow,
         r#"
         SELECT
-            n.id, n.kind AS "kind: NodeKind", n.status AS "status?: NodeStatus", n.focus AS "focus?: NodeFocus",
-            n.title, n.progress_current, n.progress_total, n.progress_unit,
-            n.color, n.notes, n.created_at, n.updated_at,
-            (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
-            CASE WHEN n.status = 'done' THEN (
-                SELECT a.ended_at FROM active_periods a WHERE a.node_id = n.id
-                ORDER BY a.started_at DESC, a.id DESC LIMIT 1
-            ) END AS completed_at,
-            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,
-            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
-                AS "topic_ids!: Vec<Uuid>",
-            EXISTS (
-                SELECT 1 FROM edges e
-                JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires'
-                  AND req.status IS DISTINCT FROM 'done'
-            ) AS "blocked!",
-            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
-                AS "container_total!",
-            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
-             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
-                AS "container_done!",
-            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)
-                AS "checklist_total!",
-            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)
-                AS "checklist_done!",
-            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
-        FROM nodes n
-        LEFT JOIN node_topics nt ON nt.node_id = n.id
-        WHERE n.user_id = $1
-          AND ($2::node_status IS NULL OR n.status = $2)
-          AND ($3::node_focus IS NULL OR n.focus = $3)
-          AND ($4::node_kind IS NULL OR n.kind = $4)
-          AND ($5::node_kind IS NULL OR n.kind = $5)
-          AND ($6::node_status IS NULL OR n.status = $6)
-        GROUP BY n.id
-        ORDER BY n.created_at DESC
+            id AS "id!", kind AS "kind!: NodeKind", status AS "status?: NodeStatus",
+            focus AS "focus?: NodeFocus", title AS "title!",
+            progress_current, progress_total, progress_unit, color, notes,
+            created_at AS "created_at!", updated_at AS "updated_at!", started_at, completed_at,
+            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,
+            topic_ids AS "topic_ids!: Vec<Uuid>", blocked AS "blocked!",
+            container_total AS "container_total!", container_done AS "container_done!",
+            checklist_total AS "checklist_total!", checklist_done AS "checklist_done!",
+            last_poked_at,
+            path_progress_done AS "path_progress_done!",
+            path_progress_total AS "path_progress_total!"
+        FROM node_rows
+        WHERE user_id = $1
+          AND ($2::node_status IS NULL OR status = $2)
+          AND ($3::node_focus IS NULL OR focus = $3)
+          AND ($4::node_kind IS NULL OR kind = $4)
+          AND ($5::node_kind IS NULL OR kind = $5)
+          AND ($6::node_status IS NULL OR status = $6)
+        ORDER BY created_at DESC
         "#,
         user_id,
         filters.status as Option<NodeStatus>,
@@ -211,37 +201,19 @@ pub async fn get_node(
         NodeRow,
         r#"
         SELECT
-            n.id, n.kind AS "kind: NodeKind", n.status AS "status?: NodeStatus", n.focus AS "focus?: NodeFocus",
-            n.title, n.progress_current, n.progress_total, n.progress_unit,
-            n.color, n.notes, n.created_at, n.updated_at,
-            (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,
-            CASE WHEN n.status = 'done' THEN (
-                SELECT a.ended_at FROM active_periods a WHERE a.node_id = n.id
-                ORDER BY a.started_at DESC, a.id DESC LIMIT 1
-            ) END AS completed_at,
-            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,
-            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')
-                AS "topic_ids!: Vec<Uuid>",
-            EXISTS (
-                SELECT 1 FROM edges e
-                JOIN nodes req ON req.id = e.to_node_id
-                WHERE e.from_node_id = n.id AND e.kind = 'requires'
-                  AND req.status IS DISTINCT FROM 'done'
-            ) AS "blocked!",
-            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')
-                AS "container_total!",
-            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id
-             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')
-                AS "container_done!",
-            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)
-                AS "checklist_total!",
-            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)
-                AS "checklist_done!",
-            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at
-        FROM nodes n
-        LEFT JOIN node_topics nt ON nt.node_id = n.id
-        WHERE n.user_id = $1 AND n.id = $2
-        GROUP BY n.id
+            id AS "id!", kind AS "kind!: NodeKind", status AS "status?: NodeStatus",
+            focus AS "focus?: NodeFocus", title AS "title!",
+            progress_current, progress_total, progress_unit, color, notes,
+            created_at AS "created_at!", updated_at AS "updated_at!", started_at, completed_at,
+            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,
+            topic_ids AS "topic_ids!: Vec<Uuid>", blocked AS "blocked!",
+            container_total AS "container_total!", container_done AS "container_done!",
+            checklist_total AS "checklist_total!", checklist_done AS "checklist_done!",
+            last_poked_at,
+            path_progress_done AS "path_progress_done!",
+            path_progress_total AS "path_progress_total!"
+        FROM node_rows
+        WHERE user_id = $1 AND id = $2
         "#,
         user_id,
         node_id,

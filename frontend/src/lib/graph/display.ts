@@ -157,12 +157,17 @@ export function fromDateInput(value: string): string | null {
  */
 export function progressOf(
 	node: NodeResponse
-): { done: number; total: number; unit: 'tracked' | 'tasks' | 'children' } | null {
+): { done: number; total: number; unit: 'tracked' | 'tasks' | 'overall' | 'children' } | null {
 	if (node.kind === 'study' && node.progress_current !== null && node.progress_total !== null) {
 		return { done: node.progress_current, total: node.progress_total, unit: 'tracked' };
 	}
 	if (node.kind === 'project' && node.checklist_progress) {
 		return { ...node.checklist_progress, unit: 'tasks' };
+	}
+	// A path's bar is its overall progress (every counter inside it summed),
+	// falling back to how many of its nodes are done.
+	if (node.kind === 'path' && node.path_progress) {
+		return { ...node.path_progress, unit: 'overall' };
 	}
 	if (node.kind === 'path' && node.container_progress) {
 		return { ...node.container_progress, unit: 'children' };
@@ -189,13 +194,22 @@ export function kindChangeLosses(node: NodeResponse, kind: NodeResponse['kind'])
 	return losses;
 }
 
-/** "15 / 30 videos" (unit label optional), "3 / 5 tasks", "1 / 2 done", or null. */
+/**
+ * "15 / 30 videos" (unit label optional), "3 / 5 tasks", "1 / 2 done", or
+ * null. A path with overall progress reads "15 / 20 · 1 / 2 done".
+ */
 export function progressText(node: NodeResponse): string | null {
 	const progress = progressOf(node);
 	if (!progress) return null;
+	if (progress.unit === 'overall') {
+		const count = node.container_progress;
+		const done = count ? ` · ${count.done} / ${count.total} done` : '';
+		return `${progress.done} / ${progress.total}${done}`;
+	}
 	const suffix = {
 		tracked: node.progress_unit ? ` ${node.progress_unit}` : '',
 		tasks: ' tasks',
+		overall: '',
 		children: ' done'
 	}[progress.unit];
 	return `${progress.done} / ${progress.total}${suffix}`;

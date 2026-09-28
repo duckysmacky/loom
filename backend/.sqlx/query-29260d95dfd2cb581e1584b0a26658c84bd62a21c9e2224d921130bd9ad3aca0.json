@@ -1,22 +1,22 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            n.id, n.kind AS \"kind: NodeKind\", n.status AS \"status?: NodeStatus\", n.focus AS \"focus?: NodeFocus\",\n            n.title, n.progress_current, n.progress_total, n.progress_unit,\n            n.color, n.notes, n.created_at, n.updated_at,\n            (SELECT MIN(a.started_at) FROM active_periods a WHERE a.node_id = n.id) AS started_at,\n            CASE WHEN n.status = 'done' THEN (\n                SELECT a.ended_at FROM active_periods a WHERE a.node_id = n.id\n                ORDER BY a.started_at DESC, a.id DESC LIMIT 1\n            ) END AS completed_at,\n            n.canvas_x, n.canvas_y, n.canvas_width, n.canvas_height, n.sort_order,\n            COALESCE(array_agg(nt.topic_id) FILTER (WHERE nt.topic_id IS NOT NULL), '{}')\n                AS \"topic_ids!: Vec<Uuid>\",\n            EXISTS (\n                SELECT 1 FROM edges e\n                JOIN nodes req ON req.id = e.to_node_id\n                WHERE e.from_node_id = n.id AND e.kind = 'requires'\n                  AND req.status IS DISTINCT FROM 'done'\n            ) AS \"blocked!\",\n            (SELECT COUNT(*) FROM edges pe WHERE pe.to_node_id = n.id AND pe.kind = 'part_of')\n                AS \"container_total!\",\n            (SELECT COUNT(*) FROM edges pe JOIN nodes child ON child.id = pe.from_node_id\n             WHERE pe.to_node_id = n.id AND pe.kind = 'part_of' AND child.status = 'done')\n                AS \"container_done!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id)\n                AS \"checklist_total!\",\n            (SELECT COUNT(*) FROM checklist_items ci WHERE ci.node_id = n.id AND ci.done)\n                AS \"checklist_done!\",\n            (SELECT MAX(poked_at) FROM pokes WHERE node_id = n.id) AS last_poked_at\n        FROM nodes n\n        LEFT JOIN node_topics nt ON nt.node_id = n.id\n        WHERE n.user_id = $1 AND n.id = $2\n        GROUP BY n.id\n        ",
+  "query": "\n        SELECT\n            id AS \"id!\", kind AS \"kind!: NodeKind\", status AS \"status?: NodeStatus\",\n            focus AS \"focus?: NodeFocus\", title AS \"title!\",\n            progress_current, progress_total, progress_unit, color, notes,\n            created_at AS \"created_at!\", updated_at AS \"updated_at!\", started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,\n            topic_ids AS \"topic_ids!: Vec<Uuid>\", blocked AS \"blocked!\",\n            container_total AS \"container_total!\", container_done AS \"container_done!\",\n            checklist_total AS \"checklist_total!\", checklist_done AS \"checklist_done!\",\n            last_poked_at,\n            path_progress_done AS \"path_progress_done!\",\n            path_progress_total AS \"path_progress_total!\"\n        FROM node_rows\n        WHERE user_id = $1 AND id = $2\n        ",
   "describe": {
     "columns": [
       {
         "ordinal": 0,
-        "name": "id",
+        "name": "id!",
         "type_info": "Uuid",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "id"
           }
         }
       },
       {
         "ordinal": 1,
-        "name": "kind: NodeKind",
+        "name": "kind!: NodeKind",
         "type_info": {
           "Custom": {
             "name": "node_kind",
@@ -32,7 +32,7 @@
         },
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "kind"
           }
         }
@@ -57,7 +57,7 @@
         },
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "status"
           }
         }
@@ -79,18 +79,18 @@
         },
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "focus"
           }
         }
       },
       {
         "ordinal": 4,
-        "name": "title",
+        "name": "title!",
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "title"
           }
         }
@@ -101,7 +101,7 @@
         "type_info": "Int4",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "progress_current"
           }
         }
@@ -112,7 +112,7 @@
         "type_info": "Int4",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "progress_total"
           }
         }
@@ -123,7 +123,7 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "progress_unit"
           }
         }
@@ -134,7 +134,7 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "color"
           }
         }
@@ -145,29 +145,29 @@
         "type_info": "Text",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "notes"
           }
         }
       },
       {
         "ordinal": 10,
-        "name": "created_at",
+        "name": "created_at!",
         "type_info": "Timestamptz",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "created_at"
           }
         }
       },
       {
         "ordinal": 11,
-        "name": "updated_at",
+        "name": "updated_at!",
         "type_info": "Timestamptz",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "updated_at"
           }
         }
@@ -176,13 +176,23 @@
         "ordinal": 12,
         "name": "started_at",
         "type_info": "Timestamptz",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "started_at"
+          }
+        }
       },
       {
         "ordinal": 13,
         "name": "completed_at",
         "type_info": "Timestamptz",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "completed_at"
+          }
+        }
       },
       {
         "ordinal": 14,
@@ -190,7 +200,7 @@
         "type_info": "Float8",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "canvas_x"
           }
         }
@@ -201,7 +211,7 @@
         "type_info": "Float8",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "canvas_y"
           }
         }
@@ -212,7 +222,7 @@
         "type_info": "Float8",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "canvas_width"
           }
         }
@@ -223,7 +233,7 @@
         "type_info": "Float8",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "canvas_height"
           }
         }
@@ -234,7 +244,7 @@
         "type_info": "Int4",
         "origin": {
           "Table": {
-            "table": "nodes",
+            "table": "node_rows",
             "name": "sort_order"
           }
         }
@@ -243,43 +253,100 @@
         "ordinal": 19,
         "name": "topic_ids!: Vec<Uuid>",
         "type_info": "UuidArray",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "topic_ids"
+          }
+        }
       },
       {
         "ordinal": 20,
         "name": "blocked!",
         "type_info": "Bool",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "blocked"
+          }
+        }
       },
       {
         "ordinal": 21,
         "name": "container_total!",
         "type_info": "Int8",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "container_total"
+          }
+        }
       },
       {
         "ordinal": 22,
         "name": "container_done!",
         "type_info": "Int8",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "container_done"
+          }
+        }
       },
       {
         "ordinal": 23,
         "name": "checklist_total!",
         "type_info": "Int8",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "checklist_total"
+          }
+        }
       },
       {
         "ordinal": 24,
         "name": "checklist_done!",
         "type_info": "Int8",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "checklist_done"
+          }
+        }
       },
       {
         "ordinal": 25,
         "name": "last_poked_at",
         "type_info": "Timestamptz",
-        "origin": "Expression"
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "last_poked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "path_progress_done!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "path_progress_done"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "path_progress_total!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "path_progress_total"
+          }
+        }
       }
     ],
     "parameters": {
@@ -289,33 +356,35 @@
       ]
     },
     "nullable": [
-      false,
-      false,
-      true,
-      true,
-      false,
       true,
       true,
       true,
       true,
       true,
-      false,
-      false,
-      null,
-      null,
       true,
       true,
       true,
       true,
       true,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null,
-      null
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
     ]
   },
-  "hash": "fccafb6989a8a8aae28dd080a44307c1bc2128462377d535a5bf1bf13c397f1c"
+  "hash": "29260d95dfd2cb581e1584b0a26658c84bd62a21c9e2224d921130bd9ad3aca0"
 }

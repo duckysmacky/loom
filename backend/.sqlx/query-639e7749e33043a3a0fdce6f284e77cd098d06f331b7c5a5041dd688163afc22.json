@@ -1,0 +1,457 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT\n            id AS \"id!\", kind AS \"kind!: NodeKind\", status AS \"status?: NodeStatus\",\n            focus AS \"focus?: NodeFocus\", title AS \"title!\",\n            progress_current, progress_total, progress_unit, color, notes,\n            created_at AS \"created_at!\", updated_at AS \"updated_at!\", started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,\n            topic_ids AS \"topic_ids!: Vec<Uuid>\", blocked AS \"blocked!\",\n            container_total AS \"container_total!\", container_done AS \"container_done!\",\n            checklist_total AS \"checklist_total!\", checklist_done AS \"checklist_done!\",\n            last_poked_at,\n            path_progress_done AS \"path_progress_done!\",\n            path_progress_total AS \"path_progress_total!\"\n        FROM node_rows\n        WHERE user_id = $1\n          AND ($2::node_status IS NULL OR status = $2)\n          AND ($3::node_focus IS NULL OR focus = $3)\n          AND ($4::node_kind IS NULL OR kind = $4)\n          AND ($5::node_kind IS NULL OR kind = $5)\n          AND ($6::node_status IS NULL OR status = $6)\n        ORDER BY created_at DESC\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id!",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "kind!: NodeKind",
+        "type_info": {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "kind"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "status?: NodeStatus",
+        "type_info": {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "focus?: NodeFocus",
+        "type_info": {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "focus"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "title!",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "title"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "progress_current",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "progress_current"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "progress_total",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "progress_total"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "progress_unit",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "progress_unit"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "color",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "color"
+          }
+        }
+      },
+      {
+        "ordinal": 9,
+        "name": "notes",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "notes"
+          }
+        }
+      },
+      {
+        "ordinal": 10,
+        "name": "created_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 11,
+        "name": "updated_at!",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "updated_at"
+          }
+        }
+      },
+      {
+        "ordinal": 12,
+        "name": "started_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "started_at"
+          }
+        }
+      },
+      {
+        "ordinal": 13,
+        "name": "completed_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "completed_at"
+          }
+        }
+      },
+      {
+        "ordinal": 14,
+        "name": "canvas_x",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "canvas_x"
+          }
+        }
+      },
+      {
+        "ordinal": 15,
+        "name": "canvas_y",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "canvas_y"
+          }
+        }
+      },
+      {
+        "ordinal": 16,
+        "name": "canvas_width",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "canvas_width"
+          }
+        }
+      },
+      {
+        "ordinal": 17,
+        "name": "canvas_height",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "canvas_height"
+          }
+        }
+      },
+      {
+        "ordinal": 18,
+        "name": "sort_order",
+        "type_info": "Int4",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "sort_order"
+          }
+        }
+      },
+      {
+        "ordinal": 19,
+        "name": "topic_ids!: Vec<Uuid>",
+        "type_info": "UuidArray",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "topic_ids"
+          }
+        }
+      },
+      {
+        "ordinal": 20,
+        "name": "blocked!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "blocked"
+          }
+        }
+      },
+      {
+        "ordinal": 21,
+        "name": "container_total!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "container_total"
+          }
+        }
+      },
+      {
+        "ordinal": 22,
+        "name": "container_done!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "container_done"
+          }
+        }
+      },
+      {
+        "ordinal": 23,
+        "name": "checklist_total!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "checklist_total"
+          }
+        }
+      },
+      {
+        "ordinal": 24,
+        "name": "checklist_done!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "checklist_done"
+          }
+        }
+      },
+      {
+        "ordinal": 25,
+        "name": "last_poked_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "last_poked_at"
+          }
+        }
+      },
+      {
+        "ordinal": 26,
+        "name": "path_progress_done!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "path_progress_done"
+          }
+        }
+      },
+      {
+        "ordinal": 27,
+        "name": "path_progress_total!",
+        "type_info": "Int8",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "path_progress_total"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done",
+                "archived"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": [
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true,
+      true
+    ]
+  },
+  "hash": "639e7749e33043a3a0fdce6f284e77cd098d06f331b7c5a5041dd688163afc22"
+}

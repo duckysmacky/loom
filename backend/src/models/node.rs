@@ -41,7 +41,8 @@ pub enum NodeFocus {
 }
 
 /// A derived done/total ratio: `container_progress` counts `part_of` children,
-/// `checklist_progress` counts checklist items. Distinct from
+/// `checklist_progress` counts checklist items, `path_progress` sums the
+/// counters of everything inside a path. Distinct from
 /// `progress_current`/`progress_total`, which are real user-editable columns
 /// (e.g. a study's "15 of 30 videos").
 #[derive(Debug, Clone, Copy, Serialize, TS)]
@@ -95,6 +96,9 @@ pub struct NodeResponse {
     pub blocked: bool,
     pub container_progress: Option<Progress>,
     pub checklist_progress: Option<Progress>,
+    /// Derived, paths only: every study counter and project checklist inside
+    /// it (nested paths included, ideas skipped) summed.
+    pub path_progress: Option<Progress>,
     pub last_poked_at: Option<DateTime<Utc>>,
 }
 
