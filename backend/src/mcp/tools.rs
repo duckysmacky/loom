@@ -249,7 +249,7 @@ impl LoomServer {
     }
 
     /// Dashboard summary: counts by status/kind, blocked count, every active
-    /// node (primary focus first, unblocked before blocked), stale nodes,
+    /// non-path node (primary focus first, unblocked before blocked), stale nodes,
     /// recent ideas and paths.
     #[tool(annotations(title = "Get overview", read_only_hint = true))]
     async fn loom_get_overview(
