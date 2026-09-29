@@ -429,23 +429,23 @@
 		const { source, target } = pendingConnection;
 		const options: { label: string; request: CreateEdgeRequest }[] = [
 			{
-				label: `${title(target)} requires ${title(source)}`,
+				label: 'Required by',
 				request: { from_node_id: target, to_node_id: source, kind: 'requires' }
 			},
 			{
-				label: `${title(source)} comes before ${title(target)}`,
+				label: 'Precedes',
 				request: { from_node_id: source, to_node_id: target, kind: 'precedes' }
 			},
 			...(graph.nodeById.get(target)?.kind === 'path'
 				? [
 						{
-							label: `${title(source)} goes inside path ${title(target)}`,
+							label: 'Part of',
 							request: { from_node_id: source, to_node_id: target, kind: 'part_of' as const }
 						}
 					]
 				: []),
 			{
-				label: `${title(source)} is related to ${title(target)}`,
+				label: 'Related',
 				request: { from_node_id: source, to_node_id: target, kind: 'related' }
 			}
 		];
@@ -533,10 +533,13 @@
 	width={440}
 >
 	<div class="picker">
-		<div class="label">Add connection</div>
+		<div class="heading">
+			{title(pendingConnection?.source)}
+			<span class="arrow">→</span>
+			{title(pendingConnection?.target)}
+		</div>
 		{#each connectionOptions as option (option.request.kind)}
 			<button type="button" class="option" onclick={() => createEdge(option.request)}>
-				<span class="kind">{option.request.kind.replace('_', ' ')}</span>
 				{option.label}
 			</button>
 		{/each}
@@ -634,14 +637,18 @@
 		gap: 8px;
 	}
 
-	.picker .label {
+	.heading {
 		margin-bottom: 6px;
+		font: 700 15px/1.3 var(--font-display);
+		color: var(--ink);
+		overflow-wrap: anywhere;
+	}
+
+	.arrow {
+		color: var(--ink-2);
 	}
 
 	.option {
-		display: flex;
-		flex-direction: column;
-		gap: 5px;
 		text-align: left;
 		padding: 11px 13px;
 		border: var(--border-width-hair) solid var(--line);
@@ -652,13 +659,6 @@
 
 	.option:hover {
 		border-color: var(--ink);
-	}
-
-	.kind {
-		font: 700 9.5px/1 var(--font-mono);
-		letter-spacing: 0.12em;
-		text-transform: uppercase;
-		color: var(--ink-2);
 	}
 
 	.actions {
