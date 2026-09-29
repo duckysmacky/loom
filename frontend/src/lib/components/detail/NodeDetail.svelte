@@ -7,6 +7,7 @@
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import DateInput from '$lib/components/ui/DateInput.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -311,27 +312,21 @@
 						<div class="dates">
 							<label class="control">
 								<span class="label">Started</span>
-								<input
-									class="field"
-									type="date"
+								<DateInput
 									value={toDateInput(node.started_at)}
 									disabled={node.kind === 'path'}
-									onchange={(event) =>
-										update(node, { started_at: fromDateInput(event.currentTarget.value) })}
+									onchange={(value) => update(node, { started_at: fromDateInput(value) })}
 								/>
 							</label>
 							<label class="control">
 								<span class="label">Completed</span>
-								<input
-									class="field"
-									type="date"
+								<DateInput
 									value={toDateInput(node.completed_at)}
 									disabled={node.kind === 'path' || node.status !== 'done'}
 									title={node.status === 'done'
 										? undefined
 										: 'Only done nodes have a completion date'}
-									onchange={(event) =>
-										update(node, { completed_at: fromDateInput(event.currentTarget.value) })}
+									onchange={(value) => update(node, { completed_at: fromDateInput(value) })}
 								/>
 							</label>
 						</div>
@@ -553,7 +548,7 @@
 		gap: 12px;
 	}
 
-	.dates .field {
+	.dates :global(.field) {
 		padding: 7px 10px;
 		font-size: 13px;
 		min-width: 0;

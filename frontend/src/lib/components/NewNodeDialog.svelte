@@ -2,6 +2,7 @@
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Chip from '$lib/components/ui/Chip.svelte';
+	import DateInput from '$lib/components/ui/DateInput.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import TopicToggles from '$lib/components/TopicToggles.svelte';
@@ -209,7 +210,7 @@
 				{#if kind !== 'path'}
 					<label class="group">
 						<span class="label">Started</span>
-						<input class="field" type="date" bind:value={started} />
+						<DateInput bind:value={started} />
 					</label>
 				{/if}
 			</div>

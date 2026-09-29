@@ -156,6 +156,31 @@ export function toDateInput(iso: string | null): string {
 	return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
+/** `yyyy-mm-dd` → `dd.mm.yyyy` for display; empty → empty. */
+export function isoDateToDisplay(value: string): string {
+	if (!value) return '';
+	const [year, month, day] = value.split('-');
+	return `${day}.${month}.${year}`;
+}
+
+/**
+ * Typed `dd.mm.yyyy` (`/` and `-` also accepted, day/month may be one digit) →
+ * `yyyy-mm-dd`. Empty → empty; unparsable or impossible dates (31.02.2026) → null.
+ */
+export function displayToIsoDate(text: string): string | null {
+	const trimmed = text.trim();
+	if (!trimmed) return '';
+	const match = /^(\d{1,2})[./-](\d{1,2})[./-](\d{4})$/.exec(trimmed);
+	if (!match) return null;
+	const [day, month, year] = [Number(match[1]), Number(match[2]), Number(match[3])];
+	const date = new Date(year, month - 1, day);
+	if (date.getFullYear() !== year || date.getMonth() !== month - 1 || date.getDate() !== day) {
+		return null;
+	}
+	const pad = (value: number) => String(value).padStart(2, '0');
+	return `${year}-${pad(month)}-${pad(day)}`;
+}
+
 /** `yyyy-mm-dd` from a date input → ISO timestamp at local midnight; empty → null. */
 export function fromDateInput(value: string): string | null {
 	return value ? new Date(`${value}T00:00:00`).toISOString() : null;

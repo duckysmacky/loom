@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { slide } from 'svelte/transition';
 	import { periodsApi } from '$lib/api/endpoints';
+	import DateInput from '$lib/components/ui/DateInput.svelte';
 	import { fromDateInput, toDateInput } from '$lib/graph/display';
 	import { ms } from '$lib/motion';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -57,21 +58,19 @@
 					{#if periods.length > 1}
 						<span class="index">{index + 1}</span>
 					{/if}
-					<input
-						class="field date"
-						type="date"
-						aria-label="Started"
+					<DateInput
+						compact
+						label="Started"
 						value={toDateInput(period.started_at)}
-						onchange={(event) => setStarted(period, event.currentTarget.value)}
+						onchange={(value) => setStarted(period, value)}
 					/>
 					<span class="arrow">→</span>
-					<input
-						class="field date"
-						type="date"
-						aria-label="Ended (blank = ongoing)"
+					<DateInput
+						compact
+						label="Ended (blank = ongoing)"
 						min={toDateInput(period.started_at)}
 						value={toDateInput(period.ended_at)}
-						onchange={(event) => setEnded(period, event.currentTarget.value)}
+						onchange={(value) => setEnded(period, value)}
 					/>
 					<button
 						type="button"
@@ -125,11 +124,6 @@
 
 	.item:hover {
 		background: var(--surface-2);
-	}
-
-	.date {
-		padding: 5px 6px;
-		font-size: 12px;
 	}
 
 	.arrow {
