@@ -1,6 +1,7 @@
 <script lang="ts">
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import AnimatedNumber from '$lib/components/ui/AnimatedNumber.svelte';
+	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
@@ -66,7 +67,7 @@
 		dashboard
 			? [
 					{ label: 'Total nodes', value: dashboard.counts.total, tone: '' },
-					{ label: 'Active', value: dashboard.counts.by_status.active, tone: '' },
+					{ label: 'Active', value: dashboard.active.length, tone: '' },
 					{ label: 'Blocked', value: dashboard.counts.blocked, tone: 'warn' },
 					{ label: 'Ideas', value: dashboard.counts.ideas, tone: '' },
 					{ label: 'Done', value: dashboard.counts.by_status.done, tone: 'ok' }
@@ -215,6 +216,15 @@
 			{/if}
 			<button type="button" class="path" onclick={() => openNode(node.id)}>
 				<span class="row-title">{node.title}</span>
+				<span class="path-tags">
+					<Badge status={node.status} blocked={node.blocked} />
+					{#if node.focus}
+						<span class="focus">
+							<span class="tier-bar" style:background={TIER_COLOR[node.focus]}></span>
+							{node.focus}
+						</span>
+					{/if}
+				</span>
 				{#if progress}
 					<span class="path-progress">
 						<ProgressBar value={progress[0]} total={progress[1]} height={8} />
@@ -454,6 +464,22 @@
 
 	.path-child:hover .row-title {
 		color: var(--accent);
+	}
+
+	.path-tags {
+		display: flex;
+		align-items: center;
+		gap: 10px;
+	}
+
+	.focus {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		font: 700 10px/1 var(--font-mono);
+		letter-spacing: 0.1em;
+		text-transform: uppercase;
+		color: var(--ink-2);
 	}
 
 	.path-progress {

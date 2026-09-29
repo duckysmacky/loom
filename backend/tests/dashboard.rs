@@ -277,7 +277,7 @@ async fn active_list_ranks_by_tier_then_unblocked(pool: PgPool) {
         json!({"kind": "project", "title": "paused", "status": "paused", "focus": "primary"}),
     )
     .await;
-    // A path is active when something inside it is.
+    // A path is active when something inside it is, but never listed here.
     let path = create_node(
         &app,
         &token,
@@ -300,7 +300,7 @@ async fn active_list_ranks_by_tier_then_unblocked(pool: PgPool) {
 
     assert_eq!(
         titles(&dashboard["active"]),
-        vec!["good", "blocked", "secondary", "inside", "path"]
+        vec!["good", "blocked", "secondary", "inside"]
     );
     assert_eq!(dashboard["active"][1]["blocked"], true);
     assert_eq!(dashboard["counts"]["blocked"], 1);

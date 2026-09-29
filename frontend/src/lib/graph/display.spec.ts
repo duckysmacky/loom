@@ -2,8 +2,10 @@ import { describe, expect, it } from 'vitest';
 import {
 	canPoke,
 	accentColor,
+	displayToIsoDate,
 	fromDateInput,
 	incrementedProgress,
+	isoDateToDisplay,
 	kindChangeLosses,
 	isIdea,
 	borderStyle,
@@ -123,6 +125,18 @@ describe('display helpers', () => {
 		expect(fromDateInput('')).toBeNull();
 		expect(toDateInput(fromDateInput('2026-09-02'))).toBe('2026-09-02');
 		expect(toDateInput(new Date('2026-09-02T23:30:00').toISOString())).toBe('2026-09-02');
+	});
+
+	it('shows and parses dates as dd.mm.yyyy', () => {
+		expect(isoDateToDisplay('2026-09-02')).toBe('02.09.2026');
+		expect(isoDateToDisplay('')).toBe('');
+		expect(displayToIsoDate('02.09.2026')).toBe('2026-09-02');
+		expect(displayToIsoDate('2/9/2026')).toBe('2026-09-02');
+		expect(displayToIsoDate(' 02-09-2026 ')).toBe('2026-09-02');
+		expect(displayToIsoDate('')).toBe('');
+		expect(displayToIsoDate('31.02.2026')).toBeNull();
+		expect(displayToIsoDate('09.2026')).toBeNull();
+		expect(displayToIsoDate('02.09.26')).toBeNull();
 	});
 
 	it('takes the first prose line of the notes as the excerpt', () => {

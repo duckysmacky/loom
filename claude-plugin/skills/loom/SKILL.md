@@ -86,7 +86,7 @@ the user what will be lost, and confirm before promoting.
 
 | Tool | Use it to |
 | --- | --- |
-| `loom_get_overview` | Get dashboard counts plus the active (primary focus first), stale and recent-idea nodes and paths. Good for "what am I working on?" |
+| `loom_get_overview` | Get dashboard counts plus the active (non-path, primary focus first), stale and recent-idea nodes and paths. Good for "what am I working on?" |
 | `loom_get_graph` | Get every node, edge and topic. **Start here before any bulk change.** |
 | `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived`), or by a title `search`. |
 | `loom_get_node` | Get one node with its edges both ways, its checklist and recent pokes. |

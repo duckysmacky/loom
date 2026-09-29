@@ -30,12 +30,12 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
         .filter(|node| node.blocked)
         .count() as i64;
 
-    // Everything being worked on (a path is active when something inside it
-    // is): primary tier first, then secondary, background; unblocked before
+    // Everything being worked on, paths aside (they have their own list):
+    // primary tier first, then secondary, background; unblocked before
     // blocked within a tier.
     let mut active: Vec<NodeResponse> = all_nodes
         .iter()
-        .filter(|node| node.status == Some(NodeStatus::Active))
+        .filter(|node| node.status == Some(NodeStatus::Active) && node.kind != NodeKind::Path)
         .cloned()
         .collect();
     // Stable sort - within a rank the listing's newest-first order holds.
