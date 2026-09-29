@@ -94,6 +94,10 @@ Nodes connect with directed edges:
   never blocks; cycles are rejected.
 - **Related** - a soft, non-blocking association.
 
+On the canvas, an unmet `requires` edge always shows in a distinct
+color; turn on "Connection labels" in Settings to also name every edge
+(requires, next, related, part of) in small text above its line.
+
 ### Topics
 
 Free-form tags for filtering, coloring, and grouping nodes - kept
@@ -109,9 +113,9 @@ going stale, with a poke button right there.
 
 ### Views
 
-- **Dashboard** - your active nodes (primary focus first, then secondary
-  and background; unblocked before blocked), what's going stale, your
-  latest ideas, and your paths, at a glance.
+- **Dashboard** - your active nodes grouped by focus tier (primary,
+  secondary, background; unblocked before blocked within each), what's
+  going stale, your latest ideas, and your paths, at a glance.
 - **Organized board** - a card grid, grouped by focus, kind, status,
   or tag.
 - Paths expand and collapse: collapsed (a single card) by default on the
@@ -150,10 +154,10 @@ a dialog to set its real kind, status, and focus in one step.
 
 ### Settings
 
-Account (email, password), appearance (theme, density), topics & tags,
-functionality defaults (default board view, quick-capture defaults,
-poke-from-cards), and connections (MCP server URL, access tokens,
-connected apps).
+Account (email, password), appearance (theme, density, canvas connection
+labels), topics & tags, functionality defaults (default board view,
+quick-capture defaults, poke-from-cards), and connections (MCP 
+server URL, access tokens, connected apps).
 
 ### MCP Server
 
