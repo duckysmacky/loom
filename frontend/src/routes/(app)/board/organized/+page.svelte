@@ -8,7 +8,7 @@
 	import { groupNodes, type Section } from '$lib/graph/grouping';
 	import { dependencyOrder, manualOrder } from '$lib/graph/order';
 	import { matchesOrContainsMatch, parentPathOf } from '$lib/graph/paths';
-	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
+	import { matchesOrganizedFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -44,7 +44,7 @@
 
 	// A path stays visible while anything inside it matches the filters.
 	const isShown = (node: NodeResponse) =>
-		matchesOrContainsMatch(node, ordered, parentOf, matchesBoardFilters);
+		matchesOrContainsMatch(node, ordered, parentOf, matchesOrganizedFilters);
 
 	const childrenOf = (pathId: string) =>
 		ordered.filter((node) => parentOf.get(node.id) === pathId && isShown(node));
