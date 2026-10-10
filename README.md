@@ -3,7 +3,7 @@
 A flexible manager for everything you're building, studying, and dreaming up.
 
 ![License](https://img.shields.io/badge/license-AGPL--3.0-blue)
-![version](https://img.shields.io/badge/version-1.1.0-blue)
+![version](https://img.shields.io/badge/version-1.3.0-blue)
 
 ## Table of contents
 
@@ -214,7 +214,7 @@ All variables live in `.env` (see `.env.example`):
 | `BIND_ADDR` | `0.0.0.0:8080` | Address the backend binds to inside its container - only change if running the binary directly, outside Docker |
 | `RUST_LOG` | `info` | Backend log level |
 | `JWT_SECRET` | - | Signs/verifies JWT access tokens. Generate with `openssl rand -hex 32`. Must be at least 32 bytes - the app refuses to start otherwise |
-| `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. Leave `true` for the first run, then set `false` once your account exists - single-user app, no reason to leave account creation open |
+| `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. |
 | `MCP_ENABLED` | `false` | Turns on the [MCP server](#mcp-server-optional) for AI agents |
 | `PUBLIC_URL` | - | Public origin Loom is served at, e.g. `https://loom.example.com` (no path, no trailing slash). Required when `MCP_ENABLED=true` |
 
