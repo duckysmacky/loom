@@ -1,7 +1,7 @@
 {
   "name": "loom",
   "displayName": "Loom",
-  "version": "1.5.0",
+  "version": "1.3.0",
   "description": "Connect Claude to your self-hosted Loom graph of projects, studies and ideas: read it, plan learning paths, create and update nodes, and log progress.",
   "author": {
     "name": "duckysmacky",
