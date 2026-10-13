@@ -155,6 +155,26 @@
 		</label>
 	</div>
 	<div class="settings-row">
+		<label class="toggle">
+			<span>
+				<span class="row-label">New period on focus change</span>
+				<span class="row-help">
+					Changing the focus of a node with an open active period ends it and starts a new one under
+					the new focus, so the timeline shows focus over time. Off: periods keep their focus until
+					you edit it.
+				</span>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.splitPeriodOnFocusChange}
+				onchange={(event) => {
+					prefs.splitPeriodOnFocusChange = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+	<div class="settings-row">
 		<span>
 			<span class="row-label">Stale after</span>
 			<span class="row-help"

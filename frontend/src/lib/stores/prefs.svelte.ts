@@ -21,6 +21,8 @@ export type Prefs = {
 	pokeSetsActive: boolean;
 	/** Pausing/archiving closes the active period, reactivating opens a new one. */
 	trackActivePeriods: boolean;
+	/** A focus change closes the open active period and starts a new one under the new focus. */
+	splitPeriodOnFocusChange: boolean;
 	/**
 	 * Paths the user expanded/collapsed, keyed `view:pathId` - only toggled
 	 * ones; the rest follow the view's default. Flat, so the shallow merge in
@@ -58,6 +60,7 @@ const DEFAULTS: Prefs = {
 	recentColors: [],
 	pokeSetsActive: false,
 	trackActivePeriods: true,
+	splitPeriodOnFocusChange: false,
 	collapsedPaths: {},
 	autoPlace: false,
 	unplacedPanelOpen: true,

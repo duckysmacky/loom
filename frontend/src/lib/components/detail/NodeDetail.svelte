@@ -66,8 +66,10 @@
 			.catch(() => (pokeCount = null));
 	});
 
-	const update = (current: NodeResponse, patch: Omit<UpdateNodeRequest, 'track_active_periods'>) =>
-		graph.mutate(() => nodesApi.update(current.id, patch));
+	const update = (
+		current: NodeResponse,
+		patch: Omit<UpdateNodeRequest, 'track_active_periods' | 'split_period_on_focus_change'>
+	) => graph.mutate(() => nodesApi.update(current.id, patch));
 
 	function saveTitle(current: NodeResponse) {
 		const title = titleDraft.trim();

@@ -56,15 +56,19 @@ export const nodesApi = {
 		),
 	get: (nodeId: string) => request<NodeResponse>('GET', `/nodes/${nodeId}`),
 	create: (body: CreateNodeRequest) => request<NodeResponse>('POST', '/nodes', body),
-	// `track_active_periods` is added here, not by the caller - it rides on
+	// `track_active_periods` and `split_period_on_focus_change` are added here, not by the caller - it rides on
 	// every PATCH (harmless when status isn't in the body; the backend only
 	// acts on it for a real active-boundary transition), keeping the
 	// "record active periods" setting a single frontend choke point instead
 	// of something every status-changing call site has to remember to add.
-	update: (nodeId: string, body: Omit<UpdateNodeRequest, 'track_active_periods'>) =>
+	update: (
+		nodeId: string,
+		body: Omit<UpdateNodeRequest, 'track_active_periods' | 'split_period_on_focus_change'>
+	) =>
 		request<NodeResponse>('PATCH', `/nodes/${nodeId}`, {
 			...body,
-			track_active_periods: prefs.trackActivePeriods
+			track_active_periods: prefs.trackActivePeriods,
+			split_period_on_focus_change: prefs.splitPeriodOnFocusChange
 		} satisfies UpdateNodeRequest),
 	remove: (nodeId: string) => request<void>('DELETE', `/nodes/${nodeId}`),
 	attachTopic: (nodeId: string, topicId: string) =>
