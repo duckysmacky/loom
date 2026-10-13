@@ -449,10 +449,84 @@ async fn stale_path_uses_pokes_inside(pool: PgPool) {
 
     let (_, dashboard) = send(
         &app,
-        req("GET", "/api/dashboard", Value::Null, Some(&token)),
+        req(
+            "GET",
+            "/api/dashboard?stale_queued=always",
+            Value::Null,
+            Some(&token),
+        ),
     )
     .await;
     let stale = titles(&dashboard["stale"]);
     assert!(stale.contains(&"empty".to_string()));
     assert!(!stale.contains(&"busy".to_string()));
+}
+
+#[sqlx::test]
+async fn stale_modes_and_days_are_configurable(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "stalemodes@example.com").await;
+
+    let queued_never = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "queued-never", "status": "queued"}),
+    )
+    .await;
+    backdate_created_at(&pool, &queued_never, 20).await;
+    let queued_poked = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "queued-poked", "status": "queued"}),
+    )
+    .await;
+    poke_and_backdate(&app, &pool, &token, &queued_poked, 20).await;
+    let paused_poked = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "paused-poked", "status": "paused"}),
+    )
+    .await;
+    poke_and_backdate(&app, &pool, &token, &paused_poked, 20).await;
+    let active_recent = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "active-recent", "status": "active"}),
+    )
+    .await;
+    backdate_created_at(&pool, &active_recent, 10).await;
+
+    let stale_for = |query: &'static str| {
+        let app = app.clone();
+        let token = token.clone();
+        async move {
+            let (_, dashboard) = send(
+                &app,
+                req(
+                    "GET",
+                    &format!("/api/dashboard{query}"),
+                    Value::Null,
+                    Some(&token),
+                ),
+            )
+            .await;
+            let mut stale = titles(&dashboard["stale"]);
+            stale.sort();
+            stale
+        }
+    };
+
+    // Defaults: queued only when poked, paused never.
+    assert_eq!(stale_for("").await, vec!["queued-poked"]);
+    assert_eq!(
+        stale_for("?stale_queued=always&stale_paused=poked").await,
+        vec!["paused-poked", "queued-never", "queued-poked"]
+    );
+    assert!(stale_for("?stale_queued=never").await.is_empty());
+    // A shorter threshold pulls in the 10-day-old active node.
+    assert!(
+        stale_for("?stale_days=7&stale_queued=never")
+            .await
+            .contains(&"active-recent".to_string())
+    );
 }

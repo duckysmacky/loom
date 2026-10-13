@@ -21,6 +21,7 @@ use crate::handlers::extract::{ApiJson, ApiPath, ApiQuery};
 use crate::handlers::{board, checklist, dashboard, edges, nodes, pokes, topics};
 use crate::middleware::auth_user::AuthUser;
 use crate::models::checklist::{CreateChecklistItemRequest, UpdateChecklistItemRequest};
+use crate::models::dashboard::DashboardQuery;
 use crate::models::deserialize_some;
 use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery};
 use crate::models::node::{
@@ -62,8 +63,8 @@ cycles rejected), `related` (soft link).
 Derived, read-only fields: blocked, container_progress (done/total of a path's \
 children, ideas skipped), path_progress (every study counter and project \
 checklist inside a path summed, e.g. 12/15 + 3/5 = 15/20), checklist_progress, \
-last_poked_at. A poke is an \"I worked on this\" log entry; nodes active/queued \
-with no poke for 14 days are stale. Paths can't be poked: a path's \
+last_poked_at. A poke is an \"I worked on this\" log entry; active nodes (and \
+previously poked queued ones) with no poke for 14 days are stale. Paths can't be poked: a path's \
 last_poked_at, started_at and completed_at come from the nodes inside it.
 
 Read before you write: call loom_get_graph or loom_list_nodes to find existing \
@@ -258,7 +259,7 @@ impl LoomServer {
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
         respond(
-            dashboard::get(self.app(), user)
+            dashboard::get(self.app(), user, ApiQuery(DashboardQuery::default()))
                 .await
                 .map(|Json(body)| body),
         )

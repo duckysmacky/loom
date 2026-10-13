@@ -2,6 +2,7 @@
 	import './settings.css';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
+	import type { StaleMode } from '$lib/types/StaleMode';
 </script>
 
 <section class="settings-section">
@@ -152,5 +153,66 @@
 				}}
 			/>
 		</label>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Stale after</span>
+			<span class="row-help"
+				>Days without a poke before a node shows under "Haven't touched in a while" on the
+				dashboard. Active nodes always can.</span
+			>
+		</span>
+		<select
+			aria-label="Stale after"
+			value={prefs.staleDays}
+			onchange={(event) => {
+				prefs.staleDays = Number(event.currentTarget.value);
+				savePrefs();
+			}}
+		>
+			<option value="7">7 days</option>
+			<option value="14">14 days</option>
+			<option value="21">21 days</option>
+			<option value="30">30 days</option>
+			<option value="60">60 days</option>
+		</select>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Stale queued nodes</span>
+			<span class="row-help"
+				>Whether queued nodes appear there. Never-poked ones count from their creation date.</span
+			>
+		</span>
+		<select
+			aria-label="Stale queued nodes"
+			value={prefs.staleQueued}
+			onchange={(event) => {
+				prefs.staleQueued = event.currentTarget.value as StaleMode;
+				savePrefs();
+			}}
+		>
+			<option value="always">Always</option>
+			<option value="poked">Only if poked before</option>
+			<option value="never">Never</option>
+		</select>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Stale paused nodes</span>
+			<span class="row-help">Whether paused nodes appear there.</span>
+		</span>
+		<select
+			aria-label="Stale paused nodes"
+			value={prefs.stalePaused}
+			onchange={(event) => {
+				prefs.stalePaused = event.currentTarget.value as StaleMode;
+				savePrefs();
+			}}
+		>
+			<option value="always">Always</option>
+			<option value="poked">Only if poked before</option>
+			<option value="never">Never</option>
+		</select>
 	</div>
 </section>

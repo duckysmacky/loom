@@ -1,6 +1,7 @@
 import type { Grouping } from '$lib/graph/grouping';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeKind } from '$lib/types/NodeKind';
+import type { StaleMode } from '$lib/types/StaleMode';
 
 /**
  * Per-browser preferences (Settings > Appearance / Functionality). Kept in
@@ -33,6 +34,11 @@ export type Prefs = {
 	pathAutoExpand: boolean;
 	/** Canvas connections carry a small text label (requires / next / related). */
 	showEdgeLabels: boolean;
+	/** Dashboard "Haven't touched in a while": days without a poke before a node counts. */
+	staleDays: number;
+	/** Whether queued / paused nodes can appear there (active ones always can). */
+	staleQueued: StaleMode;
+	stalePaused: StaleMode;
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
@@ -56,7 +62,10 @@ const DEFAULTS: Prefs = {
 	autoPlace: false,
 	unplacedPanelOpen: true,
 	pathAutoExpand: true,
-	showEdgeLabels: false
+	showEdgeLabels: false,
+	staleDays: 14,
+	staleQueued: 'poked',
+	stalePaused: 'never'
 };
 
 function loadPrefs(): Prefs {

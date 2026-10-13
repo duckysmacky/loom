@@ -107,9 +107,11 @@ actually blocks what.
 ### Pokes & staleness
 
 "Poke" a node to log that you worked on it today. It's how "last
-touched" is tracked, independent of any field edit. Anything active or
-queued that hasn't been poked in 14 days shows up on the dashboard as
-going stale, with a poke button right there.
+touched" is tracked, independent of any field edit. Anything active that
+hasn't been poked in 14 days shows up on the dashboard as going stale,
+with a poke button right there. Queued and paused nodes can show up too
+(by default queued only if poked before, paused never), and the number of
+days is adjustable - all under Settings > Functionality.
 
 ### Views
 

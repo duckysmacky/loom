@@ -132,5 +132,14 @@ export const oauthApi = {
 };
 
 export const dashboardApi = {
-	get: () => request<DashboardResponse>('GET', '/dashboard')
+	// Reads the stale-list prefs, so calling it inside an $effect refetches when they change.
+	get: () =>
+		request<DashboardResponse>(
+			'GET',
+			`/dashboard${queryString({
+				stale_days: String(prefs.staleDays),
+				stale_queued: prefs.staleQueued,
+				stale_paused: prefs.stalePaused
+			})}`
+		)
 };

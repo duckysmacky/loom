@@ -17,7 +17,7 @@
 	} from '$lib/graph/display';
 	import { parentPathOf } from '$lib/graph/paths';
 	import { graph } from '$lib/stores/graph.svelte';
-	import { isPathCollapsed, togglePathCollapsed } from '$lib/stores/prefs.svelte';
+	import { isPathCollapsed, prefs, togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
@@ -51,6 +51,12 @@
 			});
 	});
 
+	const staleSummary = $derived.by(() => {
+		const statuses = ['active'];
+		if (prefs.staleQueued !== 'never') statuses.push('queued');
+		if (prefs.stalePaused !== 'never') statuses.push('paused');
+		return `${statuses.join(', ')} - no poke for ${prefs.staleDays}+ days. Poke to keep it.`;
+	});
 	const actionableCount = $derived(dashboard?.active.filter((node) => !node.blocked).length ?? 0);
 	// The active list arrives ordered by tier; split it into one group per tier.
 	const activeTiers = $derived(
@@ -136,7 +142,7 @@
 			<aside class="rail">
 				<div class="panel">
 					<h2 class="panel-title">Haven't touched in a while</h2>
-					<p class="panel-sub">Active or queued, no poke for 14+ days. Poke to keep it.</p>
+					<p class="panel-sub">{staleSummary}</p>
 					{#if dashboard.stale.length}
 						<ul class="rows">
 							{#each dashboard.stale as node (node.id)}

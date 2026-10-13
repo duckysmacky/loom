@@ -67,8 +67,8 @@ criteria.
 - `checklist_progress`
 - `last_poked_at`
 
-**Pokes and staleness.** A **poke** is an "I worked on this" log entry. An `active` or `queued`
-node with no poke for 14 days is **stale**. Paths can't be poked: a path's last touch is the
+**Pokes and staleness.** A **poke** is an "I worked on this" log entry. An `active` node
+(or a previously poked `queued` one) with no poke for 14 days is **stale**. Paths can't be poked: a path's last touch is the
 latest poke on anything inside it.
 
 **Promoting** means changing a node's `kind` in place, keeping the same id and edges. The node

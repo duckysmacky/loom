@@ -98,8 +98,10 @@ once. One graph per account; no collaboration features.
   it). **Started** = the first period's start
   and **Completed** = the last period's end while `done` - both derived,
   never stored; editing them moves those period edges.
-- **Stale:** an active/queued node whose last poke (or creation date)
-  is more than 14 days old.
+- **Stale:** a node whose last poke (or creation date) is older than the
+  threshold (default 14 days). Active nodes always qualify; queued
+  (default: only if poked before) and paused (default: never) follow
+  per-browser prefs sent as `GET /api/dashboard` query params.
 - **Accent:** the user-assigned node color.
 - **Unplaced:** `canvas_x/y` NULL - listed in the canvas's side panel
   instead of drawn (unless the "Auto-place on canvas" setting is on).
