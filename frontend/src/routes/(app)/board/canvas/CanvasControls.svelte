@@ -8,7 +8,7 @@
 	const flow = useSvelteFlow();
 	const initialized = useNodesInitialized();
 
-	const MIN_ZOOM_PERCENT = 20;
+	const MIN_ZOOM_PERCENT = 1;
 	const MAX_ZOOM_PERCENT = 200;
 
 	// Typed zoom: the field follows the live zoom until the user edits it.
