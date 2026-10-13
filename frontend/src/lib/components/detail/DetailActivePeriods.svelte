@@ -7,6 +7,7 @@
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
 	import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
+	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	/**
@@ -37,6 +38,10 @@
 		if (started_at) graph.mutate(() => periodsApi.update(period.id, { started_at }));
 	}
 
+	function setFocus(period: ActivePeriodResponse, focus: NodeFocus) {
+		graph.mutate(() => periodsApi.update(period.id, { focus }));
+	}
+
 	function setEnded(period: ActivePeriodResponse, value: string) {
 		graph.mutate(() => periodsApi.update(period.id, { ended_at: fromDateInput(value) }));
 	}
@@ -48,7 +53,8 @@
 		<button type="button" class="link" onclick={addPeriod}>+ Add period</button>
 	</div>
 	<p class="explain">
-		The first period's start is the Started date, the last one's end the Completed date.
+		The first period's start is the Started date, the last one's end the Completed date. Each period
+		records the node's focus.
 	</p>
 
 	{#if periods.length}
@@ -72,6 +78,16 @@
 						value={toDateInput(period.ended_at)}
 						onchange={(value) => setEnded(period, value)}
 					/>
+					<select
+						class="focus"
+						aria-label="Focus during this period"
+						value={period.focus}
+						onchange={(event) => setFocus(period, event.currentTarget.value as NodeFocus)}
+					>
+						<option value="primary">primary</option>
+						<option value="secondary">secondary</option>
+						<option value="background">background</option>
+					</select>
 					<button
 						type="button"
 						class="remove"
@@ -129,6 +145,11 @@
 	.arrow {
 		flex: none;
 		color: var(--ink-2);
+	}
+
+	.focus {
+		flex: none;
+		font: 600 11px/1 var(--font-display);
 	}
 
 	.index {

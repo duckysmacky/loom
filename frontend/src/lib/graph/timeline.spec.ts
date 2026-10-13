@@ -42,7 +42,8 @@ describe('timeline math', () => {
 		expect(barSpan(makeNode({ started_at: null }), range, 10, 50 * DAY_MS)).toBeNull();
 		expect(barSpan(makeNode({ started_at: started }), range, 10, 60 * DAY_MS)).toEqual({
 			left: 100,
-			width: 500
+			width: 500,
+			focus: 'secondary'
 		});
 		expect(
 			barSpan(
@@ -51,7 +52,7 @@ describe('timeline math', () => {
 				10,
 				60 * DAY_MS
 			)
-		).toEqual({ left: 100, width: 200 });
+		).toEqual({ left: 100, width: 200, focus: 'secondary' });
 		// A node started today is still visible as a sliver.
 		expect(barSpan(makeNode({ started_at: started }), range, 10, 10 * DAY_MS)!.width).toBe(4);
 	});
@@ -71,11 +72,15 @@ describe('timeline math', () => {
 				started_at: new Date(10 * DAY_MS).toISOString(),
 				ended_at: new Date(20 * DAY_MS).toISOString()
 			}),
-			makePeriod({ started_at: new Date(40 * DAY_MS).toISOString(), ended_at: null })
+			makePeriod({
+				started_at: new Date(40 * DAY_MS).toISOString(),
+				ended_at: null,
+				focus: 'primary'
+			})
 		];
 		expect(periodSpans(periods, range, 10, 60 * DAY_MS)).toEqual([
-			{ left: 100, width: 100 },
-			{ left: 400, width: 200 }
+			{ left: 100, width: 100, focus: 'secondary' },
+			{ left: 400, width: 200, focus: 'primary' }
 		]);
 	});
 

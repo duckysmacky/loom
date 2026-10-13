@@ -40,6 +40,7 @@ export function makePeriod(overrides: Partial<ActivePeriodResponse> = {}): Activ
 		node_id: 'node',
 		started_at: '2026-09-01T00:00:00Z',
 		ended_at: null,
+		focus: 'secondary',
 		...overrides
 	};
 }

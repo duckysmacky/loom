@@ -18,6 +18,7 @@
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
 	import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
+	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import type { TimelinePokeResponse } from '$lib/types/TimelinePokeResponse';
 
@@ -157,11 +158,13 @@
 		panning = false;
 	}
 
-	function barTone(node: NodeResponse): string {
-		if (node.status === 'done') return 'done';
-		if (node.blocked) return 'blocked';
+	// Done / blocked describe where the node is now, so only its latest bar
+	// carries them; earlier bars keep the focus the node had back then.
+	function barTone(node: NodeResponse, focus: NodeFocus | null, isLatest: boolean): string {
+		if (isLatest && node.status === 'done') return 'done';
+		if (isLatest && node.blocked) return 'blocked';
 		// Styled by focus, not status: a paused node was active back then.
-		return node.focus ?? 'background';
+		return focus ?? 'background';
 	}
 
 	function barCaption(node: NodeResponse): string {
@@ -250,18 +253,18 @@
 					<div class="track" class:days={showDays} style:width="{axisWidth}px">
 						{#each spans as span, index (index)}
 							{@const caption = periods[index] ? periodCaption(periods[index]) : barCaption(node)}
-							{@const tone = barTone(node)}
+							{@const tone = barTone(node, span.focus, index === spans.length - 1)}
 							<button
 								type="button"
 								class="bar {tone}"
 								style:left="{span.left}px"
 								style:width="{span.width}px"
-								title="{node.title} · {node.status ?? node.kind} · {node.focus ??
+								title="{node.title} · {node.status ?? node.kind} · {span.focus ??
 									node.kind} · {caption}"
 								onclick={() => openNode(node.id)}
 							>
 								<span
-									>{tone === 'blocked' || tone === 'done' ? tone : (node.focus ?? node.kind)}</span
+									>{tone === 'blocked' || tone === 'done' ? tone : (span.focus ?? node.kind)}</span
 								>
 							</button>
 						{/each}

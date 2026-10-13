@@ -1,4 +1,5 @@
 import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
+import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 
 export const DAY_MS = 86_400_000;
@@ -60,10 +61,15 @@ export function barSpan(
 	const start = Date.parse(node.started_at);
 	const finish = node.completed_at ? Date.parse(node.completed_at) : now;
 	const left = xOf(start, range, pxPerDay);
-	return { left, width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4) };
+	return {
+		left,
+		width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4),
+		focus: node.focus ?? null
+	};
 }
 
-export type Span = { left: number; width: number };
+/** `focus` is the tier the node had during the span - what the timeline styles it by. */
+export type Span = { left: number; width: number; focus: NodeFocus | null };
 
 /** One span per active period - an open one (`ended_at` null) runs to `now`. */
 export function periodSpans(
@@ -76,7 +82,11 @@ export function periodSpans(
 		const start = Date.parse(period.started_at);
 		const finish = period.ended_at ? Date.parse(period.ended_at) : now;
 		const left = xOf(start, range, pxPerDay);
-		return { left, width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4) };
+		return {
+			left,
+			width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4),
+			focus: period.focus
+		};
 	});
 }
 
