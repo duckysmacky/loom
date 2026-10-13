@@ -158,8 +158,10 @@
 	}
 
 	function barTone(node: NodeResponse): string {
-		if (node.blocked && node.status !== 'done') return 'blocked';
-		return node.status ?? node.kind;
+		if (node.status === 'done') return 'done';
+		if (node.blocked) return 'blocked';
+		// Styled by focus, not status: a paused node was active back then.
+		return node.focus ?? 'background';
 	}
 
 	function barCaption(node: NodeResponse): string {
@@ -248,15 +250,19 @@
 					<div class="track" class:days={showDays} style:width="{axisWidth}px">
 						{#each spans as span, index (index)}
 							{@const caption = periods[index] ? periodCaption(periods[index]) : barCaption(node)}
+							{@const tone = barTone(node)}
 							<button
 								type="button"
-								class="bar {barTone(node)}"
+								class="bar {tone}"
 								style:left="{span.left}px"
 								style:width="{span.width}px"
-								title="{node.title} · {node.status ?? node.kind} · {caption}"
+								title="{node.title} · {node.status ?? node.kind} · {node.focus ??
+									node.kind} · {caption}"
 								onclick={() => openNode(node.id)}
 							>
-								<span>{barTone(node)}</span>
+								<span
+									>{tone === 'blocked' || tone === 'done' ? tone : (node.focus ?? node.kind)}</span
+								>
 							</button>
 						{/each}
 						{#each pokeXs as x, index (index)}
@@ -276,9 +282,10 @@
 	</div>
 
 	<div class="legend">
-		<span><span class="swatch active"></span>active</span>
+		<span><span class="swatch primary"></span>primary focus</span>
+		<span><span class="swatch secondary"></span>secondary focus</span>
+		<span><span class="swatch background"></span>background focus / idea</span>
 		<span><span class="swatch blocked"></span>blocked — waiting on a requirement</span>
-		<span><span class="swatch paused"></span>paused / queued</span>
 		<span><span class="swatch done"></span>done</span>
 		<span><span class="tick"></span>poke</span>
 		<span><span class="today-mark"></span>today</span>
@@ -516,10 +523,12 @@
 		color: var(--ink);
 	}
 
-	.bar.paused,
-	.bar.queued,
-	.bar.idea,
-	.bar.archived {
+	.bar.secondary {
+		background: var(--ink-2);
+		color: var(--on-ink);
+	}
+
+	.bar.background {
 		background: var(--surface);
 		border: 1.5px dashed var(--ink-2);
 		color: var(--ink-2);
@@ -580,7 +589,11 @@
 		background: var(--hazard);
 	}
 
-	.swatch.paused {
+	.swatch.secondary {
+		background: var(--ink-2);
+	}
+
+	.swatch.background {
 		background: none;
 		border: 1.5px dashed var(--ink-2);
 	}
