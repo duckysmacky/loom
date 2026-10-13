@@ -1,20 +1,21 @@
+use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::dashboard::{DashboardCounts, DashboardResponse, KindCounts, StatusCounts};
 use crate::models::node::{NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus};
-use crate::repo::nodes::{self, NodeRow};
+use crate::repo::nodes;
 
 const RECENT_IDEAS_LIMIT: usize = 5;
+const STALE_AFTER_DAYS: i64 = 14;
 
-/// Assembles the whole dashboard. Everything except the counts and the
-/// stale list is carved out of one full node listing - a single-user graph
-/// is small, and it keeps the `blocked`/`container_progress` derivation in
-/// the one query that already computes it.
+/// Assembles the whole dashboard, all carved out of one full node listing -
+/// a single-user graph is small, and every extra `node_rows` read re-derives
+/// every path rollup.
 pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResponse, sqlx::Error> {
-    let mut counts = get_counts(user_id, pool).await?;
-    let stale = get_stale(user_id, pool).await?;
     let all_nodes = nodes::list_nodes(user_id, pool, &NodeListQuery::default()).await?;
+    let mut counts = count_nodes(&all_nodes);
+    let stale = stale_nodes(&all_nodes);
 
     // Ideas (no status) aren't in play: they're off the board until promoted.
     let in_play = |node: &&NodeResponse| {
@@ -71,26 +72,7 @@ pub async fn get_dashboard(user_id: Uuid, pool: &PgPool) -> Result<DashboardResp
     })
 }
 
-pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts, sqlx::Error> {
-    struct Row {
-        status: Option<NodeStatus>,
-        kind: NodeKind,
-        count: i64,
-    }
-
-    let rows = sqlx::query_as!(
-        Row,
-        r#"
-        SELECT status AS "status?: NodeStatus", kind AS "kind!: NodeKind", COUNT(*) AS "count!"
-        FROM node_rows
-        WHERE user_id = $1
-        GROUP BY status, kind
-        "#,
-        user_id,
-    )
-    .fetch_all(pool)
-    .await?;
-
+fn count_nodes(all_nodes: &[NodeResponse]) -> DashboardCounts {
     let mut by_status = StatusCounts {
         idea: 0,
         queued: 0,
@@ -105,68 +87,48 @@ pub async fn get_counts(user_id: Uuid, pool: &PgPool) -> Result<DashboardCounts,
         study: 0,
         path: 0,
     };
-    let mut total = 0i64;
 
-    for row in rows {
-        total += row.count;
-        match row.status {
-            Some(NodeStatus::Idea) => by_status.idea += row.count,
-            Some(NodeStatus::Queued) => by_status.queued += row.count,
-            Some(NodeStatus::Active) => by_status.active += row.count,
-            Some(NodeStatus::Paused) => by_status.paused += row.count,
-            Some(NodeStatus::Done) => by_status.done += row.count,
-            Some(NodeStatus::Archived) => by_status.archived += row.count,
+    for node in all_nodes {
+        match node.status {
+            Some(NodeStatus::Idea) => by_status.idea += 1,
+            Some(NodeStatus::Queued) => by_status.queued += 1,
+            Some(NodeStatus::Active) => by_status.active += 1,
+            Some(NodeStatus::Paused) => by_status.paused += 1,
+            Some(NodeStatus::Done) => by_status.done += 1,
+            Some(NodeStatus::Archived) => by_status.archived += 1,
             // Ideas have no status.
             None => {}
         }
-        match row.kind {
-            NodeKind::Idea => by_kind.idea += row.count,
-            NodeKind::Project => by_kind.project += row.count,
-            NodeKind::Study => by_kind.study += row.count,
-            NodeKind::Path => by_kind.path += row.count,
+        match node.kind {
+            NodeKind::Idea => by_kind.idea += 1,
+            NodeKind::Project => by_kind.project += 1,
+            NodeKind::Study => by_kind.study += 1,
+            NodeKind::Path => by_kind.path += 1,
         }
     }
 
-    Ok(DashboardCounts {
-        total,
+    DashboardCounts {
+        total: all_nodes.len() as i64,
         by_status,
         by_kind,
-        // Needs the derived `blocked` flag - filled in by `get_dashboard`.
+        // Filled in by `get_dashboard` from the in-play nodes.
         blocked: 0,
         ideas: by_kind.idea,
-    })
+    }
 }
 
-/// Same `node_rows` columns as `nodes::list_nodes`, with the 14-day
-/// staleness predicate as the WHERE. Only active/queued nodes are
-/// eligible - done/archived/paused aren't "going stale", they're just not
-/// being worked. Ordered oldest-touched-first (most urgently stale first).
-pub async fn get_stale(user_id: Uuid, pool: &PgPool) -> Result<Vec<NodeResponse>, sqlx::Error> {
-    let rows = sqlx::query_as!(
-        NodeRow,
-        r#"
-        SELECT
-            id AS "id!", kind AS "kind!: NodeKind", status AS "status?: NodeStatus",
-            focus AS "focus?: NodeFocus", title AS "title!",
-            progress_current, progress_total, progress_unit, color, notes,
-            created_at AS "created_at!", updated_at AS "updated_at!", started_at, completed_at,
-            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,
-            topic_ids AS "topic_ids!: Vec<Uuid>", blocked AS "blocked!",
-            container_total AS "container_total!", container_done AS "container_done!",
-            checklist_total AS "checklist_total!", checklist_done AS "checklist_done!",
-            last_poked_at,
-            path_progress_done AS "path_progress_done!",
-            path_progress_total AS "path_progress_total!"
-        FROM node_rows
-        WHERE user_id = $1
-          AND status IN ('active', 'queued')
-          AND COALESCE(last_poked_at, created_at) < now() - interval '14 days'
-        ORDER BY COALESCE(last_poked_at, created_at) ASC
-        "#,
-        user_id,
-    )
-    .fetch_all(pool)
-    .await?;
-
-    Ok(rows.into_iter().map(NodeResponse::from).collect())
+/// Active/queued nodes untouched (no poke, else created) for 14+ days -
+/// done/archived/paused aren't "going stale", they're just not being
+/// worked. Oldest-touched first (most urgently stale first).
+fn stale_nodes(all_nodes: &[NodeResponse]) -> Vec<NodeResponse> {
+    let cutoff = Utc::now() - Duration::days(STALE_AFTER_DAYS);
+    let last_touched = |node: &NodeResponse| node.last_poked_at.unwrap_or(node.created_at);
+    let mut stale: Vec<NodeResponse> = all_nodes
+        .iter()
+        .filter(|node| matches!(node.status, Some(NodeStatus::Active | NodeStatus::Queued)))
+        .filter(|node| last_touched(node) < cutoff)
+        .cloned()
+        .collect();
+    stale.sort_by_key(last_touched);
+    stale
 }

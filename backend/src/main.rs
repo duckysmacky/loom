@@ -19,7 +19,10 @@ async fn main() -> Result<()> {
         .port(config.db_port)
         .username(&config.db_user)
         .password(&config.db_password)
-        .database(&config.db_name);
+        .database(&config.db_name)
+        // The `node_rows` view's cost estimate trips Postgres's JIT thresholds,
+        // and compiling it takes ~15x longer than running it at this graph size.
+        .options([("jit", "off")]);
 
     let pool = connect_with_retries(connect_options).await?;
 
