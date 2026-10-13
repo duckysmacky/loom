@@ -130,7 +130,13 @@ days is adjustable - all under Settings > Functionality.
   Ctrl-click to select several nodes, then move, unplace or delete them
   together.
 - **Timeline board** - bars from started to completed (or to now),
-  with a marker for the last time you poked each one.
+  with a marker for the last time you poked each one. Bars are styled by
+  the node's focus (solid dark primary, solid light secondary, dashed
+  background). Each active period records the focus it ran under, so
+  moving a node between focus tiers shows up as separate bars. By default
+  a period keeps its focus until you edit it in the node editor; turn on
+  "New period on focus change" in Settings > Functionality to start a new
+  period automatically whenever you change focus.
 
 All three board views share one filter/search bar (kind, status, focus,
 topic, search), so switching views never resets what you're looking at.

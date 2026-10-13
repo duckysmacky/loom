@@ -95,7 +95,10 @@ once. One graph per account; no collaboration features.
   worked on (`ended_at` null = ongoing). The first one opens on first
   activation; with "Track active periods" on, pausing/archiving closes it
   and reactivating opens a new one (demoting to an idea always closes
-  it). **Started** = the first period's start
+  it). Each period records the node's **focus** when it opened; it
+  changes by hand in the node editor, or (opt-in "New period on focus
+  change" pref) a focus change ends the open period and starts a new one.
+  **Started** = the first period's start
   and **Completed** = the last period's end while `done` - both derived,
   never stored; editing them moves those period edges.
 - **Stale:** a node whose last poke (or creation date) is older than the

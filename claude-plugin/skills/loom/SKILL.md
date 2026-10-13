@@ -79,6 +79,9 @@ loses whatever the new kind can't hold:
 - leaving `path` releases its children
 - becoming an `idea` clears status and focus (and ends any running active period)
 
+Active periods record the node's focus when they open, but a focus change through the tools does
+not split the running period - only the web app's opt-in setting does.
+
 Promoting an idea sets status `queued` and focus `secondary` unless you pass others. Always tell
 the user what will be lost, and confirm before promoting.
 
