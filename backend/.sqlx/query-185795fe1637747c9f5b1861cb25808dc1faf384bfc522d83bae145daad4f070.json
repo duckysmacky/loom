@@ -1,0 +1,28 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        INSERT INTO active_periods (node_id, started_at, ended_at, focus)\n        SELECT n.id, now(), CASE WHEN $3 THEN now() END, $4 FROM nodes n\n        WHERE n.id = $2 AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool",
+        {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        }
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "185795fe1637747c9f5b1861cb25808dc1faf384bfc522d83bae145daad4f070"
+}

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT a.id, a.node_id, a.started_at, a.ended_at\n        FROM active_periods a\n        JOIN nodes n ON n.id = a.node_id\n        WHERE n.user_id = $1 AND a.node_id = $2\n        ORDER BY a.started_at, a.id\n        ",
+  "query": "\n        SELECT a.id, a.node_id, a.started_at, a.ended_at, a.focus AS \"focus: NodeFocus\"\n        FROM active_periods a\n        JOIN nodes n ON n.id = a.node_id\n        WHERE n.user_id = $1 AND a.node_id = $2\n        ORDER BY a.started_at, a.id\n        ",
   "describe": {
     "columns": [
       {
@@ -46,6 +46,28 @@
             "name": "ended_at"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "focus: NodeFocus",
+        "type_info": {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "active_periods",
+            "name": "focus"
+          }
+        }
       }
     ],
     "parameters": {
@@ -58,8 +80,9 @@
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "64c1d999b13c6d40a0ebf35718166195547d8761833ca2b621b9d329390fe6e2"
+  "hash": "f8ec5bcdd1ca94495d45ca2015da9ae093b965fcb160a80b3cfffe36f406125c"
 }

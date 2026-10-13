@@ -1541,3 +1541,40 @@ async fn leaving_path_kind_keeps_the_derived_status(pool: PgPool) {
     assert_eq!(body["status"], "active");
     assert!(!body["started_at"].is_null());
 }
+
+#[sqlx::test]
+async fn periods_record_the_nodes_focus(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "periodfocus@example.com").await;
+
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "t", "status": "active", "focus": "primary"}),
+    )
+    .await;
+    let node_id = node["id"].as_str().unwrap();
+    assert_eq!(
+        list_periods(&app, &token, node_id).await[0]["focus"],
+        "primary"
+    );
+
+    // Without the split setting a focus change leaves the open period alone;
+    // a later period picks up the then-current focus.
+    send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"focus": "background"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    patch_status(&app, &token, node_id, "paused", true).await;
+    patch_status(&app, &token, node_id, "active", true).await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    assert_eq!(periods[0]["focus"], "primary");
+    assert_eq!(periods[1]["focus"], "background");
+}

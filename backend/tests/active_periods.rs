@@ -251,3 +251,43 @@ async fn another_users_periods_are_invisible(pool: PgPool) {
     let (_, list) = send(&app, req("GET", &list_uri, Value::Null, Some(&owner))).await;
     assert_eq!(list.as_array().unwrap().len(), 1);
 }
+
+#[sqlx::test]
+async fn period_focus_defaults_to_the_node_and_is_editable(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "periodfocusedit@example.com").await;
+    let node_id = create_node(&app, &token, "a node").await;
+
+    let defaulted = add_period(
+        &app,
+        &token,
+        &node_id,
+        json!({"started_at": "2026-09-01T00:00:00Z"}),
+    )
+    .await;
+    assert_eq!(defaulted["focus"], "secondary");
+
+    let explicit = add_period(
+        &app,
+        &token,
+        &node_id,
+        json!({"started_at": "2026-09-02T00:00:00Z", "focus": "primary"}),
+    )
+    .await;
+    assert_eq!(explicit["focus"], "primary");
+
+    let period_id = explicit["id"].as_str().unwrap();
+    let (status, updated) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/periods/{period_id}"),
+            json!({"focus": "background"}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(updated["focus"], "background");
+    assert_eq!(updated["started_at"], "2026-09-02T00:00:00Z");
+}

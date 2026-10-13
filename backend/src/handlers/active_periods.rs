@@ -7,7 +7,7 @@ use crate::middleware::auth_user::AuthUser;
 use crate::models::active_period::{
     ActivePeriodResponse, CreateActivePeriodRequest, UpdateActivePeriodRequest,
 };
-use crate::models::node::NodeKind;
+use crate::models::node::{NodeFocus, NodeKind};
 use crate::repo::{active_periods, nodes};
 use crate::state::AppState;
 
@@ -49,6 +49,7 @@ pub async fn create(
         node_id,
         request.started_at,
         request.ended_at,
+        request.focus.or(node.focus).unwrap_or(NodeFocus::Secondary),
     )
     .await?
     .ok_or(ApiError::NotFound)?;
@@ -70,6 +71,7 @@ pub async fn update(
         request.started_at,
         ended_at_set,
         ended_at,
+        request.focus,
     )
     .await
     .map_err(map_period_error)?

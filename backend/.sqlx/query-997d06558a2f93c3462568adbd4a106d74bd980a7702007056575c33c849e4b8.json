@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            INSERT INTO active_periods (node_id, started_at, focus)\n            SELECT n.id, $3, COALESCE(n.focus, 'secondary') FROM nodes n\n            WHERE n.id = $2 AND n.user_id = $1\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "997d06558a2f93c3462568adbd4a106d74bd980a7702007056575c33c849e4b8"
+}

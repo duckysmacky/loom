@@ -4,7 +4,7 @@ use uuid::Uuid;
 use crate::models::active_period::ActivePeriodResponse;
 use crate::models::board::{CanvasResponse, TimelinePokeResponse, TimelineResponse};
 use crate::models::edge::EdgeListQuery;
-use crate::models::node::NodeListQuery;
+use crate::models::node::{NodeFocus, NodeListQuery};
 use crate::repo::{edges, nodes};
 
 /// The caller's entire graph in one payload - reuses the two existing
@@ -35,7 +35,7 @@ pub async fn get_timeline(user_id: Uuid, pool: &PgPool) -> Result<TimelineRespon
     let periods = sqlx::query_as!(
         ActivePeriodResponse,
         r#"
-        SELECT a.id, a.node_id, a.started_at, a.ended_at
+        SELECT a.id, a.node_id, a.started_at, a.ended_at, a.focus AS "focus: NodeFocus"
         FROM active_periods a
         JOIN nodes n ON n.id = a.node_id
         WHERE n.user_id = $1

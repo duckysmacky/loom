@@ -3,7 +3,7 @@ use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
 use crate::models::active_period::ActivePeriodResponse;
-use crate::models::node::NodeStatus;
+use crate::models::node::{NodeFocus, NodeStatus};
 
 /// Chronological, oldest first - a newly added period reads as appended at
 /// the end. `None` means `node_id` isn't owned by `user_id`; `Some(vec)`
@@ -28,7 +28,7 @@ pub async fn list_periods(
     let periods = sqlx::query_as!(
         ActivePeriodResponse,
         r#"
-        SELECT a.id, a.node_id, a.started_at, a.ended_at
+        SELECT a.id, a.node_id, a.started_at, a.ended_at, a.focus AS "focus: NodeFocus"
         FROM active_periods a
         JOIN nodes n ON n.id = a.node_id
         WHERE n.user_id = $1 AND a.node_id = $2
@@ -50,20 +50,22 @@ pub async fn create_period(
     node_id: Uuid,
     started_at: DateTime<Utc>,
     ended_at: Option<DateTime<Utc>>,
+    focus: NodeFocus,
 ) -> Result<Option<ActivePeriodResponse>, sqlx::Error> {
     sqlx::query_as!(
         ActivePeriodResponse,
         r#"
-        INSERT INTO active_periods (node_id, started_at, ended_at)
-        SELECT n.id, $3, $4
+        INSERT INTO active_periods (node_id, started_at, ended_at, focus)
+        SELECT n.id, $3, $4, $5
         FROM nodes n
         WHERE n.id = $2 AND n.user_id = $1
-        RETURNING id, node_id, started_at, ended_at
+        RETURNING id, node_id, started_at, ended_at, focus AS "focus: NodeFocus"
         "#,
         user_id,
         node_id,
         started_at,
         ended_at,
+        focus as NodeFocus,
     )
     .fetch_optional(pool)
     .await
@@ -78,22 +80,25 @@ pub async fn update_period(
     started_at: Option<DateTime<Utc>>,
     ended_at_set: bool,
     ended_at: Option<DateTime<Utc>>,
+    focus: Option<NodeFocus>,
 ) -> Result<Option<ActivePeriodResponse>, sqlx::Error> {
     sqlx::query_as!(
         ActivePeriodResponse,
         r#"
         UPDATE active_periods a SET
             started_at = COALESCE($3, a.started_at),
-            ended_at = CASE WHEN $4 THEN $5 ELSE a.ended_at END
+            ended_at = CASE WHEN $4 THEN $5 ELSE a.ended_at END,
+            focus = COALESCE($6, a.focus)
         FROM nodes n
         WHERE a.id = $2 AND n.id = a.node_id AND n.user_id = $1
-        RETURNING a.id, a.node_id, a.started_at, a.ended_at
+        RETURNING a.id, a.node_id, a.started_at, a.ended_at, a.focus AS "focus: NodeFocus"
         "#,
         user_id,
         period_id,
         started_at,
         ended_at_set,
         ended_at,
+        focus as Option<NodeFocus>,
     )
     .fetch_optional(pool)
     .await
@@ -147,16 +152,18 @@ async fn open_period(
     tx: &mut PgConnection,
     node_id: Uuid,
     closed: bool,
+    focus: NodeFocus,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
         r#"
-        INSERT INTO active_periods (node_id, started_at, ended_at)
-        SELECT n.id, now(), CASE WHEN $3 THEN now() END FROM nodes n
+        INSERT INTO active_periods (node_id, started_at, ended_at, focus)
+        SELECT n.id, now(), CASE WHEN $3 THEN now() END, $4 FROM nodes n
         WHERE n.id = $2 AND n.user_id = $1
         "#,
         user_id,
         node_id,
         closed,
+        focus as NodeFocus,
     )
     .execute(&mut *tx)
     .await?;
@@ -227,6 +234,7 @@ pub async fn sync_status_transition(
     node_id: Uuid,
     old_status: Option<NodeStatus>,
     new_status: Option<NodeStatus>,
+    focus: NodeFocus,
     track_active_periods: bool,
 ) -> Result<(), sqlx::Error> {
     if old_status == new_status {
@@ -234,10 +242,10 @@ pub async fn sync_status_transition(
     }
     let last = last_period(user_id, tx, node_id).await?;
     match (new_status, last) {
-        (Some(NodeStatus::Active), None) => open_period(user_id, tx, node_id, false).await?,
+        (Some(NodeStatus::Active), None) => open_period(user_id, tx, node_id, false, focus).await?,
         (Some(NodeStatus::Active), Some((period_id, Some(_)))) => {
             if track_active_periods {
-                open_period(user_id, tx, node_id, false).await?;
+                open_period(user_id, tx, node_id, false, focus).await?;
             } else {
                 set_period_end(user_id, tx, period_id, None).await?;
             }
@@ -246,7 +254,7 @@ pub async fn sync_status_transition(
             close_period_now(user_id, tx, period_id).await?
         }
         (Some(NodeStatus::Done), Some((_, Some(_)))) => {
-            open_period(user_id, tx, node_id, true).await?
+            open_period(user_id, tx, node_id, true, focus).await?
         }
         (Some(NodeStatus::Paused | NodeStatus::Archived), Some((period_id, None)))
             if old_status == Some(NodeStatus::Active) && track_active_periods =>
@@ -304,8 +312,9 @@ pub async fn set_started(
     if moved == 0 {
         sqlx::query!(
             r#"
-            INSERT INTO active_periods (node_id, started_at)
-            SELECT n.id, $3 FROM nodes n WHERE n.id = $2 AND n.user_id = $1
+            INSERT INTO active_periods (node_id, started_at, focus)
+            SELECT n.id, $3, COALESCE(n.focus, 'secondary') FROM nodes n
+            WHERE n.id = $2 AND n.user_id = $1
             "#,
             user_id,
             node_id,

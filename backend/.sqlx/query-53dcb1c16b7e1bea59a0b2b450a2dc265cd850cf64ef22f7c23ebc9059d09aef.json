@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE active_periods a SET\n            started_at = COALESCE($3, a.started_at),\n            ended_at = CASE WHEN $4 THEN $5 ELSE a.ended_at END\n        FROM nodes n\n        WHERE a.id = $2 AND n.id = a.node_id AND n.user_id = $1\n        RETURNING a.id, a.node_id, a.started_at, a.ended_at\n        ",
+  "query": "\n        INSERT INTO active_periods (node_id, started_at, ended_at, focus)\n        SELECT n.id, $3, $4, $5\n        FROM nodes n\n        WHERE n.id = $2 AND n.user_id = $1\n        RETURNING id, node_id, started_at, ended_at, focus AS \"focus: NodeFocus\"\n        ",
   "describe": {
     "columns": [
       {
@@ -46,6 +46,28 @@
             "name": "ended_at"
           }
         }
+      },
+      {
+        "ordinal": 4,
+        "name": "focus: NodeFocus",
+        "type_info": {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "active_periods",
+            "name": "focus"
+          }
+        }
       }
     ],
     "parameters": {
@@ -53,16 +75,28 @@
         "Uuid",
         "Uuid",
         "Timestamptz",
-        "Bool",
-        "Timestamptz"
+        "Timestamptz",
+        {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        }
       ]
     },
     "nullable": [
       false,
       false,
       false,
-      true
+      true,
+      false
     ]
   },
-  "hash": "bde7c2f6318fd3a65019da42f132ac37688cf8a9db12db9220111df0a475e97e"
+  "hash": "53dcb1c16b7e1bea59a0b2b450a2dc265cd850cf64ef22f7c23ebc9059d09aef"
 }

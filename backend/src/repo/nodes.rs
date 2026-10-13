@@ -128,7 +128,16 @@ pub async fn create_node(
     .await?;
     // A node created straight into `active` gets its first period, exactly
     // as if it had been captured as an idea and then activated.
-    active_periods::sync_status_transition(user_id, &mut tx, node_id, None, status, false).await?;
+    active_periods::sync_status_transition(
+        user_id,
+        &mut tx,
+        node_id,
+        None,
+        status,
+        focus.unwrap_or(NodeFocus::Secondary),
+        false,
+    )
+    .await?;
     tx.commit().await?;
 
     get_node(user_id, pool, node_id)
@@ -312,7 +321,7 @@ pub async fn update_node(
             END,
             updated_at = now()
         WHERE user_id = $1 AND id = $2
-        RETURNING kind AS "kind: NodeKind", status AS "status?: NodeStatus"
+        RETURNING kind AS "kind: NodeKind", status AS "status?: NodeStatus", focus AS "focus?: NodeFocus"
         "#,
         user_id,
         node_id,
@@ -352,6 +361,7 @@ pub async fn update_node(
             node_id,
             old_status,
             row.status,
+            row.focus.unwrap_or(NodeFocus::Secondary),
             request.track_active_periods,
         )
         .await?;
