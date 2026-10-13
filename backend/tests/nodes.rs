@@ -1578,3 +1578,143 @@ async fn periods_record_the_nodes_focus(pool: PgPool) {
     assert_eq!(periods[0]["focus"], "primary");
     assert_eq!(periods[1]["focus"], "background");
 }
+
+async fn patch_focus(
+    app: &axum::Router,
+    token: &str,
+    node_id: &str,
+    focus: &str,
+    split: bool,
+) -> Value {
+    let (_, body) = send(
+        app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"focus": focus, "split_period_on_focus_change": split}),
+            Some(token),
+        ),
+    )
+    .await;
+    body
+}
+
+#[sqlx::test]
+async fn focus_change_splits_the_open_period_only_when_asked(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "focussplit@example.com").await;
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "t", "status": "active", "focus": "primary"}),
+    )
+    .await;
+    let node_id = node["id"].as_str().unwrap();
+
+    patch_focus(&app, &token, node_id, "secondary", false).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 1);
+
+    patch_focus(&app, &token, node_id, "background", true).await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    assert_eq!(periods[0]["focus"], "primary");
+    assert!(periods[0]["ended_at"].is_string());
+    assert_eq!(periods[1]["focus"], "background");
+    assert_eq!(periods[1]["ended_at"], Value::Null);
+
+    // Same focus again: nothing to split.
+    patch_focus(&app, &token, node_id, "background", true).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 2);
+
+    // Started stays the first period's start, still derived.
+    let (_, node) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{node_id}"),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(node["started_at"], periods[0]["started_at"]);
+}
+
+#[sqlx::test]
+async fn focus_change_without_an_open_period_records_nothing(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "focusnoperiod@example.com").await;
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "t", "status": "active", "focus": "primary"}),
+    )
+    .await;
+    let node_id = node["id"].as_str().unwrap();
+    patch_status(&app, &token, node_id, "paused", true).await;
+
+    patch_focus(&app, &token, node_id, "background", true).await;
+    assert_eq!(list_periods(&app, &token, node_id).await.len(), 1);
+
+    patch_status(&app, &token, node_id, "active", true).await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    assert_eq!(periods[1]["focus"], "background");
+}
+
+#[sqlx::test]
+async fn status_and_focus_in_one_patch_open_a_single_period(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "statusfocus@example.com").await;
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "t", "status": "queued", "focus": "primary"}),
+    )
+    .await;
+    let node_id = node["id"].as_str().unwrap();
+
+    send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"status": "active", "focus": "background", "split_period_on_focus_change": true}),
+            Some(&token),
+        ),
+    )
+    .await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 1);
+    assert_eq!(periods[0]["focus"], "background");
+}
+
+#[sqlx::test]
+async fn reactivating_after_a_focus_change_starts_a_new_period_when_splitting(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "reopenfocus@example.com").await;
+    let node = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "t", "status": "active", "focus": "primary"}),
+    )
+    .await;
+    let node_id = node["id"].as_str().unwrap();
+    patch_status(&app, &token, node_id, "paused", true).await;
+    patch_focus(&app, &token, node_id, "background", false).await;
+
+    // Tracking is off for this PATCH, so without splitting it would reopen.
+    send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"status": "active", "track_active_periods": false, "split_period_on_focus_change": true}),
+            Some(&token),
+        ),
+    )
+    .await;
+    let periods = list_periods(&app, &token, node_id).await;
+    assert_eq!(periods.len(), 2);
+    assert_eq!(periods[1]["focus"], "background");
+}

@@ -123,16 +123,31 @@ pub async fn delete_period(
     Ok(result.rows_affected() == 1)
 }
 
+/// Client preferences carried on a node PATCH (not stored server-side).
+#[derive(Debug, Clone, Copy, Default)]
+pub struct PeriodSettings {
+    /// Pausing/archiving closes the open period; reactivating opens a new one.
+    pub track_active_periods: bool,
+    /// A focus change closes the open period and opens a new one.
+    pub split_on_focus_change: bool,
+}
+
+struct LastPeriod {
+    id: Uuid,
+    ended_at: Option<DateTime<Utc>>,
+    focus: NodeFocus,
+}
+
 /// The node's latest period (its end is the node's completed date while
 /// done) - `None` when the node has never started.
 async fn last_period(
     user_id: Uuid,
     tx: &mut PgConnection,
     node_id: Uuid,
-) -> Result<Option<(Uuid, Option<DateTime<Utc>>)>, sqlx::Error> {
+) -> Result<Option<LastPeriod>, sqlx::Error> {
     let row = sqlx::query!(
         r#"
-        SELECT a.id, a.ended_at
+        SELECT a.id, a.ended_at, a.focus AS "focus: NodeFocus"
         FROM active_periods a
         JOIN nodes n ON n.id = a.node_id
         WHERE a.node_id = $2 AND n.user_id = $1
@@ -144,7 +159,11 @@ async fn last_period(
     )
     .fetch_optional(&mut *tx)
     .await?;
-    Ok(row.map(|row| (row.id, row.ended_at)))
+    Ok(row.map(|row| LastPeriod {
+        id: row.id,
+        ended_at: row.ended_at,
+        focus: row.focus,
+    }))
 }
 
 async fn open_period(
@@ -235,7 +254,7 @@ pub async fn sync_status_transition(
     old_status: Option<NodeStatus>,
     new_status: Option<NodeStatus>,
     focus: NodeFocus,
-    track_active_periods: bool,
+    settings: PeriodSettings,
 ) -> Result<(), sqlx::Error> {
     if old_status == new_status {
         return Ok(());
@@ -243,27 +262,52 @@ pub async fn sync_status_transition(
     let last = last_period(user_id, tx, node_id).await?;
     match (new_status, last) {
         (Some(NodeStatus::Active), None) => open_period(user_id, tx, node_id, false, focus).await?,
-        (Some(NodeStatus::Active), Some((period_id, Some(_)))) => {
-            if track_active_periods {
+        (Some(NodeStatus::Active), Some(last)) if last.ended_at.is_some() => {
+            // Reopening would carry the old focus forward, so a changed focus
+            // starts a fresh period when splitting on focus change.
+            let focus_moved = settings.split_on_focus_change && last.focus != focus;
+            if settings.track_active_periods || focus_moved {
                 open_period(user_id, tx, node_id, false, focus).await?;
             } else {
-                set_period_end(user_id, tx, period_id, None).await?;
+                set_period_end(user_id, tx, last.id, None).await?;
             }
         }
-        (Some(NodeStatus::Done), Some((period_id, None))) => {
-            close_period_now(user_id, tx, period_id).await?
+        (Some(NodeStatus::Done), Some(last)) if last.ended_at.is_none() => {
+            close_period_now(user_id, tx, last.id).await?
         }
-        (Some(NodeStatus::Done), Some((_, Some(_)))) => {
-            open_period(user_id, tx, node_id, true, focus).await?
-        }
-        (Some(NodeStatus::Paused | NodeStatus::Archived), Some((period_id, None)))
-            if old_status == Some(NodeStatus::Active) && track_active_periods =>
+        (Some(NodeStatus::Done), Some(_)) => open_period(user_id, tx, node_id, true, focus).await?,
+        (Some(NodeStatus::Paused | NodeStatus::Archived), Some(last))
+            if last.ended_at.is_none()
+                && old_status == Some(NodeStatus::Active)
+                && settings.track_active_periods =>
         {
-            close_period_now(user_id, tx, period_id).await?
+            close_period_now(user_id, tx, last.id).await?
         }
         // Demoted to an idea: whatever was running stops, tracking or not.
-        (None, Some((period_id, None))) => close_period_now(user_id, tx, period_id).await?,
+        (None, Some(last)) if last.ended_at.is_none() => {
+            close_period_now(user_id, tx, last.id).await?
+        }
         _ => {}
+    }
+    Ok(())
+}
+
+/// With "start a new period on focus change" on: if the node has an open
+/// period under a different focus, closes it now and opens one under the new
+/// focus. Nothing open (queued/paused/done) means nothing to split - the next
+/// period just picks up the node's then-current focus.
+pub async fn sync_focus_change(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    node_id: Uuid,
+    focus: NodeFocus,
+) -> Result<(), sqlx::Error> {
+    if let Some(last) = last_period(user_id, tx, node_id).await?
+        && last.ended_at.is_none()
+        && last.focus != focus
+    {
+        close_period_now(user_id, tx, last.id).await?;
+        open_period(user_id, tx, node_id, false, focus).await?;
     }
     Ok(())
 }
@@ -335,8 +379,8 @@ pub async fn set_completed(
     node_id: Uuid,
     completed_at: Option<DateTime<Utc>>,
 ) -> Result<(), sqlx::Error> {
-    if let Some((period_id, _)) = last_period(user_id, tx, node_id).await? {
-        set_period_end(user_id, tx, period_id, completed_at).await?;
+    if let Some(last) = last_period(user_id, tx, node_id).await? {
+        set_period_end(user_id, tx, last.id, completed_at).await?;
     }
     Ok(())
 }

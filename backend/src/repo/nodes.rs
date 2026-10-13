@@ -6,6 +6,7 @@ use crate::models::node::{
     CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
     Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
+use crate::repo::active_periods::PeriodSettings;
 use crate::repo::{active_periods, checklist, edges, pokes};
 
 /// Query target for every node-returning query, all of which read the
@@ -135,7 +136,7 @@ pub async fn create_node(
         None,
         status,
         focus.unwrap_or(NodeFocus::Secondary),
-        false,
+        PeriodSettings::default(),
     )
     .await?;
     tx.commit().await?;
@@ -362,9 +363,17 @@ pub async fn update_node(
             old_status,
             row.status,
             row.focus.unwrap_or(NodeFocus::Secondary),
-            request.track_active_periods,
+            PeriodSettings {
+                track_active_periods: request.track_active_periods,
+                split_on_focus_change: request.split_period_on_focus_change,
+            },
         )
         .await?;
+        if request.split_period_on_focus_change
+            && let Some(focus) = row.focus
+        {
+            active_periods::sync_focus_change(user_id, &mut tx, node_id, focus).await?;
+        }
     }
     if let Some(started_at) = request.started_at {
         active_periods::set_started(user_id, &mut tx, node_id, started_at).await?;
