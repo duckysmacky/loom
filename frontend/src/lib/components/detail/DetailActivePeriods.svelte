@@ -79,7 +79,7 @@
 						onchange={(value) => setEnded(period, value)}
 					/>
 					<select
-						class="focus"
+						class="field focus"
 						aria-label="Focus during this period"
 						value={period.focus}
 						onchange={(event) => setFocus(period, event.currentTarget.value as NodeFocus)}
@@ -149,7 +149,9 @@
 
 	.focus {
 		flex: none;
-		font: 600 11px/1 var(--font-display);
+		width: auto;
+		padding: 5px 24px 5px 6px;
+		font-size: 12px;
 	}
 
 	.index {
