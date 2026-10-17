@@ -54,12 +54,13 @@ class GraphStore {
 	/**
 	 * Logs a poke and, when "Poke sets active" is on, also switches the
 	 * node's status to `active` - one `mutate` call, one refetch, instead of
-	 * every poke call site running its own two-step sequence.
+	 * every poke call site running its own two-step sequence. A backdated poke
+	 * (`pokedAt`) is old work being logged, so it never activates the node.
 	 */
-	async poke(node: NodeResponse) {
+	async poke(node: NodeResponse, pokedAt?: string) {
 		return this.mutate(async () => {
-			const poked = await nodesApi.poke(node.id);
-			if (prefs.pokeSetsActive && node.kind !== 'idea' && node.status !== 'active') {
+			const poked = await nodesApi.poke(node.id, pokedAt);
+			if (!pokedAt && prefs.pokeSetsActive && node.kind !== 'idea' && node.status !== 'active') {
 				await nodesApi.update(node.id, { status: 'active' });
 			}
 			return poked;

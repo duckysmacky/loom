@@ -186,6 +186,21 @@ export function fromDateInput(value: string): string | null {
 	return value ? new Date(`${value}T00:00:00`).toISOString() : null;
 }
 
+/** ISO timestamp → 24h `HH:MM` in local time. */
+export function toTimeInput(iso: string): string {
+	const date = new Date(iso);
+	const pad = (value: number) => String(value).padStart(2, '0');
+	return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+/** `yyyy-mm-dd` + 24h `HH:MM` (local time) → ISO timestamp; malformed → null. */
+export function combineDateTime(isoDate: string, time: string): string | null {
+	const match = /^(\d{1,2}):(\d{2})$/.exec(time.trim());
+	if (!isoDate || !match || Number(match[1]) > 23 || Number(match[2]) > 59) return null;
+	const [year, month, day] = isoDate.split('-').map(Number);
+	return new Date(year, month - 1, day, Number(match[1]), Number(match[2])).toISOString();
+}
+
 /**
  * The progress a node shows - each kind has exactly one source: a study's
  * tracked counter, a project's checklist, a path's contained nodes. Ideas

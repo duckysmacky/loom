@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	canPoke,
+	combineDateTime,
 	accentColor,
 	displayToIsoDate,
 	fromDateInput,
@@ -14,7 +15,8 @@ import {
 	relativeDays,
 	requirementsOf,
 	shortDate,
-	toDateInput
+	toDateInput,
+	toTimeInput
 } from './display';
 import { makeEdge, makeNode } from './fixtures';
 
@@ -125,6 +127,17 @@ describe('display helpers', () => {
 		expect(fromDateInput('')).toBeNull();
 		expect(toDateInput(fromDateInput('2026-09-02'))).toBe('2026-09-02');
 		expect(toDateInput(new Date('2026-09-02T23:30:00').toISOString())).toBe('2026-09-02');
+	});
+
+	it('combines a date and a 24h time in local time', () => {
+		const iso = combineDateTime('2026-09-02', '14:30');
+		expect(toDateInput(iso)).toBe('2026-09-02');
+		expect(toTimeInput(iso as string)).toBe('14:30');
+		expect(toTimeInput(combineDateTime('2026-09-02', '9:05') as string)).toBe('09:05');
+		expect(combineDateTime('2026-09-02', '24:00')).toBeNull();
+		expect(combineDateTime('2026-09-02', '12:60')).toBeNull();
+		expect(combineDateTime('2026-09-02', 'noon')).toBeNull();
+		expect(combineDateTime('', '12:00')).toBeNull();
 	});
 
 	it('shows and parses dates as dd.mm.yyyy', () => {

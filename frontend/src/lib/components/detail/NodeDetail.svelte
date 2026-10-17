@@ -7,6 +7,7 @@
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import PokeAt from '$lib/components/PokeAt.svelte';
 	import DateInput from '$lib/components/ui/DateInput.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
@@ -342,6 +343,7 @@
 						{:else if blocked}
 							<span class="not-actionable">Not actionable yet</span>
 						{:else if canPoke(node)}
+							<PokeAt {node} />
 							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
 						{/if}
 						<Button

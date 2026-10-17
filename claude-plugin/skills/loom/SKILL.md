@@ -101,7 +101,7 @@ the user what will be lost, and confirm before promoting.
 | `loom_add_checklist_items` / `loom_update_checklist_item` / `loom_delete_checklist_item` | Manage a project's checklist. `done: true` ticks an item. |
 | `loom_list_topics` / `loom_create_topic` / `loom_update_topic` / `loom_delete_topic` | Manage tags. |
 | `loom_attach_topic` / `loom_detach_topic` | Tag or untag a node. |
-| `loom_poke_node` | Log work on a node. |
+| `loom_poke_node` | Log work on a node; optional `poked_at` (RFC 3339, not in the future) backfills work done earlier. |
 | `loom_place_nodes` | Set where nodes sit on the Board canvas (see [Placing nodes](#placing-nodes-on-the-canvas)). |
 
 When a tool fails (validation, not found, conflict, cycle), it returns an error result with a
@@ -116,7 +116,8 @@ plain message. Read the message, fix the input and retry. Don't guess ids: look 
    from a kind that holds data, and rewriting many nodes at once. Creating things the user asked
    for needs no extra confirmation.
 3. **Don't invent progress.** Only set `status: done`, tick checklist items or raise
-   `progress_current` when the user says the work happened. Log real work with a poke.
+   `progress_current` when the user says the work happened. Log real work with a poke; if the user
+   mentions work from earlier, backdate it with `poked_at` rather than poking "now".
 4. **Uncommitted things are ideas.** Capture them as `kind: idea` with no status or focus. New
    projects, studies and paths default to `queued` / `secondary`; for a plan the user wants to
    start, set the first step `active` and leave the rest `queued`.

@@ -12,6 +12,7 @@
 		disabled = false,
 		title,
 		min,
+		max,
 		label,
 		compact = false
 	}: {
@@ -21,6 +22,8 @@
 		title?: string;
 		/** Earliest accepted `yyyy-mm-dd`. */
 		min?: string;
+		/** Latest accepted `yyyy-mm-dd`. */
+		max?: string;
 		label?: string;
 		compact?: boolean;
 	} = $props();
@@ -31,7 +34,10 @@
 
 	function commit(event: Event & { currentTarget: HTMLInputElement }) {
 		const parsed = displayToIsoDate(event.currentTarget.value);
-		invalid = parsed === null || (parsed !== '' && min !== undefined && parsed < min);
+		invalid =
+			parsed === null ||
+			(parsed !== '' &&
+				((min !== undefined && parsed < min) || (max !== undefined && parsed > max)));
 		draft = null;
 		if (invalid) {
 			event.currentTarget.value = text;

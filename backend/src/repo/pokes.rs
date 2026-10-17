@@ -1,3 +1,4 @@
+use chrono::{DateTime, Utc};
 use sqlx::{PgConnection, PgPool};
 use uuid::Uuid;
 
@@ -11,16 +12,18 @@ pub async fn create_poke(
     user_id: Uuid,
     pool: &PgPool,
     node_id: Uuid,
+    poked_at: Option<DateTime<Utc>>,
 ) -> Result<Option<PokeResponse>, sqlx::Error> {
     sqlx::query_as!(
         PokeResponse,
         r#"
-        INSERT INTO pokes (node_id)
-        SELECT $2 WHERE EXISTS (SELECT 1 FROM nodes WHERE id = $2 AND user_id = $1)
+        INSERT INTO pokes (node_id, poked_at)
+        SELECT $2, COALESCE($3, now()) WHERE EXISTS (SELECT 1 FROM nodes WHERE id = $2 AND user_id = $1)
         RETURNING id, poked_at
         "#,
         user_id,
         node_id,
+        poked_at,
     )
     .fetch_optional(pool)
     .await

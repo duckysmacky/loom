@@ -7,6 +7,7 @@ use std::collections::HashMap;
 use axum::Json;
 use axum::extract::State;
 use axum::http::request::Parts;
+use chrono::{DateTime, Utc};
 use rmcp::handler::server::tool::Extension;
 use rmcp::handler::server::wrapper::Parameters;
 use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
@@ -27,6 +28,7 @@ use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery};
 use crate::models::node::{
     AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, UpdateNodeRequest,
 };
+use crate::models::poke::CreatePokeRequest;
 use crate::models::topic::{CreateTopicRequest, UpdateTopicRequest};
 use crate::state::AppState;
 
@@ -64,7 +66,8 @@ Derived, read-only fields: blocked, container_progress (done/total of a path's \
 children, ideas skipped), path_progress (every study counter and project \
 checklist inside a path summed, e.g. 12/15 + 3/5 = 15/20), checklist_progress, \
 last_poked_at. A poke is an \"I worked on this\" log entry; active nodes (and \
-previously poked queued ones) with no poke for 14 days are stale. Paths can't be poked: a path's \
+previously poked queued ones) with no poke for 14 days are stale. Pass poked_at to loom_poke_node to backdate a \
+poke for earlier work. Paths can't be poked: a path's \
 last_poked_at, started_at and completed_at come from the nodes inside it.
 
 Read before you write: call loom_get_graph or loom_list_nodes to find existing \
@@ -89,6 +92,14 @@ const LAYOUT_KEYS: [&str; 1] = ["sort_order"];
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct NodeIdParams {
     pub node_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct PokeNodeParams {
+    pub node_id: Uuid,
+    /// RFC 3339 time of the work, to log a poke you forgot (default: now).
+    /// Must not be in the future.
+    pub poked_at: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -374,18 +385,24 @@ impl LoomServer {
     }
 
     /// Logs a poke ("I worked on this") on a node, resetting its staleness.
-    /// Not for paths: poke the nodes inside instead.
+    /// Pass `poked_at` to backfill work done earlier. Not for paths: poke the
+    /// nodes inside instead.
     #[tool(annotations(title = "Poke node", read_only_hint = false, destructive_hint = false))]
     async fn loom_poke_node(
         &self,
         Extension(parts): Extension<Parts>,
-        Parameters(NodeIdParams { node_id }): Parameters<NodeIdParams>,
+        Parameters(PokeNodeParams { node_id, poked_at }): Parameters<PokeNodeParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
         respond(
-            pokes::create(self.app(), user, ApiPath(node_id))
-                .await
-                .map(|(_, Json(poke))| poke),
+            pokes::create(
+                self.app(),
+                user,
+                ApiPath(node_id),
+                Some(Json(CreatePokeRequest { poked_at })),
+            )
+            .await
+            .map(|(_, Json(poke))| poke),
         )
     }
 

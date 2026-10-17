@@ -79,7 +79,25 @@ async fn poke(app: &axum::Router, token: &str, node_id: &str) -> (StatusCode, Va
         req(
             "POST",
             &format!("/api/nodes/{node_id}/pokes"),
-            Value::Null,
+            json!({}),
+            Some(token),
+        ),
+    )
+    .await
+}
+
+async fn poke_at(
+    app: &axum::Router,
+    token: &str,
+    node_id: &str,
+    poked_at: &str,
+) -> (StatusCode, Value) {
+    send(
+        app,
+        req(
+            "POST",
+            &format!("/api/nodes/{node_id}/pokes"),
+            json!({"poked_at": poked_at}),
             Some(token),
         ),
     )
@@ -322,4 +340,61 @@ async fn path_last_poked_at_is_latest_inside_recursively_skipping_ideas(pool: Pg
         get_node(&app, &token, &outer).await["last_poked_at"],
         nested_touch
     );
+}
+
+#[sqlx::test]
+async fn poke_without_a_body_is_a_poke_now(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pokenobody@example.com").await;
+    let node = create_node(&app, &token, "n").await;
+
+    let request = Request::builder()
+        .method("POST")
+        .uri(format!("/api/nodes/{node}/pokes"))
+        .header(header::AUTHORIZATION, format!("Bearer {token}"))
+        .extension(ConnectInfo(TEST_PEER))
+        .body(Body::empty())
+        .unwrap();
+    let (status, body) = send(&app, request).await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert!(body["poked_at"].is_string());
+}
+
+#[sqlx::test]
+async fn backdated_poke_keeps_its_time_and_never_lowers_last_poked_at(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pokepast@example.com").await;
+    let node = create_node(&app, &token, "n").await;
+
+    let (status, body) = poke_at(&app, &token, &node, "2020-01-02T03:04:05Z").await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(body["poked_at"], "2020-01-02T03:04:05Z");
+    let after_backdated = get_node(&app, &token, &node).await;
+    assert_eq!(after_backdated["last_poked_at"], "2020-01-02T03:04:05Z");
+
+    let (_, now_poke) = poke(&app, &token, &node).await;
+    poke_at(&app, &token, &node, "2020-06-01T00:00:00Z").await;
+    let after_older = get_node(&app, &token, &node).await;
+    assert_eq!(after_older["last_poked_at"], now_poke["poked_at"]);
+}
+
+#[sqlx::test]
+async fn future_poke_returns_400(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "pokefuture@example.com").await;
+    let node = create_node(&app, &token, "n").await;
+
+    let (status, _) = poke_at(&app, &token, &node, "2999-01-01T00:00:00Z").await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+}
+
+#[sqlx::test]
+async fn backdated_poke_on_another_users_node_returns_404(pool: PgPool) {
+    let app = app(pool);
+    let owner = signup(&app, "pastowner@example.com").await;
+    let other = signup(&app, "pastother@example.com").await;
+    let node = create_node(&app, &owner, "n").await;
+
+    let (status, _) = poke_at(&app, &other, &node, "2020-01-02T03:04:05Z").await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
 }

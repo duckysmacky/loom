@@ -1,5 +1,5 @@
 use chrono::{DateTime, Utc};
-use serde::Serialize;
+use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 use uuid::Uuid;
 
@@ -11,4 +11,14 @@ use uuid::Uuid;
 pub struct PokeResponse {
     pub id: Uuid,
     pub poked_at: DateTime<Utc>,
+}
+
+/// Body of `POST /nodes/{id}/pokes`; the whole body is optional. `poked_at`
+/// backdates the poke (default now) for work that was never logged.
+#[derive(Debug, Default, Deserialize, TS)]
+#[ts(export)]
+pub struct CreatePokeRequest {
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub poked_at: Option<DateTime<Utc>>,
 }

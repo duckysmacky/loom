@@ -15,6 +15,7 @@ import type { CreatedMcpTokenResponse } from '$lib/types/CreatedMcpTokenResponse
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
 import type { CreateMcpTokenRequest } from '$lib/types/CreateMcpTokenRequest';
 import type { CreateNodeRequest } from '$lib/types/CreateNodeRequest';
+import type { CreatePokeRequest } from '$lib/types/CreatePokeRequest';
 import type { CreateTopicRequest } from '$lib/types/CreateTopicRequest';
 import type { DashboardResponse } from '$lib/types/DashboardResponse';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
@@ -75,7 +76,12 @@ export const nodesApi = {
 		request<void>('POST', `/nodes/${nodeId}/topics`, { topic_id: topicId }),
 	detachTopic: (nodeId: string, topicId: string) =>
 		request<void>('DELETE', `/nodes/${nodeId}/topics/${topicId}`),
-	poke: (nodeId: string) => request<PokeResponse>('POST', `/nodes/${nodeId}/pokes`),
+	poke: (nodeId: string, pokedAt?: string) =>
+		request<PokeResponse>(
+			'POST',
+			`/nodes/${nodeId}/pokes`,
+			pokedAt ? ({ poked_at: pokedAt } satisfies CreatePokeRequest) : undefined
+		),
 	pokes: (nodeId: string) => request<PokeResponse[]>('GET', `/nodes/${nodeId}/pokes`),
 	reorder: (nodeIds: string[]) =>
 		request<void>('PUT', '/nodes/order', { node_ids: nodeIds } satisfies ReorderNodesRequest),
