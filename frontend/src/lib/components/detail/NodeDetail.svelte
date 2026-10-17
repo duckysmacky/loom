@@ -356,8 +356,10 @@
 						{:else if blocked}
 							<span class="not-actionable">Not actionable yet</span>
 						{:else if canPoke(node)}
-							<PokeAt {node} />
-							<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
+							<div class="poke-row">
+								<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
+								<PokeAt {node} />
+							</div>
 						{/if}
 						<Button
 							variant={node.kind === 'idea' ? 'poke' : 'accent'}
@@ -621,6 +623,11 @@
 	.actions :global(.button) {
 		width: 100%;
 		justify-content: flex-start;
+	}
+
+	.poke-row {
+		display: flex;
+		gap: 7px;
 	}
 
 	.not-actionable {

@@ -1,16 +1,16 @@
-# Graph Report - loom  (2026-09-28)
+# Graph Report - loom  (2026-10-17)
 
 ## Corpus Check
-- 272 files · ~91,407 words
+- 273 files · ~95,586 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 1571 nodes · 4440 edges · 112 communities (74 shown, 38 thin omitted)
-- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 73 edges (avg confidence: 0.76)
+- 1609 nodes · 4614 edges · 105 communities (67 shown, 38 thin omitted)
+- Extraction: 98% EXTRACTED · 2% INFERRED · 0% AMBIGUOUS · INFERRED: 73 edges (avg confidence: 0.77)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `e5a3dfcd`
+- Built from commit: `80f244ca`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -57,13 +57,11 @@
 - App Config Loading
 - PATCH Double-Option Deserialize Helper
 - Blueprint Light Canvas Design
-- User Repository Layer
 - Frontend Vitest Example (Welcome.svelte)
 - Prettier Dependency
 - View-Shaped REST Endpoints
 - Login Rate Limiting Policy
 - Vite Dependency
-- ESLint JS Config Dependency
 - ESLint JS Config Dependency
 - ESLint JS Config Dependency
 - Auth Handlers + AuthUser + ApiError
@@ -112,23 +110,18 @@
 - state.rs
 - AppState
 - AuthUser
-- oauth.rs
-- AuthUser
-- create
-- create
-- get
 
 ## God Nodes (most connected - your core abstractions)
 1. `AppState` - 85 edges
 2. `AuthUser` - 63 edges
-3. `$lib/api/endpoints` - 49 edges
-4. `$lib/graph/display` - 48 edges
-5. `app()` - 43 edges
-6. `signup()` - 43 edges
-7. `send()` - 42 edges
-8. `req()` - 41 edges
+3. `$lib/graph/display` - 54 edges
+4. `$lib/api/endpoints` - 49 edges
+5. `app()` - 48 edges
+6. `signup()` - 48 edges
+7. `send()` - 47 edges
+8. `req()` - 46 edges
 9. `ApiPath` - 40 edges
-10. `$lib/stores/graph.svelte` - 38 edges
+10. `create_node()` - 39 edges
 
 ## Surprising Connections (you probably didn't know these)
 - `Docker Compose Config` --shares_data_with--> `Release Workflow`  [INFERRED]
@@ -151,39 +144,39 @@
 - **CI Test & Build Flow** — github_workflows_test, github_workflows_release, backend_claude, frontend_readme [INFERRED 0.75]
 - **Cross-Stack Type Contract via ts-rs** — claude_ts_rs, backend_claude, frontend_claude, frontend_readme [INFERRED 0.85]
 
-## Communities (112 total, 38 thin omitted)
+## Communities (105 total, 38 thin omitted)
 
 ### Community 0 - "nodes.rs"
-Cohesion: 0.27
-Nodes (22): attach_topic(), clean_progress_unit(), clear_order(), create(), delete(), detach_topic(), get(), list() (+14 more)
+Cohesion: 0.05
+Nodes (96): create(), delete(), list(), map_period_error(), ApiError, Error, Json, Result (+88 more)
 
 ### Community 1 - "fixtures.ts"
-Cohesion: 0.10
-Nodes (18): edgesApi, nodesApi, $lib/graph/order, dependencyOrder(), manualOrder(), moveBefore(), GraphStore, notifyError() (+10 more)
+Cohesion: 0.12
+Nodes (14): edgesApi, nodesApi, GraphStore, notifyError(), applyDrop(), confirmKindDrop(), dragState, dropAtEnd() (+6 more)
 
 ### Community 2 - "Topic Handlers (CRUD)"
 Cohesion: 0.08
-Nodes (46): create(), delete(), list(), map_edge_error(), ApiError, Error, Json, Result (+38 more)
+Nodes (47): create(), delete(), list(), map_edge_error(), ApiError, Error, Json, Result (+39 more)
 
 ### Community 3 - "Axum Router Builder + Topic Tests"
-Cohesion: 0.17
-Nodes (39): build_router(), governor_error_response(), Response, Router, app(), app_with_signup_policy(), bearer_request(), change_password_enforces_length_rules() (+31 more)
+Cohesion: 0.23
+Nodes (34): app(), app_with_signup_policy(), bearer_request(), change_password_enforces_length_rules(), change_password_replaces_the_login_credential(), change_password_requires_a_bearer_token(), change_password_signs_out_other_sessions_but_keeps_this_one(), change_password_with_wrong_current_password_is_400_and_changes_nothing() (+26 more)
 
 ### Community 4 - "Auth Integration Tests"
-Cohesion: 0.24
-Nodes (19): CreateTopicRequest, DateTime, Option, String, Utc, Uuid, TopicResponse, UpdateTopicRequest (+11 more)
+Cohesion: 0.17
+Nodes (18): DashboardCounts, DashboardQuery, DashboardResponse, KindCounts, NodeResponse, Option, Vec, StaleMode (+10 more)
 
 ### Community 5 - "Frontend Lint/Format Tooling"
 Cohesion: 0.10
 Nodes (21): eslint, @eslint/js, eslint-plugin-svelte, devDependencies, eslint, @eslint/js, eslint-plugin-svelte, svelte (+13 more)
 
 ### Community 6 - "Node Domain Enums and DTOs"
-Cohesion: 0.14
-Nodes (38): AttachTopicRequest, CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView (+30 more)
+Cohesion: 0.09
+Nodes (68): ActivePeriodResponse, CreateActivePeriodRequest, DateTime, Option, Utc, Uuid, UpdateActivePeriodRequest, AttachTopicRequest (+60 more)
 
 ### Community 7 - "Dashboard Handler"
-Cohesion: 0.19
-Nodes (58): app(), archiving_an_active_node_closes_its_period(), attach_and_detach_topic_are_idempotent(), attach_and_detach_topic_on_another_users_node_returns_404(), attach_topic_belonging_to_another_user_returns_404(), canvas_position_is_null_until_set_and_round_trips(), color_must_be_a_hex_code(), create_get_update_delete_happy_path() (+50 more)
+Cohesion: 0.18
+Nodes (64): app(), archiving_an_active_node_closes_its_period(), attach_and_detach_topic_are_idempotent(), attach_and_detach_topic_on_another_users_node_returns_404(), attach_topic_belonging_to_another_user_returns_404(), canvas_position_is_null_until_set_and_round_trips(), color_must_be_a_hex_code(), create_get_update_delete_happy_path() (+56 more)
 
 ### Community 8 - "ApiError Type"
 Cohesion: 0.17
@@ -198,24 +191,24 @@ Cohesion: 0.14
 Nodes (14): scripts, build, check, check:watch, dev, format, lint, prebuild (+6 more)
 
 ### Community 11 - "Opaque Refresh Token Generation"
-Cohesion: 0.15
-Nodes (15): $lib/api/endpoints, boardApi, checklistApi, dashboardApi, mcpApi, oauthApi, periodsApi, topicsApi (+7 more)
+Cohesion: 0.12
+Nodes (17): $lib/api/endpoints, checklistApi, dashboardApi, mcpApi, oauthApi, periodsApi, ./DetailConnections.svelte, ./DetailTopics.svelte (+9 more)
 
 ### Community 12 - "Migration-on-Boot Policy"
-Cohesion: 0.09
-Nodes (28): @fontsource/space-grotesk/400.css, @fontsource/space-grotesk/500.css, @fontsource/space-grotesk/600.css, @fontsource/space-grotesk/700.css, $lib/api/client, ApiError, NO_RETRY_PATHS, onSessionExpired() (+20 more)
+Cohesion: 0.13
+Nodes (22): $lib/api/client, ApiError, NO_RETRY_PATHS, onSessionExpired(), postRefresh(), queryString(), refreshAccessToken(), request() (+14 more)
 
 ### Community 13 - "Poke Handlers and Integration Tests"
-Cohesion: 0.15
-Nodes (20): requestKindChange(), $lib/graph/display, ACCENT_PALETTE, accentColor(), borderStyle, canPoke(), daysSince(), DEFAULT_ACCENT (+12 more)
+Cohesion: 0.11
+Nodes (28): $lib/components/PokeAt.svelte, error, pokedAt, save(), show(), $lib/graph/display, ACCENT_PALETTE, accentColor() (+20 more)
 
 ### Community 14 - "+page.svelte"
 Cohesion: 0.11
-Nodes (26): svelte/animate, svelte/easing, ./DetailActivePeriods.svelte, ./DetailChecklist.svelte, ./DetailConnections.svelte, ./DetailContains.svelte, ./DetailNotes.svelte, ./DetailTopics.svelte (+18 more)
+Nodes (19): svelte/animate, $lib/components/NodeCard.svelte, $lib/components/ui/Badge.svelte, $lib/components/ui/CollapseToggle.svelte, $lib/components/ui/ProgressBar.svelte, dimmed, path, LoomFlowEdge (+11 more)
 
 ### Community 15 - "Poke Domain Models + Repository"
-Cohesion: 0.11
-Nodes (30): DashboardCounts, DashboardResponse, KindCounts, NodeResponse, Vec, StatusCounts, PokeResponse, DateTime (+22 more)
+Cohesion: 0.12
+Nodes (28): create(), list(), ApiError, Json, Option, Result, State, StatusCode (+20 more)
 
 ### Community 16 - "Adapter-Auto Dependency"
 Cohesion: 0.18
@@ -223,31 +216,31 @@ Nodes (11): API shape, Auth, CLAUDE.md - backend, Database, Structure, Types, Th
 
 ### Community 17 - "Dashboard Integration Tests"
 Cohesion: 0.30
-Nodes (26): active_list_ranks_by_tier_then_unblocked(), add_edge(), app(), backdate_created_at(), counts_match_fixtures_exactly(), create_node(), dashboard_is_isolated_per_user(), ideas_count_and_recent_ideas_cover_every_idea_kind_node() (+18 more)
+Nodes (27): active_list_ranks_by_tier_then_unblocked(), add_edge(), app(), backdate_created_at(), counts_match_fixtures_exactly(), create_node(), dashboard_is_isolated_per_user(), ideas_count_and_recent_ideas_cover_every_idea_kind_node() (+19 more)
 
 ### Community 18 - "Edge Domain Models"
 Cohesion: 0.13
-Nodes (45): ApiJson, ApiPath, ApiQuery, T, AddChecklistItemsParams, auth(), ChecklistItemIdParams, compact() (+37 more)
+Nodes (48): ApiJson, ApiPath, ApiQuery, T, AddChecklistItemsParams, auth(), ChecklistItemIdParams, compact() (+40 more)
 
 ### Community 19 - "Globals Dependency"
 Cohesion: 0.14
 Nodes (32): clean_title(), create(), delete(), list(), ApiError, Json, Result, State (+24 more)
 
 ### Community 20 - "Edge Handlers and Integration Tests"
-Cohesion: 0.32
-Nodes (26): app(), create_kind(), create_node(), create_poke_happy_path(), deleting_node_cascades_pokes(), get_node(), last_poked_at_reflects_max_and_null_when_never_poked(), list_nodes_agrees_with_get_node_on_last_poked_at() (+18 more)
+Cohesion: 0.29
+Nodes (31): app(), backdated_poke_keeps_its_time_and_never_lowers_last_poked_at(), backdated_poke_on_another_users_node_returns_404(), create_kind(), create_node(), create_poke_happy_path(), deleting_node_cascades_pokes(), future_poke_returns_400() (+23 more)
 
 ### Community 21 - "Auth Security Model"
-Cohesion: 0.07
-Nodes (27): @xyflow/svelte/dist/base.css, $lib/navigation, closeNode(), openNode(), withParam(), $lib/stores/toasts.svelte, dismiss(), notify() (+19 more)
+Cohesion: 0.09
+Nodes (20): @xyflow/svelte/dist/base.css, ./DetailContains.svelte, $lib/navigation, closeNode(), openNode(), withParam(), $lib/stores/toasts.svelte, dismiss() (+12 more)
 
 ### Community 22 - "send"
 Cohesion: 0.36
 Nodes (19): add_item(), another_users_checklist_is_invisible(), app(), blank_titles_are_rejected(), checklist_drives_node_progress(), create_node(), get_node(), items_append_in_order_and_list_back() (+11 more)
 
 ### Community 23 - "ESLint Dependency"
-Cohesion: 0.08
-Nodes (26): SvelteKit app.html Shell, KIND_GLYPH, TIER_COLOR, $lib/graph/grouping, Bucket, FOCUS_BUCKETS, Grouping, groupNodes() (+18 more)
+Cohesion: 0.07
+Nodes (32): @fontsource/space-grotesk/400.css, @fontsource/space-grotesk/500.css, @fontsource/space-grotesk/600.css, @fontsource/space-grotesk/700.css, SvelteKit app.html Shell, KIND_GLYPH, TIER_COLOR, $lib/graph/grouping (+24 more)
 
 ### Community 24 - "Board Handler"
 Cohesion: 0.33
@@ -258,16 +251,16 @@ Cohesion: 0.34
 Nodes (17): app(), canvas_is_isolated_per_user(), canvas_returns_callers_nodes_and_edges(), create_node(), missing_or_garbage_token_returns_401(), req(), Body, Option (+9 more)
 
 ### Community 26 - "Auth Security Model"
-Cohesion: 0.08
-Nodes (43): path, $lib/graph/collapse, rerouteEdges(), RoutedEdge, containment, ids, parentOf, standIns() (+35 more)
+Cohesion: 0.07
+Nodes (47): path, $lib/graph/collapse, rerouteEdges(), RoutedEdge, containment, ids, parentOf, standIns() (+39 more)
 
 ### Community 28 - "ESLint JS Config Dependency"
 Cohesion: 0.26
 Nodes (11): ApiJson<T>, ApiPath<T>, ApiQuery<T>, FromRequestParts, Parts, Rejection, Request, Result (+3 more)
 
 ### Community 29 - "Docker Compose Services"
-Cohesion: 0.25
-Nodes (27): ActivePeriodResponse, CreateActivePeriodRequest, DateTime, Option, Utc, Uuid, UpdateActivePeriodRequest, close_period_now() (+19 more)
+Cohesion: 0.18
+Nodes (7): $lib/components/ui/AccentPicker.svelte, chosen, $lib/components/ui/Tabs.svelte, selected, remove(), $lib/types/StaleMode, ./settings.css
 
 ### Community 30 - "Frontend TypeScript Config"
 Cohesion: 0.14
@@ -306,8 +299,8 @@ Cohesion: 0.21
 Nodes (8): ApiError, Error, From, IntoResponse, Response, Self, StatusCode, String
 
 ### Community 39 - "App Config Loading"
-Cohesion: 0.09
-Nodes (41): generate(), generate_is_random(), generate_returns_matching_raw_and_hash(), hash_token(), String, create(), delete(), info() (+33 more)
+Cohesion: 0.08
+Nodes (48): generate(), generate_is_random(), generate_returns_matching_raw_and_hash(), hash_token(), String, create(), delete(), info() (+40 more)
 
 ### Community 40 - "PATCH Double-Option Deserialize Helper"
 Cohesion: 0.43
@@ -317,29 +310,21 @@ Nodes (6): connect_with_retries(), main(), PgPool, Result, shutdown_signal(), Pg
 Cohesion: 0.29
 Nodes (6): deserialize_some(), Error, Option, Result, T, D
 
-### Community 42 - "User Repository Layer"
-Cohesion: 0.24
-Nodes (17): ApiError, Result, validate_color(), create(), delete(), get(), list(), map_topic_error() (+9 more)
-
 ### Community 43 - "Frontend Vitest Example (Welcome.svelte)"
 Cohesion: 0.06
 Nodes (31): About, Backups, Claude Chat and Cowork (as a custom connector), Claude Chat and Cowork (as a plugin, recommended), Claude Code, Configuration, Connecting Claude, Connecting other agents (+23 more)
-
-### Community 50 - "ESLint JS Config Dependency"
-Cohesion: 0.18
-Nodes (14): authenticate(), router(), Request, Response, State, unauthorized(), AppState, DecodingKey (+6 more)
 
 ### Community 51 - "ESLint JS Config Dependency"
 Cohesion: 0.25
 Nodes (31): app(), call(), cannot_touch_another_users_nodes(), create_subgraph_builds_a_learning_path(), disabled_by_default(), error_text(), failing_subgraph_leaves_nothing_behind(), failing_subgraph_placement_rolls_back() (+23 more)
 
 ### Community 52 - "ESLint JS Config Dependency"
-Cohesion: 0.31
-Nodes (18): app(), cannot_see_or_delete_another_users_tokens(), create_list_delete_happy_path(), info_reports_disabled_by_default(), info_reports_url_when_enabled(), rejects_blank_name(), req(), requires_login() (+10 more)
+Cohesion: 0.19
+Nodes (23): build_router(), governor_error_response(), Response, Router, app(), cannot_see_or_delete_another_users_tokens(), create_list_delete_happy_path(), info_reports_disabled_by_default() (+15 more)
 
 ### Community 56 - "Auth Handlers + AuthUser + ApiError"
-Cohesion: 0.36
-Nodes (18): add_period(), another_users_periods_are_invisible(), app(), create_node(), create_rejects_ended_before_started(), periods_are_created_listed_updated_and_deleted(), req(), Body (+10 more)
+Cohesion: 0.37
+Nodes (19): add_period(), another_users_periods_are_invisible(), app(), create_node(), create_rejects_ended_before_started(), period_focus_defaults_to_the_node_and_is_editable(), periods_are_created_listed_updated_and_deleted(), req() (+11 more)
 
 ### Community 57 - "Auth Handlers + AuthUser + ApiError"
 Cohesion: 0.15
@@ -374,60 +359,40 @@ Cohesion: 0.50
 Nodes (3): dompurify, dompurify, renderMarkdown()
 
 ### Community 102 - "oauth.rs"
-Cohesion: 0.10
-Nodes (46): authorization_server_metadata(), decide(), exchange_code(), exchange_refresh_token(), is_allowed_redirect_uri(), is_this_resource(), list_clients(), mcp_resource() (+38 more)
+Cohesion: 0.07
+Nodes (63): authorization_server_metadata(), decide(), exchange_code(), exchange_refresh_token(), is_allowed_redirect_uri(), is_this_resource(), list_clients(), mcp_resource() (+55 more)
 
 ### Community 103 - "state.rs"
-Cohesion: 0.09
-Nodes (26): svelte/elements, $lib/components/CommandPalette.svelte, $lib/components/NewNodeDialog.svelte, $lib/components/PromoteDialog.svelte, $lib/components/QuickCapture.svelte, selected, $lib/components/ui/AccentPicker.svelte, chosen (+18 more)
+Cohesion: 0.11
+Nodes (33): svelte/easing, svelte/elements, boardApi, topicsApi, $lib/components/CommandPalette.svelte, ./DetailActivePeriods.svelte, ./DetailChecklist.svelte, ./DetailNotes.svelte (+25 more)
 
 ### Community 104 - "AppState"
 Cohesion: 0.16
 Nodes (8): shortDate(), barCaption(), fitAll(), index(), panning, periodCaption(), $lib/types/ActivePeriodResponse, $lib/types/TimelinePokeResponse
 
 ### Community 105 - "AuthUser"
-Cohesion: 0.33
-Nodes (7): isIdea(), FilterCriteria, nodeMatches(), anything, $lib/stores/filters.svelte, boardFilters, matchesBoardFilters()
-
-### Community 107 - "oauth.rs"
-Cohesion: 0.28
-Nodes (17): consume_code(), ConsumedCode, create_client(), create_code(), find_client(), list_connected(), OAuthClient, revoke_client() (+9 more)
-
-### Community 108 - "AuthUser"
-Cohesion: 0.21
-Nodes (13): canvas(), ApiError, Json, Result, State, timeline(), AuthUser, FromRequestParts (+5 more)
-
-### Community 109 - "create"
-Cohesion: 0.34
-Nodes (13): create(), delete(), list(), map_period_error(), ApiError, Error, Json, Result (+5 more)
-
-### Community 110 - "create"
-Cohesion: 0.36
-Nodes (9): create(), list(), ApiError, Json, Result, State, StatusCode, Uuid (+1 more)
-
-### Community 111 - "get"
-Cohesion: 0.40
-Nodes (5): get(), ApiError, Json, Result, State
+Cohesion: 0.31
+Nodes (8): isIdea(), FilterCriteria, nodeMatches(), anything, $lib/stores/filters.svelte, boardFilters, matchesBoardFilters(), matchesOrganizedFilters()
 
 ## Knowledge Gaps
-- **205 isolated node(s):** `gitignorePath`, `name`, `private`, `version`, `type` (+200 more)
+- **208 isolated node(s):** `gitignorePath`, `name`, `private`, `version`, `type` (+203 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **38 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `AppState` connect `ESLint JS Config Dependency` to `nodes.rs`, `Topic Handlers (CRUD)`, `Axum Router Builder + Topic Tests`, `oauth.rs`, `App Config Loading`, `ApiError Type`, `User Repository Layer`, `AuthUser`, `create`, `create`, `get`, `Edge Domain Models`, `Globals Dependency`, `Auth Security Model`?**
-  _High betweenness centrality (0.541) - this node is a cross-community bridge._
-- **Why does `build_router()` connect `Axum Router Builder + Topic Tests` to `$lib/stores/filters.svelte`, `Dashboard Handler`, `Node Handlers and Integration Tests`, `Dashboard Integration Tests`, `ESLint JS Config Dependency`, `ESLint JS Config Dependency`, `ESLint JS Config Dependency`, `Edge Handlers and Integration Tests`, `send`, `Auth Handlers + AuthUser + ApiError`, `Board Integration Tests`, `Board Handler`?**
-  _High betweenness centrality (0.270) - this node is a cross-community bridge._
-- **Why does `$lib/components/detail/NodeDetail.svelte` connect `+page.svelte` to `Auth Security Model`, `Opaque Refresh Token Generation`, `Poke Handlers and Integration Tests`, `state.rs`?**
-  _High betweenness centrality (0.102) - this node is a cross-community bridge._
+- **Why does `AppState` connect `nodes.rs` to `Topic Handlers (CRUD)`, `oauth.rs`, `App Config Loading`, `ApiError Type`, `Poke Domain Models + Repository`, `Edge Domain Models`, `Globals Dependency`, `ESLint JS Config Dependency`, `Auth Security Model`?**
+  _High betweenness centrality (0.543) - this node is a cross-community bridge._
+- **Why does `build_router()` connect `ESLint JS Config Dependency` to `nodes.rs`, `$lib/stores/filters.svelte`, `Axum Router Builder + Topic Tests`, `Dashboard Handler`, `Node Handlers and Integration Tests`, `Dashboard Integration Tests`, `ESLint JS Config Dependency`, `Edge Handlers and Integration Tests`, `send`, `Auth Handlers + AuthUser + ApiError`, `Board Integration Tests`, `Board Handler`?**
+  _High betweenness centrality (0.279) - this node is a cross-community bridge._
+- **Why does `$lib/components/detail/NodeDetail.svelte` connect `state.rs` to `Opaque Refresh Token Generation`, `Poke Handlers and Integration Tests`, `+page.svelte`, `Auth Security Model`, `Docker Compose Services`?**
+  _High betweenness centrality (0.111) - this node is a cross-community bridge._
 - **What connects `gitignorePath`, `name`, `private` to the rest of the system?**
-  _205 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _208 weakly-connected nodes found - possible documentation gaps or missing edges._
+- **Should `nodes.rs` be split into smaller, more focused modules?**
+  _Cohesion score 0.050288820931022764 - nodes in this community are weakly interconnected._
 - **Should `fixtures.ts` be split into smaller, more focused modules?**
-  _Cohesion score 0.10344827586206896 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.1225296442687747 - nodes in this community are weakly interconnected._
 - **Should `Topic Handlers (CRUD)` be split into smaller, more focused modules?**
-  _Cohesion score 0.08470588235294117 - nodes in this community are weakly interconnected._
-- **Should `Frontend Lint/Format Tooling` be split into smaller, more focused modules?**
-  _Cohesion score 0.09523809523809523 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.08220211161387632 - nodes in this community are weakly interconnected._

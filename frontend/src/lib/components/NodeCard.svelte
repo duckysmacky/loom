@@ -3,7 +3,6 @@
 	import KindMark from '$lib/components/KindMark.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import PokeAt from '$lib/components/PokeAt.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import {
@@ -133,7 +132,6 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 
 	{#if pokeable}
 		<div class="actions">
-			<PokeAt {node} />
 			<span class:pulse={pulsing}>
 				<Button variant="poke" onclick={poke} title="Log that you worked on this" icon={Pointer}
 					>Poke</Button
@@ -300,6 +298,5 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 		padding-top: 12px;
 		display: flex;
 		justify-content: flex-end;
-		gap: 6px;
 	}
 </style>

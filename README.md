@@ -113,8 +113,8 @@ with a poke button right there. Queued and paused nodes can show up too
 (by default queued only if poked before, paused never), and the number of
 days is adjustable - all under Settings > Functionality.
 
-Forgot to poke? The small clock button next to every poke button logs a
-poke at a past date and time instead (never in the future). It doesn't
+Forgot to poke? The small clock button to the right of the poke button
+in a node's detail view logs a poke at a past date and time instead (never in the future). It doesn't
 switch the node to active, and it can't lower "last touched" below a
 newer poke.
 

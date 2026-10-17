@@ -41,6 +41,7 @@
   "39": "App Config Loading",
   "40": "PATCH Double-Option Deserialize Helper",
   "41": "Blueprint Light Canvas Design",
+  "42": "canvas.rs",
   "43": "Frontend Vitest Example (Welcome.svelte)",
   "44": "Prettier Dependency",
   "45": "View-Shaped REST Endpoints",
@@ -48,6 +49,7 @@
   "47": "+page.ts",
   "48": "Vite Dependency",
   "49": "Backend lib.rs",
+  "50": "TopicResponse",
   "51": "ESLint JS Config Dependency",
   "52": "ESLint JS Config Dependency",
   "53": "Shared Board Filter Store",
@@ -103,5 +105,13 @@
   "103": "state.rs",
   "104": "AppState",
   "105": "AuthUser",
-  "106": "$lib/graph/grouping"
+  "106": "$lib/graph/grouping",
+  "107": "create",
+  "108": "mcp_tokens.rs",
+  "109": "extract.rs",
+  "110": "types.ts",
+  "111": "@sveltejs/kit",
+  "112": "typescript-eslint",
+  "113": "@vitest/browser-playwright",
+  "114": "@lucide/svelte"
 }

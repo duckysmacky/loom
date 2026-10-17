@@ -4,7 +4,6 @@
 	import AnimatedNumber from '$lib/components/ui/AnimatedNumber.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
-	import PokeAt from '$lib/components/PokeAt.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { dashboardApi, nodesApi } from '$lib/api/endpoints';
@@ -159,10 +158,7 @@
 										</span>
 									</button>
 									{#if canPoke(node)}
-										<span class="poke-group">
-											<PokeAt {node} />
-											<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
-										</span>
+										<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
 									{/if}
 								</li>
 							{/each}
@@ -397,11 +393,6 @@
 		display: flex;
 		flex-direction: column;
 		gap: 14px;
-	}
-
-	.poke-group {
-		display: flex;
-		gap: 6px;
 	}
 
 	.row {

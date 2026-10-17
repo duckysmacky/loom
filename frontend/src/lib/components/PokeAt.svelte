@@ -10,7 +10,7 @@
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	/**
-	 * Small square button next to a Poke button: opens a dialog to log a poke
+	 * Small square button to the right of the node view's Poke button: opens a dialog to log a poke
 	 * at a past date and time, for work that was never logged in the moment.
 	 */
 	let { node }: { node: NodeResponse } = $props();
@@ -49,7 +49,7 @@
 	}
 </script>
 
-<!-- Keeps clicks (and the dialog's own) from reaching a clickable parent like NodeCard. -->
+<!-- Keeps clicks (and the dialog's own) from reaching a clickable parent. -->
 <!-- svelte-ignore a11y_no_static_element_interactions, a11y_click_events_have_key_events -->
 <span class="poke-at" onclick={(event) => event.stopPropagation()}>
 	<button
