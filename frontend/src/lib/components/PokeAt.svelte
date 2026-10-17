@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { History, Pointer } from '@lucide/svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import DateInput from '$lib/components/ui/DateInput.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -57,17 +59,7 @@
 		aria-label="Log a poke at a past date and time"
 		onclick={show}
 	>
-		<svg
-			viewBox="0 0 16 16"
-			width="14"
-			height="14"
-			fill="none"
-			stroke="currentColor"
-			stroke-width="1.5"
-		>
-			<circle cx="8" cy="8" r="6.25" />
-			<path d="M8 4.5V8l2.5 1.75" stroke-linecap="square" />
-		</svg>
+		<Icon icon={History} always />
 	</button>
 
 	<Modal {open} onclose={() => (open = false)} label="Log a past poke" width={380}>
@@ -103,7 +95,9 @@
 
 			<div class="actions">
 				<Button variant="quiet" onclick={() => (open = false)}>Cancel</Button>
-				<Button variant="primary" type="submit" disabled={saving || !!error}>Add poke</Button>
+				<Button variant="primary" type="submit" disabled={saving || !!error} icon={Pointer}
+					>Add poke</Button
+				>
 			</div>
 		</form>
 	</Modal>

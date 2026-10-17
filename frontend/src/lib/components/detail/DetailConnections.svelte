@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Link } from '@lucide/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { edgesApi } from '$lib/api/endpoints';
 	import { accentColor } from '$lib/graph/display';
@@ -131,7 +132,7 @@
 			</select>
 			<div class="add-actions">
 				<Button variant="quiet" onclick={() => (adding = false)}>Cancel</Button>
-				<Button variant="primary" onclick={add} disabled={!otherId}>Connect</Button>
+				<Button variant="primary" onclick={add} disabled={!otherId} icon={Link}>Connect</Button>
 			</div>
 		</div>
 	{:else}

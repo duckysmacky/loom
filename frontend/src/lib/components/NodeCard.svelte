@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Pointer } from '@lucide/svelte';
+	import KindMark from '$lib/components/KindMark.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import PokeAt from '$lib/components/PokeAt.svelte';
@@ -7,7 +9,6 @@
 	import {
 		canPoke,
 		accentColor,
-		KIND_GLYPH,
 		borderStyle,
 		incrementedProgress,
 		notesExcerpt,
@@ -90,8 +91,9 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 >
 	<div class="head">
 		{@render lead?.()}
-		<!-- The kind glyph doubles as the accent swatch. -->
-		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
+		<!-- The kind mark doubles as the accent swatch. -->
+		<span class="accent" style:color={accentColor(node)} aria-hidden="true"
+			><KindMark {kind} /></span
 		>
 		<span class="kind">{kind}</span>
 		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
@@ -133,7 +135,9 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 		<div class="actions">
 			<PokeAt {node} />
 			<span class:pulse={pulsing}>
-				<Button variant="poke" onclick={poke} title="Log that you worked on this">Poke</Button>
+				<Button variant="poke" onclick={poke} title="Log that you worked on this" icon={Pointer}
+					>Poke</Button
+				>
 			</span>
 		</div>
 	{/if}

@@ -45,6 +45,24 @@
 		/>
 	</div>
 	<div class="settings-row">
+		<span>
+			<span class="row-label">Icon style</span>
+			<span class="row-help">Glyphs swaps icons for plain typographic marks.</span>
+		</span>
+		<SegmentedControl
+			label="Icon style"
+			value={prefs.iconStyle}
+			onchange={(iconStyle) => {
+				prefs.iconStyle = iconStyle;
+				savePrefs();
+			}}
+			options={[
+				{ value: 'icons', label: 'Icons' },
+				{ value: 'glyphs', label: 'Glyphs' }
+			]}
+		/>
+	</div>
+	<div class="settings-row">
 		<label class="toggle">
 			<span>
 				<span class="row-label">Connection labels</span>

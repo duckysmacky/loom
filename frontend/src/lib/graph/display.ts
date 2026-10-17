@@ -103,7 +103,7 @@ export function canPoke(node: NodeResponse): boolean {
 	);
 }
 
-/** Typographic kind marks (the design system uses glyphs, never icons). */
+/** Typographic kind marks, shown instead of kind icons in the glyph icon style. */
 export const KIND_GLYPH: Record<NodeResponse['kind'], string> = {
 	project: '■',
 	study: '◆',

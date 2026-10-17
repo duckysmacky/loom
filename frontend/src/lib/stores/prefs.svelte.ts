@@ -10,6 +10,8 @@ import type { StaleMode } from '$lib/types/StaleMode';
 export type Prefs = {
 	theme: 'system' | 'light' | 'dark';
 	density: 'comfortable' | 'compact';
+	/** Lucide icons across the UI, or the older typographic glyphs (also picks the favicon). */
+	iconStyle: 'icons' | 'glyphs';
 	defaultBoardView: 'organized' | 'canvas' | 'timeline';
 	captureKind: NodeKind;
 	captureFocus: NodeFocus;
@@ -52,6 +54,7 @@ const MAX_RECENT_COLORS = 8;
 const DEFAULTS: Prefs = {
 	theme: 'system',
 	density: 'comfortable',
+	iconStyle: 'icons',
 	defaultBoardView: 'organized',
 	captureKind: 'idea',
 	captureFocus: 'secondary',
@@ -112,11 +115,13 @@ export function savePrefs() {
 
 const darkQuery = window.matchMedia('(prefers-color-scheme: dark)');
 
-/** Mirrors theme/density onto <html>; app.html does the same before first paint. */
+/** Mirrors theme/density onto <html> and picks the favicon; app.html does the same before first paint. */
 export function applyAppearance() {
 	const dark = prefs.theme === 'dark' || (prefs.theme === 'system' && darkQuery.matches);
 	document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 	document.documentElement.dataset.density = prefs.density;
+	const favicon = document.querySelector<HTMLLinkElement>('link#favicon');
+	if (favicon) favicon.href = prefs.iconStyle === 'glyphs' ? '/favicon-glyph.svg' : '/favicon.svg';
 }
 
 darkQuery.addEventListener('change', applyAppearance);

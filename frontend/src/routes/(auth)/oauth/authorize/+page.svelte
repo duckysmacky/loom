@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Check, X } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -63,8 +64,12 @@
 		</p>
 		<p class="detail">You can disconnect it any time in Settings → Connections.</p>
 		<div class="actions">
-			<Button variant="quiet" disabled={deciding} onclick={() => decide(false)}>Deny</Button>
-			<Button variant="primary" disabled={deciding} onclick={() => decide(true)}>Approve</Button>
+			<Button variant="quiet" disabled={deciding} onclick={() => decide(false)} icon={X}
+				>Deny</Button
+			>
+			<Button variant="primary" disabled={deciding} onclick={() => decide(true)} icon={Check}
+				>Approve</Button
+			>
 		</div>
 	{:else}
 		<p class="detail">Checking the request…</p>

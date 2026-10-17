@@ -1,5 +1,8 @@
 <script lang="ts">
+	import { LogOut, Plus, Search, Settings, Zap } from '@lucide/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
+	import { prefs } from '$lib/stores/prefs.svelte';
 	import { logout, session } from '$lib/stores/session.svelte';
 	import { overlays } from '$lib/stores/ui.svelte';
 	import { fly } from 'svelte/transition';
@@ -15,15 +18,15 @@
 	<h1 class="title">{title}</h1>
 
 	<button type="button" class="search" onclick={() => (overlays.paletteOpen = true)}>
-		<span class="lens"></span>
+		{#if prefs.iconStyle === 'icons'}<Icon icon={Search} />{:else}<span class="lens"></span>{/if}
 		<span class="placeholder">Search nodes…</span>
 		<span class="key">Ctrl K</span>
 	</button>
 
 	<div class="actions">
-		<Button variant="quiet" onclick={() => (overlays.newOpen = true)}>New</Button>
+		<Button variant="quiet" icon={Plus} onclick={() => (overlays.newOpen = true)}>New</Button>
 		<Button variant="accent" onclick={() => (overlays.captureOpen = true)}>
-			+<span class="capture-label"> Quick capture</span>
+			<Icon icon={Zap} glyph="+" /><span class="capture-label">Quick capture</span>
 		</Button>
 		<div class="account">
 			<button
@@ -36,8 +39,9 @@
 			{#if menuOpen}
 				<div class="menu" transition:fly={{ y: -6, duration: ms(140) }}>
 					<div class="email">{session.user?.email}</div>
-					<a href="/settings" onclick={() => (menuOpen = false)}>Settings</a>
-					<button type="button" onclick={logout}>Sign out</button>
+					<a href="/settings" onclick={() => (menuOpen = false)}><Icon icon={Settings} />Settings</a
+					>
+					<button type="button" onclick={logout}><Icon icon={LogOut} />Sign out</button>
 				</div>
 			{/if}
 		</div>
@@ -69,6 +73,7 @@
 	}
 
 	.search {
+		color: var(--ink-2);
 		flex: 1;
 		max-width: 320px;
 		margin-left: 8px;
@@ -135,6 +140,9 @@
 	}
 
 	.menu > * {
+		display: flex;
+		align-items: center;
+		gap: 8px;
 		padding: 10px 14px;
 		font: 600 12.5px/1.2 var(--font-display);
 		text-align: left;

@@ -1,11 +1,13 @@
 <script lang="ts">
+	import { ArchiveRestore, ArrowUpRight } from '@lucide/svelte';
+	import KindMark from '$lib/components/KindMark.svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { KIND_GLYPH, accentColor, isIdea, notesExcerpt, shortDate } from '$lib/graph/display';
+	import { accentColor, isIdea, notesExcerpt, shortDate } from '$lib/graph/display';
 	import { openNode, withParam } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -211,7 +213,7 @@
 							</button>
 							<div class="sub">
 								<span class="kind">
-									{KIND_GLYPH[node.kind]}
+									<KindMark kind={node.kind} />
 									{node.kind}{node.status ? ` · ${node.status}` : ''}
 								</span>
 								{notesExcerpt(node.notes)}
@@ -239,9 +241,13 @@
 							<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 							<span onclick={(event) => event.stopPropagation()}>
 								{#if node.archived}
-									<Button variant="poke" onclick={() => restore(node)}>Restore</Button>
+									<Button variant="poke" onclick={() => restore(node)} icon={ArchiveRestore}
+										>Restore</Button
+									>
 								{:else if isIdea(node)}
-									<Button variant="poke" onclick={() => (promoting = node)}>To board</Button>
+									<Button variant="poke" onclick={() => (promoting = node)} icon={ArrowUpRight}
+										>To board</Button
+									>
 								{/if}
 							</span>
 						</td>

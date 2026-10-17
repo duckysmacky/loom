@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Zap } from '@lucide/svelte';
+	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
@@ -85,10 +87,10 @@
 					value={kind}
 					onchange={(value) => (kind = value)}
 					options={[
-						{ value: 'idea', label: 'Idea' },
-						{ value: 'project', label: 'Project' },
-						{ value: 'study', label: 'Study' },
-						{ value: 'path', label: 'Path' }
+						{ value: 'idea', label: 'Idea', icon: KIND_ICON.idea },
+						{ value: 'project', label: 'Project', icon: KIND_ICON.project },
+						{ value: 'study', label: 'Study', icon: KIND_ICON.study },
+						{ value: 'path', label: 'Path', icon: KIND_ICON.path }
 					]}
 				/>
 			</div>
@@ -128,7 +130,9 @@
 
 		<div class="actions">
 			<span class="hint">↵ to capture · esc to close</span>
-			<Button type="submit" variant="primary" disabled={!title.trim() || saving}>Capture</Button>
+			<Button type="submit" variant="primary" disabled={!title.trim() || saving} icon={Zap}
+				>Capture</Button
+			>
 		</div>
 	</form>
 </Modal>

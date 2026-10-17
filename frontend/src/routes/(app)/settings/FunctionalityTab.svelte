@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import './settings.css';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
@@ -40,10 +41,10 @@
 				savePrefs();
 			}}
 			options={[
-				{ value: 'idea', label: 'Idea' },
-				{ value: 'project', label: 'Project' },
-				{ value: 'study', label: 'Study' },
-				{ value: 'path', label: 'Path' }
+				{ value: 'idea', label: 'Idea', icon: KIND_ICON.idea },
+				{ value: 'project', label: 'Project', icon: KIND_ICON.project },
+				{ value: 'study', label: 'Study', icon: KIND_ICON.study },
+				{ value: 'path', label: 'Path', icon: KIND_ICON.path }
 			]}
 		/>
 	</div>

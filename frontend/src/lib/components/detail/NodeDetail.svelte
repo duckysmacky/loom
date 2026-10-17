@@ -1,4 +1,15 @@
 <script lang="ts">
+	import {
+		Archive,
+		ArchiveRestore,
+		ArrowUpRight,
+		Check,
+		Pointer,
+		Spline,
+		Trash2,
+		X
+	} from '@lucide/svelte';
+	import KindMark from '$lib/components/KindMark.svelte';
 	import { goto } from '$app/navigation';
 	import { cubicOut } from 'svelte/easing';
 	import { fade, fly } from 'svelte/transition';
@@ -144,7 +155,7 @@
 		{#if !node}
 			<div class="missing">
 				<p>{graph.loaded ? 'This node no longer exists.' : 'Loading…'}</p>
-				<Button variant="quiet" onclick={closeNode}>Close</Button>
+				<Button variant="quiet" onclick={closeNode} icon={X}>Close</Button>
 			</div>
 		{:else}
 			{@const blocked = node.blocked && node.status !== 'done'}
@@ -152,7 +163,7 @@
 
 			<header>
 				<div class="meta-row">
-					<span class="label">{node.kind}</span>
+					<span class="label"><KindMark kind={node.kind} /> {node.kind}</span>
 					<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
 					{#if blocked}<span class="computed">blocked is computed · not editable</span>{/if}
 					<button type="button" class="close" aria-label="Close" onclick={closeNode}>✕</button>
@@ -200,7 +211,7 @@
 									aria-label="What is being counted"
 									bind:value={progressUnit}
 								/>
-								<Button type="submit" variant="poke">Save</Button>
+								<Button type="submit" variant="poke" icon={Check}>Save</Button>
 								{#if node.progress_total !== null}
 									<Button
 										variant="poke"
@@ -339,27 +350,38 @@
 						<span class="label">Actions</span>
 						<!-- For an idea, promoting it is the main action. -->
 						{#if node.kind === 'idea'}
-							<Button variant="accent" onclick={() => (promoting = node)}>Move to board</Button>
+							<Button variant="accent" onclick={() => (promoting = node)} icon={ArrowUpRight}
+								>Move to board</Button
+							>
 						{:else if blocked}
 							<span class="not-actionable">Not actionable yet</span>
 						{:else if canPoke(node)}
 							<PokeAt {node} />
-							<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
+							<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
 						{/if}
 						<Button
 							variant={node.kind === 'idea' ? 'poke' : 'accent'}
 							onclick={() => goto(`/board/canvas?focus=${node.id}&node=${node.id}`)}
+							icon={Spline}
 						>
 							Open in canvas
 						</Button>
-						<Button variant="quiet" onclick={() => update(node, { archived: !node.archived })}>
+						<Button
+							variant="quiet"
+							onclick={() => update(node, { archived: !node.archived })}
+							icon={node.archived ? ArchiveRestore : Archive}
+						>
 							{node.archived ? 'Restore' : 'Archive'}
 						</Button>
 						{#if confirmingDelete}
-							<Button variant="primary" onclick={() => remove(node)}>Delete for good</Button>
+							<Button variant="primary" onclick={() => remove(node)} icon={Trash2}
+								>Delete for good</Button
+							>
 							<Button variant="quiet" onclick={() => (confirmingDelete = false)}>Keep</Button>
 						{:else}
-							<Button variant="quiet" onclick={() => (confirmingDelete = true)}>Delete</Button>
+							<Button variant="quiet" onclick={() => (confirmingDelete = true)} icon={Trash2}
+								>Delete</Button
+							>
 						{/if}
 					</div>
 				</aside>

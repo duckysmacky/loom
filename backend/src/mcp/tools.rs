@@ -10,7 +10,9 @@ use axum::http::request::Parts;
 use chrono::{DateTime, Utc};
 use rmcp::handler::server::tool::Extension;
 use rmcp::handler::server::wrapper::Parameters;
-use rmcp::model::{CallToolResult, ContentBlock, Implementation, ServerCapabilities, ServerConfig};
+use rmcp::model::{
+    CallToolResult, ContentBlock, Icon, Implementation, ServerCapabilities, ServerConfig,
+};
 use rmcp::{ErrorData, ServerHandler, tool, tool_handler, tool_router};
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
@@ -1052,9 +1054,27 @@ impl LoomServer {
 impl ServerHandler for LoomServer {
     fn get_info(&self) -> ServerConfig {
         ServerConfig::new(ServerCapabilities::builder().enable_tools().build())
-            .with_server_info(Implementation::new("loom", env!("CARGO_PKG_VERSION")))
+            .with_server_info(server_info(
+                self.state.mcp_public_url.as_deref().unwrap_or_default(),
+            ))
             .with_instructions(INSTRUCTIONS)
     }
+}
+
+/// Name and logo for MCP clients, the logo served by the frontend at `public_url`.
+fn server_info(public_url: &str) -> Implementation {
+    let public_url = public_url.trim_end_matches('/');
+    Implementation::new("loom", env!("CARGO_PKG_VERSION"))
+        .with_title("Loom")
+        .with_website_url(public_url)
+        .with_icons(vec![
+            Icon::new(format!("{public_url}/favicon.svg"))
+                .with_mime_type("image/svg+xml")
+                .with_sizes(vec!["any".into()]),
+            Icon::new(format!("{public_url}/apple-touch-icon.png"))
+                .with_mime_type("image/png")
+                .with_sizes(vec!["180x180".into()]),
+        ])
 }
 
 /// The caller's identity, put on the request by `mcp::authenticate` before

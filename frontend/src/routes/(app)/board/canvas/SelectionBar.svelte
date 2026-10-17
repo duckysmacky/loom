@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Trash2, Undo2 } from '@lucide/svelte';
 	import { Panel } from '@xyflow/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -43,9 +44,9 @@
 			<span class="count">{count} selected</span>
 			<!-- With auto-place on, an unplaced node would be laid out again at once. -->
 			{#if !prefs.autoPlace}
-				<Button variant="quiet" onclick={unplace}>Unplace</Button>
+				<Button variant="quiet" onclick={unplace} icon={Undo2}>Unplace</Button>
 			{/if}
-			<Button variant="quiet" onclick={() => (confirming = true)}>Delete</Button>
+			<Button variant="quiet" onclick={() => (confirming = true)} icon={Trash2}>Delete</Button>
 		</div>
 	</Panel>
 {/if}
@@ -59,7 +60,7 @@
 		</p>
 		<div class="actions">
 			<Button variant="quiet" onclick={() => (confirming = false)}>Keep</Button>
-			<Button variant="primary" onclick={remove}>Delete for good</Button>
+			<Button variant="primary" onclick={remove} icon={Trash2}>Delete for good</Button>
 		</div>
 	</div>
 </Modal>

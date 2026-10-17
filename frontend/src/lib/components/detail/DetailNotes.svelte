@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Check } from '@lucide/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import { renderMarkdown } from '$lib/markdown';
@@ -46,7 +47,7 @@
 		<div class="actions">
 			<span class="hint">Ctrl ↵ to save</span>
 			<Button variant="quiet" onclick={() => (editing = false)}>Cancel</Button>
-			<Button variant="primary" onclick={save}>Save</Button>
+			<Button variant="primary" onclick={save} icon={Check}>Save</Button>
 		</div>
 	{:else if node.notes}
 		<!-- Sanitized by DOMPurify in renderMarkdown. -->

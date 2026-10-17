@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { ArrowUpRight } from '@lucide/svelte';
+	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
@@ -58,9 +60,9 @@
 				value={kind}
 				onchange={(value) => (kind = value)}
 				options={[
-					{ value: 'project', label: 'Project' },
-					{ value: 'study', label: 'Study' },
-					{ value: 'path', label: 'Path' }
+					{ value: 'project', label: 'Project', icon: KIND_ICON.project },
+					{ value: 'study', label: 'Study', icon: KIND_ICON.study },
+					{ value: 'path', label: 'Path', icon: KIND_ICON.path }
 				]}
 			/>
 		</div>
@@ -98,7 +100,9 @@
 
 		<div class="actions">
 			<Button variant="quiet" onclick={onclose}>Cancel</Button>
-			<Button variant="primary" onclick={promote} disabled={saving}>Move to board</Button>
+			<Button variant="primary" onclick={promote} disabled={saving} icon={ArrowUpRight}
+				>Move to board</Button
+			>
 		</div>
 	</div>
 </Modal>

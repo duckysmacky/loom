@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { LogOut } from '@lucide/svelte';
 	import './settings.css';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { ApiError } from '$lib/api/client';
@@ -45,7 +46,7 @@
 			<span class="row-label">Sign out</span>
 			<span class="row-help">Ends this browser's session.</span>
 		</span>
-		<Button onclick={logout}>Sign out</Button>
+		<Button onclick={logout} icon={LogOut}>Sign out</Button>
 	</div>
 </section>
 

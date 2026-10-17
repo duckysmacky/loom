@@ -1,4 +1,5 @@
 <script lang="ts">
+	import KindMark from '$lib/components/KindMark.svelte';
 	import { flip } from 'svelte/animate';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -98,7 +99,10 @@
 			<section aria-labelledby="tier-{section.id}">
 				<div class="section-head">
 					<span class="bar" style:background={section.bar}></span>
-					<h2 class="title" id="tier-{section.id}">{section.title}</h2>
+					<h2 class="title" id="tier-{section.id}">
+						{#if section.kind}<KindMark kind={section.kind} />{/if}
+						{section.title}
+					</h2>
 					<span class="meta">
 						{section.nodes.length}
 						{section.nodes.length === 1 ? 'node' : 'nodes'}

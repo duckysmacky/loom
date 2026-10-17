@@ -1,4 +1,6 @@
 <script lang="ts">
+	import { Link, Plus } from '@lucide/svelte';
+	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Chip from '$lib/components/ui/Chip.svelte';
@@ -164,10 +166,10 @@
 					value={kind}
 					onchange={(value) => (kind = value)}
 					options={[
-						{ value: 'idea', label: 'Idea' },
-						{ value: 'project', label: 'Project' },
-						{ value: 'study', label: 'Study' },
-						{ value: 'path', label: 'Path' }
+						{ value: 'idea', label: 'Idea', icon: KIND_ICON.idea },
+						{ value: 'project', label: 'Project', icon: KIND_ICON.project },
+						{ value: 'study', label: 'Study', icon: KIND_ICON.study },
+						{ value: 'path', label: 'Path', icon: KIND_ICON.path }
 					]}
 				/>
 			</div>
@@ -270,7 +272,7 @@
 						<option value={candidate.id}>{candidate.title}</option>
 					{/each}
 				</select>
-				<Button variant="quiet" onclick={addLink} disabled={!linkTarget}>Add</Button>
+				<Button variant="quiet" onclick={addLink} disabled={!linkTarget} icon={Link}>Add</Button>
 			</div>
 		</div>
 
@@ -278,7 +280,9 @@
 
 		<div class="actions">
 			<span class="hint">esc to close</span>
-			<Button type="submit" variant="primary" disabled={!title.trim() || saving}>Create</Button>
+			<Button type="submit" variant="primary" disabled={!title.trim() || saving} icon={Plus}
+				>Create</Button
+			>
 		</div>
 	</form>
 </Modal>

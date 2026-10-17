@@ -1,21 +1,27 @@
 <script lang="ts">
 	import type { Snippet } from 'svelte';
 	import type { HTMLButtonAttributes } from 'svelte/elements';
+	import type { LucideIcon } from '@lucide/svelte';
+	import Icon from './Icon.svelte';
 
 	type Variant = 'primary' | 'secondary' | 'poke' | 'accent' | 'quiet';
 
 	let {
 		variant = 'secondary',
 		type = 'button',
+		icon,
 		children,
 		...rest
-	}: HTMLButtonAttributes & { variant?: Variant; children: Snippet } = $props();
+	}: HTMLButtonAttributes & { variant?: Variant; icon?: LucideIcon; children: Snippet } = $props();
 </script>
 
 <!-- Loom Button: primary (solid ink, one per view), secondary (ink outline),
 poke (accent text on a hairline - the low-emphasis nudge), accent (solid
-accent, top-bar calls to action), quiet (hairline, ink-3 text). -->
-<button {type} class="button {variant}" {...rest}>{@render children()}</button>
+accent, top-bar calls to action), quiet (hairline, ink-3 text). `icon` leads
+the label (icon style only). -->
+<button {type} class="button {variant}" {...rest}
+	>{#if icon}<Icon {icon} size={13} />{/if}{@render children()}</button
+>
 
 <style>
 	.button {

@@ -1,12 +1,20 @@
+import type { NodeKind } from '$lib/types/NodeKind';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
-import { KIND_GLYPH, TIER_COLOR } from './display';
+import { TIER_COLOR } from './display';
 
 export type Grouping = 'focus' | 'kind' | 'status' | 'tag';
 
-export type Section = { id: string; title: string; bar: string; nodes: NodeResponse[] };
+/** `kind` marks a section holding one kind of node, shown with its kind mark. */
+export type Section = {
+	id: string;
+	title: string;
+	kind?: NodeKind;
+	bar: string;
+	nodes: NodeResponse[];
+};
 
-type Bucket = { id: string; title: string; bar: string; holds: (node: NodeResponse) => boolean };
+type Bucket = Omit<Section, 'nodes'> & { holds: (node: NodeResponse) => boolean };
 
 const FOCUS_BUCKETS: Bucket[] = (['primary', 'secondary', 'background'] as const).map((focus) => ({
 	id: focus,
@@ -24,7 +32,8 @@ const KIND_BUCKETS: Bucket[] = (
 	] as const
 ).map(([kind, title, bar]) => ({
 	id: kind,
-	title: `${KIND_GLYPH[kind]} ${title}`,
+	title,
+	kind,
 	bar,
 	holds: (node) => node.kind === kind
 }));
@@ -47,7 +56,8 @@ const STATUS_BUCKETS: Bucket[] = (
 /** Ideas have no focus or status: they get their own section in those groupings. */
 const IDEA_BUCKET: Bucket = {
 	id: 'ideas',
-	title: `${KIND_GLYPH.idea} ideas`,
+	title: 'ideas',
+	kind: 'idea',
 	bar: 'var(--node-idea)',
 	holds: (node) => node.kind === 'idea'
 };
@@ -88,6 +98,6 @@ export function groupNodes(
 		tag: tagBuckets(topics)
 	}[grouping];
 	return buckets
-		.map(({ id, title, bar, holds }) => ({ id, title, bar, nodes: nodes.filter(holds) }))
+		.map(({ holds, ...section }) => ({ ...section, nodes: nodes.filter(holds) }))
 		.filter((section) => section.nodes.length > 0);
 }

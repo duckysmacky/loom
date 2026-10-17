@@ -4,8 +4,9 @@
 </script>
 
 <script lang="ts">
+	import KindMark from '$lib/components/KindMark.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
-	import { KIND_GLYPH, accentColor } from '$lib/graph/display';
+	import { accentColor } from '$lib/graph/display';
 	import { parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
@@ -63,7 +64,9 @@
 						}}
 					>
 						<button type="button" class="row-main" onclick={() => openNode(node.id)}>
-							<span class="glyph" style:color={accentColor(node)}>{KIND_GLYPH[node.kind]}</span>
+							<span class="glyph" style:color={accentColor(node)}
+								><KindMark kind={node.kind} /></span
+							>
 							<span class="title">{node.title}</span>
 							{#if path}<span class="in">in {path.title}</span>{/if}
 						</button>

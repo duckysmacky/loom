@@ -9,7 +9,6 @@
 	import '@fontsource/ibm-plex-mono/700.css';
 	import '@fontsource/jetbrains-mono/400.css';
 	import '$lib/styles/global.css';
-	import favicon from '$lib/assets/favicon.svg';
 	import { applyAppearance } from '$lib/stores/prefs.svelte';
 	import { bootstrapSession, session } from '$lib/stores/session.svelte';
 
@@ -20,7 +19,6 @@
 </script>
 
 <svelte:head>
-	<link rel="icon" href={favicon} />
 	<title>Loom</title>
 </svelte:head>
 

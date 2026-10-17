@@ -1,11 +1,12 @@
 <script lang="ts">
+	import KindMark from '$lib/components/KindMark.svelte';
 	import { NodeResizer, type NodeProps } from '@xyflow/svelte';
 	import SideHandles from './SideHandles.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import { togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
-	import { KIND_GLYPH, TIER_COLOR, borderStyle, progressText } from '$lib/graph/display';
+	import { TIER_COLOR, borderStyle, progressText } from '$lib/graph/display';
 	import { PATH_MIN_HEIGHT, PATH_MIN_WIDTH } from '$lib/graph/layout';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
@@ -50,7 +51,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 >
 	<div class="head path-head" title="Open path">
 		<CollapseToggle collapsed={false} ontoggle={() => togglePathCollapsed('canvas', node.id)} />
-		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
+		<span class="kind"><KindMark kind="path" /> path</span>
 		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
 		<span class="title">{node.title}</span>
 		{#if progressText(node)}<span class="count">{progressText(node)}</span>{/if}

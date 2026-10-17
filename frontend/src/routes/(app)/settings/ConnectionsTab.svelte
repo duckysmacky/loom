@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Copy, Plus, Unplug } from '@lucide/svelte';
 	import './settings.css';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { mcpApi, oauthApi } from '$lib/api/endpoints';
@@ -92,7 +93,7 @@
 			</span>
 			<span class="url-row">
 				<code class="url">{info.url}</code>
-				<Button variant="quiet" onclick={() => copy(info!.url!)}>Copy</Button>
+				<Button variant="quiet" onclick={() => copy(info!.url!)} icon={Copy}>Copy</Button>
 			</span>
 		</div>
 	{:else}
@@ -118,9 +119,11 @@
 					</span>
 					{#if revokingId === client.client_id}
 						<Button variant="quiet" onclick={() => (revokingId = null)}>Keep</Button>
-						<Button variant="primary" onclick={() => disconnect(client)}>Disconnect</Button>
+						<Button variant="primary" onclick={() => disconnect(client)} icon={Unplug}
+							>Disconnect</Button
+						>
 					{:else}
-						<Button variant="quiet" onclick={() => (revokingId = client.client_id)}
+						<Button variant="quiet" onclick={() => (revokingId = client.client_id)} icon={Unplug}
 							>Disconnect</Button
 						>
 					{/if}
@@ -147,7 +150,7 @@
 			maxlength="100"
 			bind:value={newName}
 		/>
-		<Button type="submit" variant="primary" disabled={!newName.trim()}>Create</Button>
+		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}>Create</Button>
 	</form>
 
 	{#if revealed}
@@ -155,7 +158,7 @@
 			<span class="row-help">Copy this token now - it won't be shown again.</span>
 			<span class="url-row">
 				<code class="url">{revealed}</code>
-				<Button variant="quiet" onclick={() => copy(revealed!)}>Copy</Button>
+				<Button variant="quiet" onclick={() => copy(revealed!)} icon={Copy}>Copy</Button>
 				<Button variant="quiet" onclick={() => (revealed = null)}>Done</Button>
 			</span>
 		</div>
@@ -172,9 +175,11 @@
 				</span>
 				{#if revokingId === token.id}
 					<Button variant="quiet" onclick={() => (revokingId = null)}>Keep</Button>
-					<Button variant="primary" onclick={() => revoke(token)}>Revoke</Button>
+					<Button variant="primary" onclick={() => revoke(token)} icon={Unplug}>Revoke</Button>
 				{:else}
-					<Button variant="quiet" onclick={() => (revokingId = token.id)}>Revoke</Button>
+					<Button variant="quiet" onclick={() => (revokingId = token.id)} icon={Unplug}
+						>Revoke</Button
+					>
 				{/if}
 			</li>
 		{:else}

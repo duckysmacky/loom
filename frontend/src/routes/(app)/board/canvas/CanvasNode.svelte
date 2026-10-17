@@ -1,4 +1,5 @@
 <script lang="ts">
+	import KindMark from '$lib/components/KindMark.svelte';
 	import { type NodeProps } from '@xyflow/svelte';
 	import SideHandles from './SideHandles.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -9,7 +10,6 @@
 	import {
 		TIER_COLOR,
 		accentColor,
-		KIND_GLYPH,
 		borderStyle,
 		progressPair,
 		progressText,
@@ -45,8 +45,9 @@
 			<!-- Only a collapsed path renders as a card. -->
 			<CollapseToggle collapsed ontoggle={() => togglePathCollapsed('canvas', node.id)} />
 		{/if}
-		<!-- The kind glyph doubles as the accent swatch. -->
-		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
+		<!-- The kind mark doubles as the accent swatch. -->
+		<span class="accent" style:color={accentColor(node)} aria-hidden="true"
+			><KindMark {kind} /></span
 		>
 		<span class="kind">{kind}</span>
 		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />

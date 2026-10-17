@@ -4,8 +4,10 @@
 		<meta charset="utf-8" />
 		<meta name="viewport" content="width=device-width, initial-scale=1" />
 		<meta name="text-scale" content="scale" />
+		<link rel="icon" id="favicon" href="/favicon.svg" type="image/svg+xml" />
+		<link rel="apple-touch-icon" href="/apple-touch-icon.png" />
 		<script>
-			// Apply the saved theme/density before first paint (no light flash in
+			// Apply the saved theme/density/icon style before first paint (no light flash in
 			// dark mode). Mirrors applyAppearance() in $lib/stores/prefs.svelte.ts.
 			try {
 				const prefs = JSON.parse(localStorage.getItem('loom.prefs') || '{}');
@@ -15,6 +17,8 @@
 					(theme === 'system' && matchMedia('(prefers-color-scheme: dark)').matches);
 				document.documentElement.dataset.theme = dark ? 'dark' : 'light';
 				document.documentElement.dataset.density = prefs.density || 'comfortable';
+				if (prefs.iconStyle === 'glyphs')
+					document.getElementById('favicon').href = '/favicon-glyph.svg';
 			} catch {
 				// Storage blocked: fall back to the light defaults.
 			}

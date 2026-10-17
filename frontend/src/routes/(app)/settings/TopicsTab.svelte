@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Pencil, Plus, Trash2 } from '@lucide/svelte';
 	import './settings.css';
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -59,7 +60,7 @@
 			bind:value={newName}
 		/>
 		<AccentPicker value={newColor} onchange={(color) => (newColor = color)} />
-		<Button type="submit" variant="primary" disabled={!newName.trim()}>Add</Button>
+		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}>Add</Button>
 	</form>
 
 	<ul class="topics">
@@ -92,16 +93,21 @@
 				</div>
 				{#if deletingId === topic.id}
 					<Button variant="quiet" onclick={() => (deletingId = null)}>Keep</Button>
-					<Button variant="primary" onclick={() => remove(topic.id, topic.name)}>Delete</Button>
+					<Button variant="primary" onclick={() => remove(topic.id, topic.name)} icon={Trash2}
+						>Delete</Button
+					>
 				{:else}
 					<Button
 						variant="quiet"
 						onclick={() => {
 							renamingId = topic.id;
 							renameDraft = topic.name;
-						}}>Rename</Button
+						}}
+						icon={Pencil}>Rename</Button
 					>
-					<Button variant="quiet" onclick={() => (deletingId = topic.id)}>Delete</Button>
+					<Button variant="quiet" onclick={() => (deletingId = topic.id)} icon={Trash2}
+						>Delete</Button
+					>
 				{/if}
 			</li>
 		{:else}

@@ -1,11 +1,11 @@
 <script lang="ts">
+	import KindMark from '$lib/components/KindMark.svelte';
 	import { flip } from 'svelte/animate';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import {
-		KIND_GLYPH,
 		TIER_COLOR,
 		borderStyle,
 		progressPair,
@@ -86,7 +86,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		<div class="head-row">
 			<CollapseToggle collapsed={false} ontoggle={toggle} />
 			<button type="button" class="head" onclick={() => openNode(path.id)}>
-				<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
+				<span class="kind"><KindMark kind="path" /> path</span>
 				<Badge status={path.status} blocked={path.blocked} archived={path.archived} />
 				<span class="title">{path.title}</span>
 				{#if progress}

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { Plus, Pointer } from '@lucide/svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import AnimatedNumber from '$lib/components/ui/AnimatedNumber.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -160,7 +161,7 @@
 									{#if canPoke(node)}
 										<span class="poke-group">
 											<PokeAt {node} />
-											<Button variant="poke" onclick={() => poke(node)}>Poke</Button>
+											<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
 										</span>
 									{/if}
 								</li>
@@ -183,7 +184,9 @@
 							aria-label="New idea title"
 							bind:value={ideaTitle}
 						/>
-						<Button variant="primary" type="submit" disabled={!ideaTitle.trim()}>Add</Button>
+						<Button variant="primary" type="submit" disabled={!ideaTitle.trim()} icon={Plus}
+							>Add</Button
+						>
 					</form>
 					{#if dashboard.recent_ideas.length}
 						<ul class="rows">
