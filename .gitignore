@@ -1,4 +1,7 @@
 .context/
 docs/
 
+graphify-out/.graphify_*
+graphify-out/cache
+
 .env
