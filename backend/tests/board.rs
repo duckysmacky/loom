@@ -130,7 +130,7 @@ async fn timeline_returns_only_the_callers_pokes_and_periods(pool: PgPool) {
         req(
             "POST",
             &format!("/api/nodes/{node_a}/pokes"),
-            Value::Null,
+            json!({}),
             Some(&token_a),
         ),
     )
@@ -152,7 +152,7 @@ async fn timeline_returns_only_the_callers_pokes_and_periods(pool: PgPool) {
         req(
             "POST",
             &format!("/api/nodes/{node_b}/pokes"),
-            Value::Null,
+            json!({}),
             Some(&token_b),
         ),
     )

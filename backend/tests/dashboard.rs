@@ -88,7 +88,7 @@ async fn poke_and_backdate(
         req(
             "POST",
             &format!("/api/nodes/{node_id}/pokes"),
-            Value::Null,
+            json!({}),
             Some(token),
         ),
     )
@@ -180,7 +180,7 @@ async fn stale_list_reflects_14_day_threshold(pool: PgPool) {
         req(
             "POST",
             &format!("/api/nodes/{recently_poked}/pokes"),
-            Value::Null,
+            json!({}),
             Some(&token),
         ),
     )
