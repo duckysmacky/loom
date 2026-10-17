@@ -134,6 +134,10 @@ newer poke.
   you drag them in (or turn on auto-place in Settings). Shift-drag or
   Ctrl-click to select several nodes, then move, unplace or delete them
   together.
+  **Sticky notes** (+ Note) put free text on the canvas without
+  creating a node - double-click to edit, resize, drop into a path box to
+  move with it. Connecting a note, or picking "Arrow" when connecting two
+  nodes, draws an annotation arrow that means nothing to the graph.
 - **Timeline board** - bars from started to completed (or to now),
   with a marker for the last time you poked each one. Bars are styled by
   the node's focus (solid dark primary, solid light secondary, dashed
@@ -379,6 +383,7 @@ validation, same rules:
 | Build in bulk | `loom_create_subgraph` - many nodes plus their edges in one all-or-nothing call, optionally with canvas positions |
 | Layout | `loom_place_nodes` - set where nodes and path boxes sit on the Board canvas (unplaced nodes are laid out automatically) |
 | Edges | `loom_create_edge`, `loom_delete_edge` |
+| Canvas notes | `loom_create_note`, `loom_update_note`, `loom_delete_note`, `loom_create_arrow`, `loom_delete_arrow` - sticky notes and annotation arrows |
 | Checklists | `loom_add_checklist_items`, `loom_update_checklist_item`, `loom_delete_checklist_item` |
 | Topics | `loom_list_topics`, `loom_create_topic`, `loom_update_topic`, `loom_delete_topic`, `loom_attach_topic`, `loom_detach_topic` |
 

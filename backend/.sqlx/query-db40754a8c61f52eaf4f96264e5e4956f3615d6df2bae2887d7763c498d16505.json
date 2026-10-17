@@ -1,0 +1,124 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, body, canvas_x, canvas_y, canvas_width, canvas_height, path_id,\n            created_at, updated_at\n        FROM canvas_notes\n        WHERE user_id = $1\n        ORDER BY created_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "body",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "canvas_x",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_x"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "canvas_y",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_y"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "canvas_width",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_width"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "canvas_height",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_height"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "path_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "path_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "db40754a8c61f52eaf4f96264e5e4956f3615d6df2bae2887d7763c498d16505"
+}

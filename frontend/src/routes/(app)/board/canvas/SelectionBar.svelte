@@ -8,10 +8,10 @@
 	import { graph } from '$lib/stores/graph.svelte';
 	import { prefs } from '$lib/stores/prefs.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
-	import type { LoomFlowNode } from './types';
+	import type { LoomCardNode } from './types';
 
 	/** Actions for the nodes selected on the canvas. */
-	let { selected }: { selected: LoomFlowNode[] } = $props();
+	let { selected }: { selected: LoomCardNode[] } = $props();
 
 	let confirming = $state(false);
 	const ids = $derived(selected.map((flowNode) => flowNode.id));

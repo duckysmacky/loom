@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Handle, NodeResizer, Position, type NodeProps } from '@xyflow/svelte';
+	import { NodeResizer, type NodeProps } from '@xyflow/svelte';
+	import SideHandles from './SideHandles.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import { togglePathCollapsed } from '$lib/stores/prefs.svelte';
@@ -8,9 +9,9 @@
 	import { PATH_MIN_HEIGHT, PATH_MIN_WIDTH } from '$lib/graph/layout';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
-	import type { LoomFlowNode } from './types';
+	import type { LoomCardNode } from './types';
 
-	let { data, selected }: NodeProps<LoomFlowNode> = $props();
+	let { data, selected }: NodeProps<LoomCardNode> = $props();
 
 	const node = $derived(data.node);
 	const border = $derived(borderStyle(node));
@@ -41,8 +42,6 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	color="var(--node-path)"
 	onResizeEnd={(_, params) => saveSize(params)}
 />
-<Handle type="target" position={Position.Left} />
-<Handle type="target" position={Position.Top} id="top" />
 <div
 	class="path-box line-{border.line} tone-{border.tone}"
 	class:dimmed={data.dimmed}
@@ -57,8 +56,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 		{#if progressText(node)}<span class="count">{progressText(node)}</span>{/if}
 	</div>
 </div>
-<Handle type="source" position={Position.Right} />
-<Handle type="source" position={Position.Bottom} id="bottom" />
+<SideHandles />
 
 <style>
 	.path-box {

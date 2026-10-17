@@ -1,0 +1,136 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        SELECT id, from_node_id, from_note_id, to_node_id, to_note_id,\n               from_side AS \"from_side: CanvasSide\", to_side AS \"to_side: CanvasSide\", created_at\n        FROM canvas_arrows\n        WHERE user_id = $1\n        ORDER BY created_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "from_node_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "from_node_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "from_note_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "from_note_id"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "to_node_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "to_node_id"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "to_note_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "to_note_id"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "from_side: CanvasSide",
+        "type_info": {
+          "Custom": {
+            "name": "canvas_side",
+            "kind": {
+              "Enum": [
+                "top",
+                "right",
+                "bottom",
+                "left"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "from_side"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "to_side: CanvasSide",
+        "type_info": {
+          "Custom": {
+            "name": "canvas_side",
+            "kind": {
+              "Enum": [
+                "top",
+                "right",
+                "bottom",
+                "left"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "to_side"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "canvas_arrows",
+            "name": "created_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      true,
+      true,
+      false,
+      false,
+      false
+    ]
+  },
+  "hash": "8731b49032806e71e2fa36b94db785802d4fcabb3da9114339d018dc94dd6d86"
+}

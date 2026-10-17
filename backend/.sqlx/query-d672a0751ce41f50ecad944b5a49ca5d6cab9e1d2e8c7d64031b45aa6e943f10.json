@@ -1,0 +1,132 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE canvas_notes SET\n            body = COALESCE($3, body),\n            canvas_x = COALESCE($4, canvas_x),\n            canvas_y = COALESCE($5, canvas_y),\n            canvas_width = COALESCE($6, canvas_width),\n            canvas_height = COALESCE($7, canvas_height),\n            path_id = CASE WHEN $8 THEN $9 ELSE path_id END,\n            updated_at = now()\n        WHERE id = $2 AND user_id = $1\n        RETURNING id, body, canvas_x, canvas_y, canvas_width, canvas_height, path_id,\n            created_at, updated_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "body",
+        "type_info": "Text",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "body"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "canvas_x",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_x"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "canvas_y",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_y"
+          }
+        }
+      },
+      {
+        "ordinal": 4,
+        "name": "canvas_width",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_width"
+          }
+        }
+      },
+      {
+        "ordinal": 5,
+        "name": "canvas_height",
+        "type_info": "Float8",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "canvas_height"
+          }
+        }
+      },
+      {
+        "ordinal": 6,
+        "name": "path_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "path_id"
+          }
+        }
+      },
+      {
+        "ordinal": 7,
+        "name": "created_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "created_at"
+          }
+        }
+      },
+      {
+        "ordinal": 8,
+        "name": "updated_at",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "canvas_notes",
+            "name": "updated_at"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Text",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Float8",
+        "Bool",
+        "Uuid"
+      ]
+    },
+    "nullable": [
+      false,
+      false,
+      false,
+      false,
+      false,
+      false,
+      true,
+      false,
+      false
+    ]
+  },
+  "hash": "d672a0751ce41f50ecad944b5a49ca5d6cab9e1d2e8c7d64031b45aa6e943f10"
+}

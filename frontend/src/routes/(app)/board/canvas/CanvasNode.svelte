@@ -1,5 +1,6 @@
 <script lang="ts">
-	import { Handle, Position, type NodeProps } from '@xyflow/svelte';
+	import { type NodeProps } from '@xyflow/svelte';
+	import SideHandles from './SideHandles.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -28,12 +29,6 @@
 	);
 </script>
 
-<!-- Target handle on the left, source on the right: edges run prerequisite
-→ dependent and child → container, left to right. The unnamed handles come
-first so edges that name no handle use them; related edges use the named
-top/bottom pair so related cards connect vertically. -->
-<Handle type="target" position={Position.Left} />
-<Handle type="target" position={Position.Top} id="top" />
 <div
 	class="canvas-node line-{border.line} tone-{border.tone}"
 	class:path={kind === 'path'}
@@ -75,8 +70,7 @@ top/bottom pair so related cards connect vertically. -->
 		{node.focus}
 	</div>
 </div>
-<Handle type="source" position={Position.Right} />
-<Handle type="source" position={Position.Bottom} id="bottom" />
+<SideHandles />
 
 <style>
 	.canvas-node {

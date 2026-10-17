@@ -160,6 +160,8 @@ async fn lists_tools(pool: PgPool) {
         "loom_create_node",
         "loom_create_subgraph",
         "loom_update_node",
+        "loom_create_note",
+        "loom_create_arrow",
     ] {
         assert!(names.contains(&expected), "missing {expected} in {names:?}");
     }

@@ -5,7 +5,7 @@ use crate::models::active_period::ActivePeriodResponse;
 use crate::models::board::{CanvasResponse, TimelinePokeResponse, TimelineResponse};
 use crate::models::edge::EdgeListQuery;
 use crate::models::node::{NodeFocus, NodeListQuery};
-use crate::repo::{edges, nodes};
+use crate::repo::{canvas, edges, nodes};
 
 /// The caller's entire graph in one payload - reuses the two existing
 /// unfiltered list queries rather than a bespoke query, so it doesn't
@@ -14,7 +14,14 @@ use crate::repo::{edges, nodes};
 pub async fn get_canvas(user_id: Uuid, pool: &PgPool) -> Result<CanvasResponse, sqlx::Error> {
     let nodes = nodes::list_nodes(user_id, pool, &NodeListQuery::default()).await?;
     let edges = edges::list_edges(user_id, pool, &EdgeListQuery::default()).await?;
-    Ok(CanvasResponse { nodes, edges })
+    let notes = canvas::list_notes(user_id, pool).await?;
+    let arrows = canvas::list_arrows(user_id, pool).await?;
+    Ok(CanvasResponse {
+        nodes,
+        edges,
+        notes,
+        arrows,
+    })
 }
 
 /// Every poke and active period the caller owns, across every node, in one

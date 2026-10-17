@@ -36,6 +36,10 @@
 	/* precedes edges: a plain "do first" line - white on the dark sheet,
 	   faint ink here, where white would vanish into the paper. */
 	--edge-precedes: rgba(19, 35, 57, 0.4);
+	/* Sticky notes on the canvas: paper yellow with dark ink in both themes. */
+	--note-fill: #fbe98a;
+	--note-edge: #d9bf3f;
+	--note-ink: #3a3214;
 
 	--side: #132339;
 	--side-ink: #a8bbd0;
@@ -111,6 +115,9 @@
 	--path-fill: rgba(143, 163, 130, 0.12);
 	--selection-tint: rgba(93, 157, 221, 0.12);
 	--edge-precedes: #ffffff;
+	--note-fill: #e3cd62;
+	--note-edge: #b39b2e;
+	--note-ink: #2a2410;
 
 	--side: #0a1322;
 	--side-ink: #92a3b7;

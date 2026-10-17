@@ -92,7 +92,7 @@ the user what will be lost, and confirm before promoting.
 | Tool | Use it to |
 | --- | --- |
 | `loom_get_overview` | Get dashboard counts plus the active (non-path, primary focus first), stale and recent-idea nodes and paths. Good for "what am I working on?" |
-| `loom_get_graph` | Get every node, edge and topic. **Start here before any bulk change.** |
+| `loom_get_graph` | Get every node, edge and topic, plus the canvas's sticky notes and arrows. **Start here before any bulk change.** |
 | `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived` = flag set), or by a title `search`. |
 | `loom_get_node` | Get one node with its edges both ways, its checklist and recent pokes. |
 | `loom_create_node` | Create one node. It can also take `checklist` (projects) and `topic_ids`. |
@@ -105,6 +105,8 @@ the user what will be lost, and confirm before promoting.
 | `loom_attach_topic` / `loom_detach_topic` | Tag or untag a node. |
 | `loom_poke_node` | Log work on a node; optional `poked_at` (RFC 3339, not in the future) backfills work done earlier. |
 | `loom_place_nodes` | Set where nodes sit on the Board canvas (see [Placing nodes](#placing-nodes-on-the-canvas)). |
+| `loom_create_note` / `loom_update_note` / `loom_delete_note` | Manage sticky notes on the canvas (see [Notes and arrows](#notes-and-arrows-on-the-canvas)). |
+| `loom_create_arrow` / `loom_delete_arrow` | Draw or remove an annotation arrow between notes and/or nodes. |
 
 When a tool fails (validation, not found, conflict, cycle), it returns an error result with a
 plain message. Read the message, fix the input and retry. Don't guess ids: look them up.
@@ -227,6 +229,23 @@ new node goes beside the node it relates to.
 - Joining or leaving a path clears a node's position, because it's relative to the box. Place
   the node again after changing a `part_of` edge.
 - Don't move nodes the user arranged by hand unless they ask.
+
+## Notes and arrows on the canvas
+
+Sticky notes are free text on the Board canvas, **not nodes**: no kind, status or progress,
+and they never show up in node lists. Use them for annotations the user asks for ("leave a
+note next to X saying ..."), never as a substitute for an idea node.
+
+- A note's `canvas_x` / `canvas_y` is its top-left corner (default size 200 × 140). Put it
+  beside what it describes, e.g. right of a card: `x = card x + 190 + 30`.
+- With `path_id` the note sits inside that path box and moves with it; its position is then
+  relative to the box (content starts at 24, 56). Moving it in or out of a path needs the new
+  position too.
+- Arrows (`loom_create_arrow`) connect any two notes/nodes: exactly one `from_node_id` or
+  `from_note_id`, and one `to_node_id` or `to_note_id`. They are purely visual and mean nothing
+  to the graph. For a real relationship between nodes, use an edge. `from_side` / `to_side`
+  (`top`, `right`, `bottom`, `left`; default `right` -> `left`) pick where it leaves and enters.
+- Deleting a note or node deletes its arrows.
 
 ## Other common requests
 

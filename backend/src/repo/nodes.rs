@@ -7,7 +7,7 @@ use crate::models::node::{
     Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
 use crate::repo::active_periods::PeriodSettings;
-use crate::repo::{active_periods, checklist, edges, pokes};
+use crate::repo::{active_periods, canvas, checklist, edges, pokes};
 
 /// Query target for every node-returning query, all of which read the
 /// `node_rows` view (every derived column in one place) - flat fields only,
@@ -420,6 +420,7 @@ pub async fn update_node(
     // becomes a path drops its own.
     if row.kind != NodeKind::Path {
         edges::release_children(user_id, &mut tx, node_id).await?;
+        canvas::release_notes(user_id, &mut tx, node_id).await?;
     } else {
         pokes::delete_all_for_node(user_id, &mut tx, node_id).await?;
         active_periods::set_started(user_id, &mut tx, node_id, None).await?;
@@ -476,6 +477,7 @@ pub async fn delete_node(user_id: Uuid, pool: &PgPool, node_id: Uuid) -> Result<
     // relative to its box, so they go back to unplaced instead of landing
     // somewhere odd. A no-op for anything but a path.
     edges::release_children(user_id, &mut tx, node_id).await?;
+    canvas::release_notes(user_id, &mut tx, node_id).await?;
     let result = sqlx::query!(
         "DELETE FROM nodes WHERE user_id = $1 AND id = $2",
         user_id,

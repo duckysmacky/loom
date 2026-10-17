@@ -1,0 +1,15 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE canvas_notes note SET\n            path_id = (\n                SELECT e.to_node_id FROM edges e\n                WHERE e.from_node_id = path.id AND e.kind = 'part_of'\n            ),\n            canvas_x = note.canvas_x + COALESCE(path.canvas_x, 0),\n            canvas_y = note.canvas_y + COALESCE(path.canvas_y, 0),\n            updated_at = now()\n        FROM nodes path\n        WHERE note.path_id = $2 AND path.id = $2 AND path.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "8f177144dde815be5b122fa95531e41a0135b4e43a140528ff9f1cb79af805f2"
+}

@@ -128,6 +128,15 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/{id}", delete(handlers::edges::delete));
 
+    let canvas_routes = Router::new()
+        .route("/notes", post(handlers::canvas::create_note))
+        .route(
+            "/notes/{id}",
+            patch(handlers::canvas::update_note).delete(handlers::canvas::delete_note),
+        )
+        .route("/arrows", post(handlers::canvas::create_arrow))
+        .route("/arrows/{id}", delete(handlers::canvas::delete_arrow));
+
     let mcp_routes = Router::new()
         .route("/info", get(handlers::mcp_tokens::info))
         .route(
@@ -147,6 +156,7 @@ pub fn build_router(state: AppState) -> Router {
         .nest("/edges", edge_routes)
         .nest("/checklist", checklist_routes)
         .nest("/periods", period_routes)
+        .nest("/canvas", canvas_routes)
         .nest("/mcp", mcp_routes);
     let mut app = Router::new();
     let mut mcp_router = None;

@@ -19,8 +19,11 @@ use uuid::Uuid;
 
 use crate::handlers::error::ApiError;
 use crate::handlers::extract::{ApiJson, ApiPath, ApiQuery};
-use crate::handlers::{board, checklist, dashboard, edges, nodes, pokes, topics};
+use crate::handlers::{board, canvas, checklist, dashboard, edges, nodes, pokes, topics};
 use crate::middleware::auth_user::AuthUser;
+use crate::models::canvas::{
+    CreateCanvasArrowRequest, CreateCanvasNoteRequest, UpdateCanvasNoteRequest,
+};
 use crate::models::checklist::{CreateChecklistItemRequest, UpdateChecklistItemRequest};
 use crate::models::dashboard::DashboardQuery;
 use crate::models::deserialize_some;
@@ -84,7 +87,13 @@ ones). So place what you create: pass x/y to loom_create_subgraph or use \
 loom_place_nodes, and lay them out like a diagram: a node goes in the column to the right of what it \
 requires or what precedes it, parallel or related nodes are stacked vertically \
 in one column (the canvas joins related cards top to bottom), and a node sits \
-level with the middle of its prerequisites.";
+level with the middle of its prerequisites.
+
+Sticky notes are free text on the canvas, not nodes: annotations for the \
+user (loom_create_note). A note can sit inside a path box (`path_id`, position \
+then relative to the box). Arrows (loom_create_arrow) are purely visual \
+annotations between notes and/or nodes - they mean nothing to the graph, so \
+use edges for real relationships.";
 
 /// Keys that only matter to the web app - noise for an agent. (Canvas
 /// positions stay: agents can read and set them.)
@@ -111,6 +120,23 @@ pub struct EdgeIdParams {
 #[derive(Debug, Deserialize, JsonSchema)]
 pub struct ChecklistItemIdParams {
     pub item_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct NoteIdParams {
+    pub note_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct ArrowIdParams {
+    pub arrow_id: Uuid,
+}
+
+#[derive(Debug, Deserialize, JsonSchema)]
+pub struct UpdateNoteParams {
+    pub note_id: Uuid,
+    #[serde(flatten)]
+    pub changes: UpdateCanvasNoteRequest,
 }
 
 #[derive(Debug, Deserialize, JsonSchema)]
@@ -277,7 +303,8 @@ impl LoomServer {
         )
     }
 
-    /// The whole graph: every node and every edge. Best first call before
+    /// The whole graph: every node and edge, plus the canvas's sticky notes
+    /// and annotation arrows. Best first call before
     /// editing, to find existing nodes, paths and topics.
     #[tool(annotations(title = "Get graph", read_only_hint = true))]
     async fn loom_get_graph(
@@ -289,7 +316,13 @@ impl LoomServer {
         let topics = topics::list(self.app(), user).await;
         respond(graph.and_then(|Json(graph)| {
             let Json(topics) = topics?;
-            Ok(json!({ "nodes": graph.nodes, "edges": graph.edges, "topics": topics }))
+            Ok(json!({
+                "nodes": graph.nodes,
+                "edges": graph.edges,
+                "topics": topics,
+                "notes": graph.notes,
+                "arrows": graph.arrows,
+            }))
         }))
     }
 
@@ -442,6 +475,111 @@ impl LoomServer {
             edges::delete(self.app(), user, ApiPath(edge_id))
                 .await
                 .map(|_| json!({ "deleted": edge_id })),
+        )
+    }
+
+    /// Adds a sticky note to the Board canvas: free text for the user, not
+    /// a node. Coordinates are the note's top-left in pixels; with
+    /// `path_id` it sits inside that path box (relative to its top-left,
+    /// content starts at (24, 56)) and moves with it. Default size 200x140.
+    #[tool(annotations(
+        title = "Create note",
+        read_only_hint = false,
+        destructive_hint = false
+    ))]
+    async fn loom_create_note(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(request): Parameters<CreateCanvasNoteRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let user = auth(&parts)?;
+        respond(
+            canvas::create_note(self.app(), user, ApiJson(request))
+                .await
+                .map(|(_, Json(note))| note),
+        )
+    }
+
+    /// Edits a sticky note's text, position, size or path. Moving it into
+    /// or out of a path (`path_id`, `null` for the top level) needs the new
+    /// position too - it's relative to the new parent.
+    #[tool(annotations(
+        title = "Update note",
+        read_only_hint = false,
+        destructive_hint = false
+    ))]
+    async fn loom_update_note(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(params): Parameters<UpdateNoteParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let user = auth(&parts)?;
+        respond(
+            canvas::update_note(
+                self.app(),
+                user,
+                ApiPath(params.note_id),
+                ApiJson(params.changes),
+            )
+            .await
+            .map(|Json(note)| note),
+        )
+    }
+
+    /// Deletes a sticky note and the arrows attached to it.
+    #[tool(annotations(title = "Delete note", read_only_hint = false, destructive_hint = true))]
+    async fn loom_delete_note(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(NoteIdParams { note_id }): Parameters<NoteIdParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let user = auth(&parts)?;
+        respond(
+            canvas::delete_note(self.app(), user, ApiPath(note_id))
+                .await
+                .map(|_| json!({ "deleted": note_id })),
+        )
+    }
+
+    /// Draws an annotation arrow on the canvas between two items: set
+    /// exactly one of `from_node_id`/`from_note_id` and one of
+    /// `to_node_id`/`to_note_id`, optionally the sides it leaves and enters
+    /// (default right -> left). Purely visual - it never blocks or orders
+    /// anything; use loom_create_edge for real relationships.
+    #[tool(annotations(
+        title = "Create arrow",
+        read_only_hint = false,
+        destructive_hint = false
+    ))]
+    async fn loom_create_arrow(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(request): Parameters<CreateCanvasArrowRequest>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let user = auth(&parts)?;
+        respond(
+            canvas::create_arrow(self.app(), user, ApiJson(request))
+                .await
+                .map(|(_, Json(arrow))| arrow),
+        )
+    }
+
+    /// Deletes an annotation arrow (see loom_get_graph for their ids).
+    #[tool(annotations(
+        title = "Delete arrow",
+        read_only_hint = false,
+        destructive_hint = true
+    ))]
+    async fn loom_delete_arrow(
+        &self,
+        Extension(parts): Extension<Parts>,
+        Parameters(ArrowIdParams { arrow_id }): Parameters<ArrowIdParams>,
+    ) -> Result<CallToolResult, ErrorData> {
+        let user = auth(&parts)?;
+        respond(
+            canvas::delete_arrow(self.app(), user, ApiPath(arrow_id))
+                .await
+                .map(|_| json!({ "deleted": arrow_id })),
         )
     }
 

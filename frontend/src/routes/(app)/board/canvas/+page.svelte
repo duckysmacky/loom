@@ -1,11 +1,17 @@
 <script lang="ts">
 	import '@xyflow/svelte/dist/base.css';
-	import { Background, SvelteFlow, useSvelteFlow, type Connection } from '@xyflow/svelte';
+	import {
+		Background,
+		ConnectionMode,
+		SvelteFlow,
+		useSvelteFlow,
+		type Connection
+	} from '@xyflow/svelte';
 	import { page } from '$app/state';
 	import { untrack } from 'svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
-	import { edgesApi, nodesApi } from '$lib/api/endpoints';
+	import { canvasApi, edgesApi, nodesApi } from '$lib/api/endpoints';
 	import { isIdea } from '$lib/graph/display';
 	import {
 		CANVAS_NODE_HEIGHT,
@@ -26,18 +32,28 @@
 	import { graph } from '$lib/stores/graph.svelte';
 	import { isPathCollapsed, prefs } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
+	import type { CanvasSide } from '$lib/types/CanvasSide';
+	import type { CreateCanvasArrowRequest } from '$lib/types/CreateCanvasArrowRequest';
 	import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
+	import CanvasArrow from './CanvasArrow.svelte';
 	import CanvasControls from './CanvasControls.svelte';
 	import CanvasEdge from './CanvasEdge.svelte';
 	import CanvasNode from './CanvasNode.svelte';
+	import CanvasNote from './CanvasNote.svelte';
 	import CanvasPath from './CanvasPath.svelte';
-	import type { LoomFlowEdge, LoomFlowNode } from './types';
+	import {
+		isCard,
+		type LoomCardNode,
+		type LoomFlowEdge,
+		type LoomFlowNode,
+		type LoomNoteNode
+	} from './types';
 	import SelectionBar from './SelectionBar.svelte';
 	import UnplacedPanel, { UNPLACED_DRAG_TYPE } from './UnplacedPanel.svelte';
 
-	const nodeTypes = { loom: CanvasNode, loomPath: CanvasPath };
-	const edgeTypes = { loom: CanvasEdge };
+	const nodeTypes = { loom: CanvasNode, loomPath: CanvasPath, loomNote: CanvasNote };
+	const edgeTypes = { loom: CanvasEdge, loomArrow: CanvasArrow };
 
 	let nodes = $state.raw<LoomFlowNode[]>([]);
 	let edges = $state.raw<LoomFlowEdge[]>([]);
@@ -106,7 +122,7 @@
 		const parentsFirst = drawn.toSorted(
 			(left, right) => nestingDepth(left.id, parentOf) - nestingDepth(right.id, parentOf)
 		);
-		nodes = parentsFirst.map((node) => {
+		const cards: LoomFlowNode[] = parentsFirst.map((node) => {
 			const { position, size, parentId } = placements.get(node.id)!;
 			const isPath = node.kind === 'path' && !collapsed.has(node.id);
 			return {
@@ -121,6 +137,25 @@
 				deletable: false
 			};
 		});
+		// Notes sit at the top level or inside an expanded path box; inside a
+		// collapsed, hidden or unplaced path they're hidden with it.
+		const boxIds = new Set(
+			cards.filter((flowNode) => flowNode.type === 'loomPath').map((flowNode) => flowNode.id)
+		);
+		const notes: LoomNoteNode[] = graph.notes
+			.filter((note) => !note.path_id || boxIds.has(note.path_id))
+			.map((note) => ({
+				id: note.id,
+				type: 'loomNote' as const,
+				position: { x: note.canvas_x, y: note.canvas_y },
+				parentId: note.path_id ?? undefined,
+				width: note.canvas_width,
+				height: note.canvas_height,
+				data: { note },
+				selected: selectedIds.has(note.id),
+				deletable: false
+			}));
+		nodes = [...cards, ...notes];
 		// Placements are relative to the parent path; walk up for the canvas y.
 		const absoluteY = (id: string): number => {
 			const placement = placements.get(id);
@@ -128,7 +163,7 @@
 			return placement.position.y + (placement.parentId ? absoluteY(placement.parentId) : 0);
 		};
 		// part_of is drawn as containment (the box), not as a line.
-		edges = rerouteEdges(graph.edges, standIn)
+		const graphEdges: LoomFlowEdge[] = rerouteEdges(graph.edges, standIn)
 			.filter(({ edge }) => shownIds.has(edge.from_node_id) && shownIds.has(edge.to_node_id))
 			.map(({ edge, merged, rerouted }) => {
 				let { source, target } = flowDirection(edge);
@@ -149,7 +184,9 @@
 					target,
 					// A line standing in for hidden connections isn't one edge to delete.
 					deletable: !rerouted,
-					...(related ? { sourceHandle: 'bottom', targetHandle: 'top' } : {}),
+					...(related
+						? { sourceHandle: 'bottom', targetHandle: 'top' }
+						: { sourceHandle: 'right', targetHandle: 'left' }),
 					type: 'loom' as const,
 					zIndex: 1,
 					data: {
@@ -159,9 +196,31 @@
 					}
 				};
 			});
+		// Annotation arrows: an end hidden in a collapsed path points at the
+		// path's card instead; arrows to anything else not drawn are left out.
+		const drawnIds = new Set([...cards, ...notes].map((flowNode) => flowNode.id));
+		const arrowEnd = (nodeId: string | null, noteId: string | null) =>
+			noteId ?? (nodeId ? (standIn.get(nodeId) ?? nodeId) : '');
+		const arrows: LoomFlowEdge[] = graph.arrows
+			.map((arrow) => ({
+				id: arrow.id,
+				source: arrowEnd(arrow.from_node_id, arrow.from_note_id),
+				target: arrowEnd(arrow.to_node_id, arrow.to_note_id),
+				sourceHandle: arrow.from_side,
+				targetHandle: arrow.to_side,
+				type: 'loomArrow' as const,
+				zIndex: 1,
+				data: {}
+			}))
+			.filter(
+				(arrow) =>
+					drawnIds.has(arrow.source) && drawnIds.has(arrow.target) && arrow.source !== arrow.target
+			);
+		edges = [...graphEdges, ...arrows];
 	});
 
-	const selected = $derived(nodes.filter((flowNode) => flowNode.selected));
+	// Notes have their own delete button; the selection bar acts on graph nodes.
+	const selected = $derived(nodes.filter(isCard).filter((flowNode) => flowNode.selected));
 
 	/**
 	 * Saves several positions at once. Position changes no derived state, so
@@ -217,11 +276,14 @@
 	function pathAt(
 		point: Point,
 		nodeId: string,
-		skip: Set<string> = new Set()
-	): LoomFlowNode | undefined {
+		skip: Set<string> = new Set(),
+		boxesOnly = false
+	): LoomCardNode | undefined {
 		const parentOf = parentPathOf(graph.edges);
 		return nodes
+			.filter(isCard)
 			.filter((candidate) => candidate.data.node.kind === 'path' && candidate.id !== nodeId)
+			.filter((candidate) => !boxesOnly || candidate.type === 'loomPath')
 			.filter((candidate) => !skip.has(candidate.id))
 			.filter((candidate) => !ancestorPaths(candidate.id, parentOf).includes(nodeId))
 			.filter((candidate) => {
@@ -246,7 +308,7 @@
 	 */
 	async function changePath(
 		nodeId: string,
-		target: LoomFlowNode | undefined,
+		target: LoomCardNode | undefined,
 		topLeft: Point
 	): Promise<boolean> {
 		const previous = graph.edges.find(
@@ -274,6 +336,9 @@
 	}
 
 	const cardSize: Size = { width: CANVAS_NODE_WIDTH, height: CANVAS_NODE_HEIGHT };
+	// The API's default note size.
+	const NOTE_WIDTH = 200;
+	const NOTE_HEIGHT = 140;
 
 	/**
 	 * Notes how big `target`'s box must be to hold a child at `position`
@@ -286,7 +351,7 @@
 		position: Point,
 		size: Size
 	) {
-		if (!prefs.pathAutoExpand || target?.type !== 'loomPath') return;
+		if (!prefs.pathAutoExpand || !target || !isCard(target) || target.type !== 'loomPath') return;
 		if (target.data.node.canvas_width === null) return;
 		growth.set(target.id, grownToFit(growth.get(target.id) ?? sizeOf(target), position, size));
 	}
@@ -327,6 +392,10 @@
 		const growth = new Map<string, Size>();
 
 		for (const moved of dragged) {
+			if (!isCard(moved)) {
+				await settleNote(moved, draggedIds, growth);
+				continue;
+			}
 			// Moving along with a dragged ancestor: its relative position is unchanged.
 			if (ancestorPaths(moved.id, parentOf).some((id) => draggedIds.has(id))) continue;
 
@@ -363,6 +432,69 @@
 		if (moves.length) {
 			notify(moves.length === 1 ? moves[0] : `Moved ${moves.length} nodes between paths`);
 			await graph.load();
+		}
+	}
+
+	/**
+	 * A dropped note joins the innermost path box under its centre (or the
+	 * top level) and saves its position relative to it. A box without a saved
+	 * size only fits its nodes, so it's pinned to a size that holds the note.
+	 */
+	async function settleNote(
+		moved: LoomNoteNode,
+		draggedIds: Set<string>,
+		growth: Map<string, Size>
+	) {
+		const pathId = moved.data.note.path_id;
+		// Moving along with a dragged ancestor path: its relative position is unchanged.
+		if (
+			pathId &&
+			[pathId, ...ancestorPaths(pathId, parentPathOf(graph.edges))].some((id) => draggedIds.has(id))
+		)
+			return;
+		const topLeft = absolute(moved.id);
+		const size = sizeOf(moved);
+		const box = pathAt(
+			{ x: topLeft.x + size.width / 2, y: topLeft.y + size.height / 2 },
+			moved.id,
+			draggedIds,
+			true
+		);
+		const base = box ? absolute(box.id) : { x: 0, y: 0 };
+		const position = { x: topLeft.x - base.x, y: topLeft.y - base.y };
+		if (box && prefs.pathAutoExpand) {
+			growth.set(box.id, grownToFit(growth.get(box.id) ?? sizeOf(box), position, size));
+		}
+		try {
+			graph.replaceNote(
+				await canvasApi.updateNote(moved.id, {
+					canvas_x: Math.round(position.x),
+					canvas_y: Math.round(position.y),
+					path_id: box?.id ?? null
+				})
+			);
+		} catch (error) {
+			notifyError(error);
+			await graph.load();
+		}
+	}
+
+	/** Drops a new, empty note in the middle of the view, ready to type in. */
+	async function addNote() {
+		const rect = canvasElement!.getBoundingClientRect();
+		const centre = flow.screenToFlowPosition({
+			x: rect.left + rect.width / 2,
+			y: rect.top + rect.height / 2
+		});
+		try {
+			const note = await canvasApi.createNote({
+				body: '',
+				canvas_x: Math.round(centre.x - NOTE_WIDTH / 2),
+				canvas_y: Math.round(centre.y - NOTE_HEIGHT / 2)
+			});
+			graph.notes = [...graph.notes, note];
+		} catch (error) {
+			notifyError(error);
 		}
 	}
 
@@ -418,9 +550,8 @@
 
 	const title = (id: string | undefined) => (id ? graph.nodeById.get(id)?.title : '') ?? '';
 
-	// A drag from S's source handle (right or bottom) to T's target handle
-	// (left or top) offers the relationships that match the canvas's
-	// left-to-right reading.
+	// A drag from S to T (any sides) offers the relationships that match the
+	// canvas's left-to-right reading.
 	const connectionOptions = $derived.by(() => {
 		if (!pendingConnection) return [];
 		const { source, target } = pendingConnection;
@@ -455,8 +586,31 @@
 		if (created) notify('Connection added');
 	}
 
+	const isNote = (id: string) => graph.notes.some((note) => note.id === id);
+
+	/**
+	 * Annotation arrow between the sides a connection was drawn between -
+	 * each end a note or a node.
+	 */
+	async function createArrow({ source, target, sourceHandle, targetHandle }: Connection) {
+		pendingConnection = null;
+		const request: CreateCanvasArrowRequest = {
+			...(isNote(source) ? { from_note_id: source } : { from_node_id: source }),
+			from_side: sourceHandle as CanvasSide,
+			to_side: targetHandle as CanvasSide
+		};
+		if (isNote(target)) request.to_note_id = target;
+		else request.to_node_id = target;
+		const created = await graph.mutate(() => canvasApi.createArrow(request));
+		if (created) notify('Arrow added');
+	}
+
 	async function deleteEdges({ edges: removed }: { edges: LoomFlowEdge[] }) {
-		for (const edge of removed) await graph.mutate(() => edgesApi.remove(edge.id));
+		for (const edge of removed) {
+			await graph.mutate(() =>
+				edge.type === 'loomArrow' ? canvasApi.removeArrow(edge.id) : edgesApi.remove(edge.id)
+			);
+		}
 		if (removed.length) notify(removed.length === 1 ? 'Connection removed' : 'Connections removed');
 	}
 </script>
@@ -481,22 +635,30 @@
 			onnodeclick={({ node, event }) => {
 				// Ctrl/Cmd-click toggles a node in the selection (Shift-drag draws a
 				// selection box) instead of opening it.
-				if (event.shiftKey || event.ctrlKey || event.metaKey) return;
+				if (event.shiftKey || event.ctrlKey || event.metaKey || node.type === 'loomNote') return;
 				// A path box opens only from its header; clicking the body just
 				// selects it (for resizing) without popping the detail view.
 				const onHeader = (event.target as Element | null)?.closest('.path-head');
 				if (node.type !== 'loomPath' || onHeader) openNode(node.id);
 			}}
 			onnodedragstop={settleDrag}
+			connectionMode={ConnectionMode.Loose}
 			onbeforeconnect={(connection) => {
-				pendingConnection = connection;
+				// Loose mode lets a drag end on another side of the same item.
+				if (connection.source === connection.target) return false;
+				// A note has no graph relationships: connecting one draws an arrow.
+				if (isNote(connection.source) || isNote(connection.target)) {
+					createArrow(connection);
+				} else {
+					pendingConnection = connection;
+				}
 				return false;
 			}}
 			// Keyboard Delete removes connections only. A box selection also
 			// selects every attached edge, so it does nothing while nodes are
 			// selected - those are deleted from the selection bar.
 			onbeforedelete={async ({ edges: doomed }) =>
-				selected.length ? false : { nodes: [], edges: doomed }}
+				nodes.some((flowNode) => flowNode.selected) ? false : { nodes: [], edges: doomed }}
 			ondelete={deleteEdges}
 			onmove={(_, viewport) => (zoom = viewport.zoom)}
 			ondragover={(event: DragEvent) => {
@@ -514,7 +676,7 @@
 			}}
 		>
 			<Background patternColor="var(--grid-dot)" bgColor="var(--bg)" gap={26} size={1.4} />
-			<CanvasControls {zoom} />
+			<CanvasControls {zoom} onaddnote={addNote} />
 			<SelectionBar {selected} />
 		</SvelteFlow>
 	</div>
@@ -540,6 +702,13 @@
 				{option.label}
 			</button>
 		{/each}
+		<button
+			type="button"
+			class="option annotation"
+			onclick={() => pendingConnection && createArrow(pendingConnection)}
+		>
+			Arrow <span>· annotation only, no meaning in the graph</span>
+		</button>
 		<div class="actions">
 			<Button variant="quiet" onclick={() => (pendingConnection = null)}>Cancel</Button>
 		</div>
@@ -656,6 +825,11 @@
 
 	.option:hover {
 		border-color: var(--ink);
+	}
+
+	.annotation span {
+		font-weight: 500;
+		color: var(--ink-2);
 	}
 
 	.actions {

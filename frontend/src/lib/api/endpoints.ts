@@ -6,10 +6,14 @@ import type { AuthorizeDecision } from '$lib/types/AuthorizeDecision';
 import type { AuthorizePreview } from '$lib/types/AuthorizePreview';
 import type { AuthorizeRedirect } from '$lib/types/AuthorizeRedirect';
 import type { AuthUserView } from '$lib/types/AuthUserView';
+import type { CanvasArrowResponse } from '$lib/types/CanvasArrowResponse';
+import type { CanvasNoteResponse } from '$lib/types/CanvasNoteResponse';
 import type { CanvasResponse } from '$lib/types/CanvasResponse';
 import type { ChecklistItemResponse } from '$lib/types/ChecklistItemResponse';
 import type { ChangePasswordRequest } from '$lib/types/ChangePasswordRequest';
 import type { ConnectedClientResponse } from '$lib/types/ConnectedClientResponse';
+import type { CreateCanvasArrowRequest } from '$lib/types/CreateCanvasArrowRequest';
+import type { CreateCanvasNoteRequest } from '$lib/types/CreateCanvasNoteRequest';
 import type { CreateActivePeriodRequest } from '$lib/types/CreateActivePeriodRequest';
 import type { CreatedMcpTokenResponse } from '$lib/types/CreatedMcpTokenResponse';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
@@ -31,6 +35,7 @@ import type { SignupRequest } from '$lib/types/SignupRequest';
 import type { TimelineResponse } from '$lib/types/TimelineResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
 import type { UpdateActivePeriodRequest } from '$lib/types/UpdateActivePeriodRequest';
+import type { UpdateCanvasNoteRequest } from '$lib/types/UpdateCanvasNoteRequest';
 import type { UpdateChecklistItemRequest } from '$lib/types/UpdateChecklistItemRequest';
 import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
 import type { UpdateTopicRequest } from '$lib/types/UpdateTopicRequest';
@@ -122,6 +127,18 @@ export const periodsApi = {
 export const boardApi = {
 	canvas: () => request<CanvasResponse>('GET', '/board/canvas'),
 	timeline: () => request<TimelineResponse>('GET', '/board/timeline')
+};
+
+/** Sticky notes and annotation arrows on the canvas - not part of the graph. */
+export const canvasApi = {
+	createNote: (body: CreateCanvasNoteRequest) =>
+		request<CanvasNoteResponse>('POST', '/canvas/notes', body),
+	updateNote: (noteId: string, body: UpdateCanvasNoteRequest) =>
+		request<CanvasNoteResponse>('PATCH', `/canvas/notes/${noteId}`, body),
+	removeNote: (noteId: string) => request<void>('DELETE', `/canvas/notes/${noteId}`),
+	createArrow: (body: CreateCanvasArrowRequest) =>
+		request<CanvasArrowResponse>('POST', '/canvas/arrows', body),
+	removeArrow: (arrowId: string) => request<void>('DELETE', `/canvas/arrows/${arrowId}`)
 };
 
 export const mcpApi = {

@@ -3,7 +3,7 @@
 	import { page } from '$app/state';
 	import { CANVAS_NODE_HEIGHT, CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 
-	let { zoom }: { zoom: number } = $props();
+	let { zoom, onaddnote }: { zoom: number; onaddnote: () => void } = $props();
 
 	const flow = useSvelteFlow();
 	const initialized = useNodesInitialized();
@@ -50,6 +50,9 @@
 </script>
 
 <Panel position="bottom-left">
+	<button type="button" class="add-note" title="Add a sticky note" onclick={onaddnote}
+		>+ Note</button
+	>
 	<div class="controls">
 		<button type="button" aria-label="Zoom out" onclick={() => flow.zoomOut()}>−</button>
 		<label class="zoom">
@@ -77,6 +80,7 @@
 		<div class="entry"><span class="swatch path-box"></span>path · drop nodes inside</div>
 		<div class="entry"><span class="swatch precedes"></span>precedes · do first</div>
 		<div class="entry"><span class="swatch related"></span>related</div>
+		<div class="entry"><span class="swatch annotation"></span>arrow · annotation only</div>
 	</div>
 </Panel>
 
@@ -106,6 +110,18 @@
 
 	.fit {
 		padding: 0 8px;
+	}
+
+	.add-note {
+		display: block;
+		margin-bottom: 8px;
+		height: 34px;
+		padding: 0 16px;
+		background: var(--note-fill);
+		border: var(--border-width) solid var(--note-edge);
+		color: var(--note-ink);
+		font-size: 13px;
+		cursor: pointer;
 	}
 
 	.zoom {
@@ -180,6 +196,10 @@
 
 	.related {
 		border-top: 2px dotted var(--ink-2);
+	}
+
+	.annotation {
+		border-top: 2px dashed var(--note-edge);
 	}
 
 	@media (max-width: 700px) {

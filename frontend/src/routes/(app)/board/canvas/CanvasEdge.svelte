@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/svelte';
 	import { prefs } from '$lib/stores/prefs.svelte';
-	import type { LoomFlowEdge } from './types';
+	import type { LoomGraphEdge } from './types';
 
 	let {
 		id,
@@ -13,7 +13,7 @@
 		targetPosition,
 		data,
 		selected
-	}: EdgeProps<LoomFlowEdge> = $props();
+	}: EdgeProps<LoomGraphEdge> = $props();
 
 	const kind = $derived(data?.kind ?? 'related');
 	const unmet = $derived(data?.unmet ?? false);

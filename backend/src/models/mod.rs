@@ -1,6 +1,7 @@
 pub mod active_period;
 pub mod auth;
 pub mod board;
+pub mod canvas;
 pub mod checklist;
 pub mod dashboard;
 pub mod edge;

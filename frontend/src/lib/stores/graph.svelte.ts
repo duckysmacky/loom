@@ -1,4 +1,6 @@
 import { boardApi, nodesApi, topicsApi } from '$lib/api/endpoints';
+import type { CanvasArrowResponse } from '$lib/types/CanvasArrowResponse';
+import type { CanvasNoteResponse } from '$lib/types/CanvasNoteResponse';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
@@ -17,6 +19,9 @@ class GraphStore {
 	nodes = $state<NodeResponse[]>([]);
 	edges = $state<EdgeResponse[]>([]);
 	topics = $state<TopicResponse[]>([]);
+	/** The canvas's sticky notes and annotation arrows (not graph nodes/edges). */
+	notes = $state<CanvasNoteResponse[]>([]);
+	arrows = $state<CanvasArrowResponse[]>([]);
 	loaded = $state(false);
 	version = $state(0);
 
@@ -28,6 +33,8 @@ class GraphStore {
 			const [canvas, topics] = await Promise.all([boardApi.canvas(), topicsApi.list()]);
 			this.nodes = canvas.nodes;
 			this.edges = canvas.edges;
+			this.notes = canvas.notes;
+			this.arrows = canvas.arrows;
 			this.topics = topics;
 			this.loaded = true;
 			this.version++;
@@ -75,9 +82,16 @@ class GraphStore {
 		this.nodes = this.nodes.map((node) => (node.id === updated.id ? updated : node));
 	}
 
+	/** Swaps in one updated note - notes never affect derived state. */
+	replaceNote(updated: CanvasNoteResponse) {
+		this.notes = this.notes.map((note) => (note.id === updated.id ? updated : note));
+	}
+
 	reset() {
 		this.nodes = [];
 		this.edges = [];
+		this.notes = [];
+		this.arrows = [];
 		this.topics = [];
 		this.loaded = false;
 	}
