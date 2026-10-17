@@ -23,8 +23,7 @@
 				['queued', 'Queued'],
 				['active', 'Active'],
 				['paused', 'Paused'],
-				['done', 'Done'],
-				['archived', 'Archived']
+				['done', 'Done']
 			]
 		},
 		{
@@ -60,7 +59,7 @@
 			boardFilters.search !== '' ||
 			boardFilters.showArchived ||
 			boardFilters.showIdeas ||
-			boardFilters.showDone
+			!boardFilters.showDone
 	);
 </script>
 

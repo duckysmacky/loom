@@ -122,7 +122,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "study", "title": "d", "status": "archived"}),
+        json!({"kind": "study", "title": "d", "status": "active", "archived": true}),
     )
     .await;
 
@@ -135,6 +135,7 @@ async fn counts_match_fixtures_exactly(pool: PgPool) {
     let counts = &dashboard["counts"];
     assert_eq!(counts["total"], 4);
     assert_eq!(counts["by_status"]["idea"], 0);
+    // The archived study keeps its status but is counted apart.
     assert_eq!(counts["by_status"]["active"], 1);
     assert_eq!(counts["by_status"]["archived"], 1);
     assert_eq!(counts["by_status"]["queued"], 0);
@@ -367,14 +368,17 @@ async fn paths_list_open_path_kind_nodes_with_progress(pool: PgPool) {
         json!({"kind": "path", "title": "archived-path"}),
     )
     .await;
-    // Everything inside archived, so the path's derived status is archived.
-    let archived_child = create_node(
+    // Archived itself, whatever the status derived from what's inside.
+    send(
         &app,
-        &token,
-        json!({"kind": "study", "title": "c", "status": "archived"}),
+        req(
+            "PATCH",
+            &format!("/api/nodes/{archived_path}"),
+            json!({"archived": true}),
+            Some(&token),
+        ),
     )
     .await;
-    add_edge(&app, &token, &archived_child, &archived_path, "part_of").await;
 
     let (_, dashboard) = send(
         &app,

@@ -27,7 +27,7 @@
 	} from './drag.svelte';
 	import PathBox from './PathBox.svelte';
 
-	const STATUS_ORDER: NodeStatus[] = ['active', 'queued', 'paused', 'idea', 'done', 'archived'];
+	const STATUS_ORDER: NodeStatus[] = ['active', 'queued', 'paused', 'idea', 'done'];
 	// Ideas have no status: they sort last.
 	const rank = (node: NodeResponse) =>
 		node.status ? STATUS_ORDER.indexOf(node.status) : STATUS_ORDER.length;

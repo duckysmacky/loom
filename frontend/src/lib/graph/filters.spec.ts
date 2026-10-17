@@ -14,12 +14,17 @@ const anything: FilterCriteria = {
 describe('nodeMatches', () => {
 	it('matches everything but archived nodes by default', () => {
 		expect(nodeMatches(makeNode(), anything)).toBe(true);
-		expect(nodeMatches(makeNode({ status: 'archived' }), anything)).toBe(false);
-		expect(nodeMatches(makeNode({ status: 'archived' }), { ...anything, showArchived: true })).toBe(
+		expect(nodeMatches(makeNode({ archived: true }), anything)).toBe(false);
+		expect(nodeMatches(makeNode({ archived: true }), { ...anything, showArchived: true })).toBe(
 			true
 		);
+		// Archived keeps its status: a done node can be archived and still filter as done.
 		expect(
-			nodeMatches(makeNode({ status: 'archived' }), { ...anything, statuses: ['archived'] })
+			nodeMatches(makeNode({ status: 'done', archived: true }), {
+				...anything,
+				statuses: ['done'],
+				showArchived: true
+			})
 		).toBe(true);
 	});
 

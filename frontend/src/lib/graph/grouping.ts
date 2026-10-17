@@ -35,8 +35,7 @@ const STATUS_BUCKETS: Bucket[] = (
 		['queued', 'var(--ink-2)'],
 		['paused', 'var(--ink-2)'],
 		['idea', 'var(--line)'],
-		['done', 'var(--ok)'],
-		['archived', 'var(--line)']
+		['done', 'var(--ok)']
 	] as const
 ).map(([status, bar]) => ({
 	id: status,

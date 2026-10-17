@@ -126,7 +126,7 @@ pub async fn delete_period(
 /// Client preferences carried on a node PATCH (not stored server-side).
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PeriodSettings {
-    /// Pausing/archiving closes the open period; reactivating opens a new one.
+    /// Pausing closes the open period; reactivating opens a new one.
     pub track_active_periods: bool,
     /// A focus change closes the open period and opens a new one.
     pub split_on_focus_change: bool,
@@ -244,7 +244,7 @@ async fn close_period_now(
 ///   date. If the last period already closed (a pause), a completion-day
 ///   period is added so the pause record isn't overwritten. A node that
 ///   never started gets nothing: no start means no completed date either.
-/// - `active -> paused/archived` with tracking on closes the open period.
+/// - `active -> paused` with tracking on closes the open period.
 /// - `queued`/`idea` are neutral.
 /// - no status (demoted to an idea) closes the open period, tracking or not.
 pub async fn sync_status_transition(
@@ -276,7 +276,7 @@ pub async fn sync_status_transition(
             close_period_now(user_id, tx, last.id).await?
         }
         (Some(NodeStatus::Done), Some(_)) => open_period(user_id, tx, node_id, true, focus).await?,
-        (Some(NodeStatus::Paused | NodeStatus::Archived), Some(last))
+        (Some(NodeStatus::Paused), Some(last))
             if last.ended_at.is_none()
                 && old_status == Some(NodeStatus::Active)
                 && settings.track_active_periods =>

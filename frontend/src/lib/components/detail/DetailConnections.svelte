@@ -67,7 +67,7 @@
 
 	const candidates = $derived(
 		graph.nodes
-			.filter((candidate) => candidate.id !== node.id && candidate.status !== 'archived')
+			.filter((candidate) => candidate.id !== node.id && !candidate.archived)
 			// Only paths can contain nodes.
 			.filter((candidate) => relation !== 'part_of' || candidate.kind === 'path')
 			.toSorted((left, right) => left.title.localeCompare(right.title))

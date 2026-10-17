@@ -44,6 +44,7 @@ pub(crate) struct NodeRow {
     pub(crate) last_poked_at: Option<DateTime<Utc>>,
     pub(crate) path_progress_done: i64,
     pub(crate) path_progress_total: i64,
+    pub(crate) archived: bool,
 }
 
 impl From<NodeRow> for NodeResponse {
@@ -86,6 +87,7 @@ impl From<NodeRow> for NodeResponse {
             checklist_progress,
             path_progress,
             last_poked_at: row.last_poked_at,
+            archived: row.archived,
         }
     }
 }
@@ -109,9 +111,9 @@ pub async fn create_node(
         r#"
         INSERT INTO nodes (
             user_id, kind, status, focus, title, progress_current, progress_total, color, notes,
-            progress_unit
+            progress_unit, archived
         )
-        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11)
         RETURNING id
         "#,
         user_id,
@@ -124,6 +126,7 @@ pub async fn create_node(
         request.color,
         request.notes,
         request.progress_unit,
+        request.archived.unwrap_or(false),
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -151,7 +154,7 @@ pub async fn list_nodes(
     pool: &PgPool,
     filters: &NodeListQuery,
 ) -> Result<Vec<NodeResponse>, sqlx::Error> {
-    let (view_kind, view_status) = view_predicates(filters.view);
+    let (view_kind, view_archived) = view_predicates(filters.view);
 
     let rows = sqlx::query_as!(
         NodeRow,
@@ -167,14 +170,15 @@ pub async fn list_nodes(
             checklist_total AS "checklist_total!", checklist_done AS "checklist_done!",
             last_poked_at,
             path_progress_done AS "path_progress_done!",
-            path_progress_total AS "path_progress_total!"
+            path_progress_total AS "path_progress_total!",
+            archived AS "archived!"
         FROM node_rows
         WHERE user_id = $1
           AND ($2::node_status IS NULL OR status = $2)
           AND ($3::node_focus IS NULL OR focus = $3)
           AND ($4::node_kind IS NULL OR kind = $4)
           AND ($5::node_kind IS NULL OR kind = $5)
-          AND ($6::node_status IS NULL OR status = $6)
+          AND ($6::bool IS NULL OR archived = $6)
         ORDER BY created_at DESC
         "#,
         user_id,
@@ -182,7 +186,7 @@ pub async fn list_nodes(
         filters.focus as Option<NodeFocus>,
         filters.kind as Option<NodeKind>,
         view_kind as Option<NodeKind>,
-        view_status as Option<NodeStatus>,
+        view_archived,
     )
     .fetch_all(pool)
     .await?;
@@ -190,14 +194,14 @@ pub async fn list_nodes(
     Ok(rows.into_iter().map(NodeResponse::from).collect())
 }
 
-/// Translates `view` into the effective (kind, status) constraint it
+/// Translates `view` into the effective (kind, archived) constraint it
 /// implies. `ideas` = every idea-kind node: captured but not yet promoted
 /// (promoting it to a project/study/path takes it out).
-/// `archived` = status=archived. `all`/`None` = no extra constraint.
-fn view_predicates(view: Option<NodeView>) -> (Option<NodeKind>, Option<NodeStatus>) {
+/// `archived` = archived flag set. `all`/`None` = no extra constraint.
+fn view_predicates(view: Option<NodeView>) -> (Option<NodeKind>, Option<bool>) {
     match view {
         Some(NodeView::Ideas) => (Some(NodeKind::Idea), None),
-        Some(NodeView::Archived) => (None, Some(NodeStatus::Archived)),
+        Some(NodeView::Archived) => (None, Some(true)),
         Some(NodeView::All) | None => (None, None),
     }
 }
@@ -221,7 +225,8 @@ pub async fn get_node(
             checklist_total AS "checklist_total!", checklist_done AS "checklist_done!",
             last_poked_at,
             path_progress_done AS "path_progress_done!",
-            path_progress_total AS "path_progress_total!"
+            path_progress_total AS "path_progress_total!",
+            archived AS "archived!"
         FROM node_rows
         WHERE user_id = $1 AND id = $2
         "#,
@@ -320,6 +325,7 @@ pub async fn update_node(
                 WHEN COALESCE($3, kind) <> 'study' THEN NULL
                 WHEN $23 THEN $24 ELSE progress_unit
             END,
+            archived = COALESCE($25, archived),
             updated_at = now()
         WHERE user_id = $1 AND id = $2
         RETURNING kind AS "kind: NodeKind", status AS "status?: NodeStatus", focus AS "focus?: NodeFocus"
@@ -348,6 +354,7 @@ pub async fn update_node(
         canvas_height,
         progress_unit_set,
         progress_unit,
+        request.archived,
     )
     .fetch_one(&mut *tx)
     .await?;
@@ -374,6 +381,28 @@ pub async fn update_node(
         {
             active_periods::sync_focus_change(user_id, &mut tx, node_id, focus).await?;
         }
+    }
+    // Archiving (or restoring) a path does the same to everything inside it,
+    // nested paths and ideas included.
+    if let (Some(archived), NodeKind::Path) = (request.archived, row.kind) {
+        sqlx::query!(
+            r#"
+            WITH RECURSIVE inside(node_id) AS (
+                SELECT from_node_id FROM edges
+                WHERE to_node_id = $2 AND kind = 'part_of'
+                UNION
+                SELECT e.from_node_id FROM edges e JOIN inside i ON e.to_node_id = i.node_id
+                WHERE e.kind = 'part_of'
+            )
+            UPDATE nodes SET archived = $3, updated_at = now()
+            WHERE user_id = $1 AND id IN (SELECT node_id FROM inside)
+            "#,
+            user_id,
+            node_id,
+            archived,
+        )
+        .execute(&mut *tx)
+        .await?;
     }
     if let Some(started_at) = request.started_at {
         active_periods::set_started(user_id, &mut tx, node_id, started_at).await?;

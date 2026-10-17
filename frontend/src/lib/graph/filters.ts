@@ -16,12 +16,7 @@ export type FilterCriteria = {
 export function nodeMatches(node: NodeResponse, criteria: FilterCriteria): boolean {
 	const search = criteria.search.trim().toLowerCase();
 	if (search && !node.title.toLowerCase().includes(search)) return false;
-	if (
-		!criteria.showArchived &&
-		node.status === 'archived' &&
-		!criteria.statuses.includes('archived')
-	)
-		return false;
+	if (!criteria.showArchived && node.archived) return false;
 	if (criteria.kinds.length && !criteria.kinds.includes(node.kind)) return false;
 	if (criteria.statuses.length && !(node.status && criteria.statuses.includes(node.status)))
 		return false;

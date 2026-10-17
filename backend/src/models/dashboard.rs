@@ -16,6 +16,7 @@ pub struct StatusCounts {
     pub paused: i64,
     #[ts(type = "number")]
     pub done: i64,
+    /// Archived nodes of any status; the other counts leave them out.
     #[ts(type = "number")]
     pub archived: i64,
 }
@@ -40,7 +41,7 @@ pub struct DashboardCounts {
     pub total: i64,
     pub by_status: StatusCounts,
     pub by_kind: KindCounts,
-    /// Nodes still in play (not done/archived) with an unmet `requires` edge.
+    /// Nodes still in play (not done, not archived) with an unmet `requires` edge.
     #[ts(type = "number")]
     pub blocked: i64,
     /// Unpromoted ideas - same predicate as `GET /api/nodes?view=ideas`.
@@ -61,7 +62,7 @@ pub struct DashboardResponse {
     pub active: Vec<NodeResponse>,
     /// The newest unpromoted ideas, newest first.
     pub recent_ideas: Vec<NodeResponse>,
-    /// `kind=path` nodes not done/archived, newest first.
+    /// `kind=path` nodes not done and not archived, newest first.
     pub paths: Vec<NodeResponse>,
 }
 

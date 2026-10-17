@@ -42,7 +42,8 @@ with a progress counter: progress_current/progress_total/progress_unit), `path` 
 (the only container - other nodes join it with a `part_of` edge; paths can nest).
 
 Status (projects, studies and paths only): idea -> queued -> active -> paused -> \
-done, or archived. Focus tier (primary/secondary/background) is orthogonal to \
+done. Any node (any kind, any status) can also be archived: `archived` is a \
+flag that hides it from the board and dashboard without changing its status. Focus tier (primary/secondary/background) is orthogonal to \
 status and orders the dashboard's list of active nodes. Ideas have neither: sending status or focus for \
 an idea is an error, and both are omitted from idea results. Changing a node's \
 kind (\"promoting\") keeps its id and edges but drops data the new kind can't \
@@ -52,7 +53,7 @@ focus secondary unless given; turning a node into an idea clears both and ends \
 its open active period. A path's status is derived from the nodes inside it \
 (nested paths walked through, ideas skipped): anything active -> active, else \
 anything paused -> paused, else anything still to do (or nothing inside) -> \
-queued, else archived when everything is archived, otherwise done. Sending a \
+queued, otherwise done (archived flags don't count). Sending a \
 status or start/completion date for a path is an error; its focus is editable.
 
 Edges always point from the node being described: `requires` (from depends on \
@@ -293,7 +294,7 @@ impl LoomServer {
     }
 
     /// Lists nodes, newest first, optionally filtered by kind/status/focus,
-    /// a view preset (`ideas` = idea-kind nodes, `archived`) and a title search.
+    /// a view preset (`ideas` = idea-kind nodes, `archived` = archived flag set) and a title search.
     #[tool(annotations(title = "List nodes", read_only_hint = true))]
     async fn loom_list_nodes(
         &self,
@@ -348,7 +349,8 @@ impl LoomServer {
     /// project deletes its checklist, leaving study clears progress,
     /// leaving path releases its children. Promoting an idea gives it
     /// status `queued` / focus `secondary` unless set; changing kind to
-    /// `idea` clears both. Ideas reject status/focus; paths reject status
+    /// `idea` clears both. Set `archived` to hide/restore any node (a path takes everything inside it along). Ideas
+    /// reject status/focus; paths reject status
     /// and dates (derived from the nodes inside).
     #[tool(annotations(title = "Update node", read_only_hint = false, destructive_hint = true))]
     async fn loom_update_node(

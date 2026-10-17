@@ -23,7 +23,7 @@
 		graph.nodes
 			.filter((candidate) => candidate.id !== node.id && !parentOf.has(candidate.id))
 			.filter((candidate) => !ancestorPaths(node.id, parentOf).includes(candidate.id))
-			.filter((candidate) => candidate.status !== 'archived')
+			.filter((candidate) => !candidate.archived)
 			.toSorted((left, right) => left.title.localeCompare(right.title))
 	);
 

@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n            WITH RECURSIVE inside(node_id) AS (\n                SELECT from_node_id FROM edges\n                WHERE to_node_id = $2 AND kind = 'part_of'\n                UNION\n                SELECT e.from_node_id FROM edges e JOIN inside i ON e.to_node_id = i.node_id\n                WHERE e.kind = 'part_of'\n            )\n            UPDATE nodes SET archived = $3, updated_at = now()\n            WHERE user_id = $1 AND id IN (SELECT node_id FROM inside)\n            ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Bool"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "f4d037f497604e228f9662108ba363709ed21225a7b1685e850892db84220cf5"
+}

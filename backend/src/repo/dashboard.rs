@@ -24,11 +24,9 @@ pub async fn get_dashboard(
     let stale = stale_nodes(&all_nodes, query);
 
     // Ideas (no status) aren't in play: they're off the board until promoted.
+    // Archived nodes are hidden, whatever their status.
     let in_play = |node: &&NodeResponse| {
-        !matches!(
-            node.status,
-            None | Some(NodeStatus::Done | NodeStatus::Archived)
-        )
+        !node.archived && !matches!(node.status, None | Some(NodeStatus::Done))
     };
 
     counts.blocked = all_nodes
@@ -42,7 +40,9 @@ pub async fn get_dashboard(
     // blocked within a tier.
     let mut active: Vec<NodeResponse> = all_nodes
         .iter()
-        .filter(|node| node.status == Some(NodeStatus::Active) && node.kind != NodeKind::Path)
+        .filter(|node| {
+            !node.archived && node.status == Some(NodeStatus::Active) && node.kind != NodeKind::Path
+        })
         .cloned()
         .collect();
     // Stable sort - within a rank the listing's newest-first order holds.
@@ -57,7 +57,7 @@ pub async fn get_dashboard(
 
     let recent_ideas = all_nodes
         .iter()
-        .filter(|node| node.kind == NodeKind::Idea)
+        .filter(|node| node.kind == NodeKind::Idea && !node.archived)
         .take(RECENT_IDEAS_LIMIT)
         .cloned()
         .collect();
@@ -95,15 +95,19 @@ fn count_nodes(all_nodes: &[NodeResponse]) -> DashboardCounts {
     };
 
     for node in all_nodes {
-        match node.status {
-            Some(NodeStatus::Idea) => by_status.idea += 1,
-            Some(NodeStatus::Queued) => by_status.queued += 1,
-            Some(NodeStatus::Active) => by_status.active += 1,
-            Some(NodeStatus::Paused) => by_status.paused += 1,
-            Some(NodeStatus::Done) => by_status.done += 1,
-            Some(NodeStatus::Archived) => by_status.archived += 1,
-            // Ideas have no status.
-            None => {}
+        // Archived nodes are counted apart, not under the status they kept.
+        if node.archived {
+            by_status.archived += 1;
+        } else {
+            match node.status {
+                Some(NodeStatus::Idea) => by_status.idea += 1,
+                Some(NodeStatus::Queued) => by_status.queued += 1,
+                Some(NodeStatus::Active) => by_status.active += 1,
+                Some(NodeStatus::Paused) => by_status.paused += 1,
+                Some(NodeStatus::Done) => by_status.done += 1,
+                // Ideas have no status.
+                None => {}
+            }
         }
         match node.kind {
             NodeKind::Idea => by_kind.idea += 1,
@@ -133,6 +137,9 @@ fn stale_nodes(all_nodes: &[NodeResponse], query: &DashboardQuery) -> Vec<NodeRe
     let cutoff = Utc::now() - Duration::days(days);
     let last_touched = |node: &NodeResponse| node.last_poked_at.unwrap_or(node.created_at);
     let eligible = |node: &NodeResponse| {
+        if node.archived {
+            return false;
+        }
         let mode = match node.status {
             Some(NodeStatus::Active) => return true,
             Some(NodeStatus::Queued) => queued_mode,

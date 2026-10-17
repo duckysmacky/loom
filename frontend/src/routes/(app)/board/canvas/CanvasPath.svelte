@@ -52,7 +52,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	<div class="head path-head" title="Open path">
 		<CollapseToggle collapsed={false} ontoggle={() => togglePathCollapsed('canvas', node.id)} />
 		<span class="kind"><span class="glyph">{KIND_GLYPH.path}</span> path</span>
-		<Badge status={node.status} blocked={node.blocked} />
+		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
 		<span class="title">{node.title}</span>
 		{#if progressText(node)}<span class="count">{progressText(node)}</span>{/if}
 	</div>

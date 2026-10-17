@@ -17,7 +17,7 @@ export const boardFilters = $state<FilterCriteria & { showIdeas: boolean; showDo
 	topicIds: [],
 	showArchived: false,
 	showIdeas: false,
-	showDone: false
+	showDone: true
 });
 
 /** Board views hide ideas unless the "Show ideas" switch is on;
@@ -43,5 +43,5 @@ export function clearBoardFilters() {
 	boardFilters.topicIds = [];
 	boardFilters.showArchived = false;
 	boardFilters.showIdeas = false;
-	boardFilters.showDone = false;
+	boardFilters.showDone = true;
 }

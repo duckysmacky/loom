@@ -19,7 +19,7 @@ export type Prefs = {
 	recentColors: string[];
 	/** A poke also switches the node's status to Active. */
 	pokeSetsActive: boolean;
-	/** Pausing/archiving closes the active period, reactivating opens a new one. */
+	/** Pausing closes the active period, reactivating opens a new one. */
 	trackActivePeriods: boolean;
 	/** A focus change closes the open active period and starts a new one under the new focus. */
 	splitPeriodOnFocusChange: boolean;

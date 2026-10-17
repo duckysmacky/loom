@@ -140,8 +140,8 @@
 			<span>
 				<span class="row-label">Track active periods</span>
 				<span class="row-help">
-					Pausing or archiving closes the current active period; reactivating starts a new one. Off:
-					reactivating continues the last period.
+					Pausing closes the current active period; reactivating starts a new one. Off: reactivating
+					continues the last period.
 				</span>
 			</span>
 			<input

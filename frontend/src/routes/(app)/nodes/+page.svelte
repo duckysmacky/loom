@@ -35,7 +35,7 @@
 	$effect(() => {
 		void graph.version;
 		// Filters hidden on the current tab don't apply (ideas fixes the
-		// kind and has no status/focus; archived fixes the status).
+		// kind and has no status/focus; archived fixes the flag).
 		const ideas = view === 'ideas';
 		const query = {
 			view,
@@ -53,18 +53,22 @@
 		{
 			value: 'ideas' as const,
 			label: 'Ideas',
-			count: graph.nodes.filter(isIdea).length
+			count: graph.nodes.filter((node) => isIdea(node) && !node.archived).length
 		},
 		{ value: 'all' as const, label: 'All', count: graph.nodes.length },
 		{
 			value: 'archived' as const,
 			label: 'Archived',
-			count: graph.nodes.filter((node) => node.status === 'archived').length
+			count: graph.nodes.filter((node) => node.archived).length
 		}
 	]);
 
 	const visibleRows = $derived.by(() => {
-		const filtered = (rows ?? []).filter((node) => !topicId || node.topic_ids.includes(topicId));
+		// Archived ideas live under the Archived tab, not the Ideas list.
+		const filtered = (rows ?? []).filter(
+			(node) =>
+				(!topicId || node.topic_ids.includes(topicId)) && !(view === 'ideas' && node.archived)
+		);
 		const touched = (node: NodeResponse) => node.last_poked_at ?? '';
 		return filtered.toSorted((left, right) =>
 			sort === 'title'
@@ -94,15 +98,15 @@
 	}
 
 	async function restore(node: NodeResponse) {
-		const restored = await graph.mutate(() => nodesApi.update(node.id, { status: 'queued' }));
-		if (restored) notify(`Restored “${node.title}” to queued`);
+		const restored = await graph.mutate(() => nodesApi.update(node.id, { archived: false }));
+		if (restored) notify(`Restored “${node.title}”`);
 	}
 
 	const footer = $derived(
 		view === 'ideas'
 			? `${visibleRows.length} ideas · promoting sets a kind, status and focus tier`
 			: view === 'archived'
-				? `${visibleRows.length} archived · restoring moves a node back to queued`
+				? `${visibleRows.length} archived · restoring brings a node back with its status`
 				: `${visibleRows.length} nodes`
 	);
 </script>
@@ -132,7 +136,7 @@
 				<span>Status</span>
 				<select bind:value={status}>
 					<option value="">Any</option>
-					{#each ['idea', 'queued', 'active', 'paused', 'done', 'archived'] as option (option)}
+					{#each ['idea', 'queued', 'active', 'paused', 'done'] as option (option)}
 						<option value={option}>{option[0].toUpperCase() + option.slice(1)}</option>
 					{/each}
 				</select>
@@ -234,10 +238,10 @@
 							<!-- stopPropagation: the row itself opens the detail panel. -->
 							<!-- svelte-ignore a11y_click_events_have_key_events, a11y_no_static_element_interactions -->
 							<span onclick={(event) => event.stopPropagation()}>
-								{#if isIdea(node)}
-									<Button variant="poke" onclick={() => (promoting = node)}>To board</Button>
-								{:else if node.status === 'archived' && node.kind !== 'path'}
+								{#if node.archived}
 									<Button variant="poke" onclick={() => restore(node)}>Restore</Button>
+								{:else if isIdea(node)}
+									<Button variant="poke" onclick={() => (promoting = node)}>To board</Button>
 								{/if}
 							</span>
 						</td>

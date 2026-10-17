@@ -70,7 +70,7 @@
 	);
 	const candidates = $derived(
 		graph.nodes
-			.filter((node) => node.status !== 'archived')
+			.filter((node) => !node.archived)
 			// Only paths can contain nodes.
 			.filter((node) => linkKind !== 'part_of' || node.kind === 'path')
 			.filter((node) => !links.some((link) => link.kind === linkKind && link.targetId === node.id))

@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            -- Ideas have no status/focus: becoming one clears both, and\n            -- promoting one defaults to queued/secondary unless given.\n            -- A path leaving path kind keeps the status derived from what's\n            -- inside it (still attached here; released below).\n            status = CASE\n                WHEN COALESCE($3, kind) = 'idea' THEN NULL\n                WHEN kind = 'path' AND COALESCE($3, kind) <> 'path'\n                    THEN COALESCE($4, path_status(id))\n                ELSE COALESCE($4, status, 'queued')\n            END,\n            focus = CASE\n                WHEN COALESCE($3, kind) = 'idea' THEN NULL\n                ELSE COALESCE($5, focus, 'secondary')\n            END,\n            title = COALESCE($6, title),\n            -- Tracked progress belongs to study nodes only: any other resulting\n            -- kind drops it (a kind change clears data the new kind can't have).\n            progress_current = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $7 THEN $8 ELSE progress_current\n            END,\n            progress_total = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $9 THEN $10 ELSE progress_total\n            END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            canvas_x = CASE WHEN $15 THEN $16 ELSE canvas_x END,\n            canvas_y = CASE WHEN $17 THEN $18 ELSE canvas_y END,\n            canvas_width = CASE WHEN $19 THEN $20 ELSE canvas_width END,\n            canvas_height = CASE WHEN $21 THEN $22 ELSE canvas_height END,\n            progress_unit = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $23 THEN $24 ELSE progress_unit\n            END,\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING kind AS \"kind: NodeKind\", status AS \"status?: NodeStatus\", focus AS \"focus?: NodeFocus\"\n        ",
+  "query": "\n        UPDATE nodes SET\n            kind = COALESCE($3, kind),\n            -- Ideas have no status/focus: becoming one clears both, and\n            -- promoting one defaults to queued/secondary unless given.\n            -- A path leaving path kind keeps the status derived from what's\n            -- inside it (still attached here; released below).\n            status = CASE\n                WHEN COALESCE($3, kind) = 'idea' THEN NULL\n                WHEN kind = 'path' AND COALESCE($3, kind) <> 'path'\n                    THEN COALESCE($4, path_status(id))\n                ELSE COALESCE($4, status, 'queued')\n            END,\n            focus = CASE\n                WHEN COALESCE($3, kind) = 'idea' THEN NULL\n                ELSE COALESCE($5, focus, 'secondary')\n            END,\n            title = COALESCE($6, title),\n            -- Tracked progress belongs to study nodes only: any other resulting\n            -- kind drops it (a kind change clears data the new kind can't have).\n            progress_current = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $7 THEN $8 ELSE progress_current\n            END,\n            progress_total = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $9 THEN $10 ELSE progress_total\n            END,\n            color = CASE WHEN $11 THEN $12 ELSE color END,\n            notes = CASE WHEN $13 THEN $14 ELSE notes END,\n            canvas_x = CASE WHEN $15 THEN $16 ELSE canvas_x END,\n            canvas_y = CASE WHEN $17 THEN $18 ELSE canvas_y END,\n            canvas_width = CASE WHEN $19 THEN $20 ELSE canvas_width END,\n            canvas_height = CASE WHEN $21 THEN $22 ELSE canvas_height END,\n            progress_unit = CASE\n                WHEN COALESCE($3, kind) <> 'study' THEN NULL\n                WHEN $23 THEN $24 ELSE progress_unit\n            END,\n            archived = COALESCE($25, archived),\n            updated_at = now()\n        WHERE user_id = $1 AND id = $2\n        RETURNING kind AS \"kind: NodeKind\", status AS \"status?: NodeStatus\", focus AS \"focus?: NodeFocus\"\n        ",
   "describe": {
     "columns": [
       {
@@ -38,8 +38,7 @@
                 "queued",
                 "active",
                 "paused",
-                "done",
-                "archived"
+                "done"
               ]
             }
           }
@@ -100,8 +99,7 @@
                 "queued",
                 "active",
                 "paused",
-                "done",
-                "archived"
+                "done"
               ]
             }
           }
@@ -136,7 +134,8 @@
         "Bool",
         "Float8",
         "Bool",
-        "Text"
+        "Text",
+        "Bool"
       ]
     },
     "nullable": [
@@ -145,5 +144,5 @@
       true
     ]
   },
-  "hash": "02931bf769f7de60552d710820482a83f0ff126d113c176a1f4f4aeb92ddf601"
+  "hash": "1a3d043d1ff6dbe1fbbdde4f4e65b8e08474a231801253fbb4567a9b52915cc4"
 }

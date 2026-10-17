@@ -56,7 +56,7 @@ export type BorderStyle = {
  * Card border language. The line says what a node is (solid project/study,
  * dashed idea/path); only "paused" overrides it, with a dotted line. The
  * colour says how it's doing: warn while blocked, green once done, faded
- * while hidden (ideas/archived), muted grey while queued or at idea
+ * while hidden (ideas, archived nodes), muted grey while queued or at idea
  * status.
  */
 export function borderStyle(node: NodeResponse): BorderStyle {
@@ -71,7 +71,7 @@ export function borderStyle(node: NodeResponse): BorderStyle {
 			? 'warn'
 			: node.status === 'done'
 				? 'ok'
-				: node.status === null || node.status === 'archived'
+				: node.status === null || node.archived
 					? 'faded'
 					: node.status === 'queued' || node.status === 'idea'
 						? 'muted'

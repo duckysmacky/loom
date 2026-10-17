@@ -54,7 +54,7 @@ top/bottom pair so related cards connect vertically. -->
 		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
 		>
 		<span class="kind">{kind}</span>
-		<Badge status={node.status} blocked={node.blocked} />
+		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
 	</div>
 	<div class="title">{node.title}</div>
 	{#if kind === 'path'}

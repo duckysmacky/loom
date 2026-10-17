@@ -28,12 +28,13 @@ connected graph. One graph per account; no collaboration.
 
 - **Kinds:** `idea` (uncommitted; no status/focus/progress/checklist - DB CHECK enforces status/focus), `project` (only kind with checklist), `study` (only kind with `progress_current/total/unit`), `path` (only container; nodes join via `part_of`; nestable).
 - **Promote:** change `kind` in place (same id, same edges); data the new kind can't hold is dropped. Idea -> other gets `queued`/`secondary`; demoting to idea clears both and closes the open period. The `idea` *status* is an ordinary status of committed nodes.
+- **Archived:** boolean flag on any node (any kind/status, ideas and paths included), independent of status and periods; hides it from board/dashboard. Archiving/restoring a path does the same to everything inside it (nested paths, ideas included).
 - **Focus:** `primary`/`secondary`/`background`, orthogonal to status; orders dashboard active list.
 - **Blocked:** derived - unmet `requires` edge to a non-`done` node (idea = not done).
 - **Progress (all derived):** container = done ratio of a path's `part_of` children; checklist = project items; path = all study counters + checklists inside (nested included). Distinct from a study's own counter.
-- **Path rollups:** status (active > paused > queued/empty > all-archived > done), last touched, started/completed derived recursively from inner nodes, skipping ideas. Paths have no pokes, periods or writable status.
+- **Path rollups:** status (active > paused > queued/empty > done), last touched, started/completed derived recursively from inner nodes, skipping ideas. Paths have no pokes, periods or writable status.
 - **Poke:** append-only "worked on this" log, decoupled from `updated_at`. Last touched = `MAX(poked_at)`.
-- **Active period:** `started_at -> ended_at` (null = ongoing). First opens on first activation; with "Track active periods", pause/archive closes and reactivation opens a new one. Records node focus at open; editable by hand, or (opt-in pref) focus change starts a new period. Started/Completed derived from first/last period; editing them moves period edges.
+- **Active period:** `started_at -> ended_at` (null = ongoing). First opens on first activation; with "Track active periods", pause closes and reactivation opens a new one. Records node focus at open; editable by hand, or (opt-in pref) focus change starts a new period. Started/Completed derived from first/last period; editing them moves period edges.
 - **Stale:** last poke (or creation) older than threshold (default 14d). Active always; queued (default only if poked before) and paused (default never) follow per-browser prefs sent as `GET /api/dashboard` query params.
 - **Accent:** user-assigned node color. **Unplaced:** `canvas_x/y` NULL - side panel, unless "Auto-place on canvas".
 - **Edges** (directed forward from edited node): `requires` (blocking, no cycles), `part_of` (child -> path, no cycles, one path per node), `precedes` (soft order, never blocks, no cycles), `related` (soft, cycles ok).

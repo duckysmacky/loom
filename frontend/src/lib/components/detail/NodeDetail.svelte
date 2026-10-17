@@ -153,7 +153,7 @@
 			<header>
 				<div class="meta-row">
 					<span class="label">{node.kind}</span>
-					<Badge status={node.status} blocked={node.blocked} />
+					<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
 					{#if blocked}<span class="computed">blocked is computed · not editable</span>{/if}
 					<button type="button" class="close" aria-label="Close" onclick={closeNode}>✕</button>
 				</div>
@@ -252,7 +252,7 @@
 								onchange={(event) =>
 									update(node, { status: event.currentTarget.value as NodeResponse['status'] })}
 							>
-								{#each ['idea', 'queued', 'active', 'paused', 'done', 'archived'] as status (status)}
+								{#each ['idea', 'queued', 'active', 'paused', 'done'] as status (status)}
 									<option value={status}>{status[0].toUpperCase() + status.slice(1)}</option>
 								{/each}
 							</select>
@@ -352,17 +352,9 @@
 						>
 							Open in canvas
 						</Button>
-						{#if node.kind === 'path'}
-							<!-- Archived only when everything inside it is. -->
-						{:else if node.status === 'archived'}
-							<Button variant="quiet" onclick={() => update(node, { status: 'queued' })}>
-								Restore
-							</Button>
-						{:else if node.status}
-							<Button variant="quiet" onclick={() => update(node, { status: 'archived' })}>
-								Archive
-							</Button>
-						{/if}
+						<Button variant="quiet" onclick={() => update(node, { archived: !node.archived })}>
+							{node.archived ? 'Restore' : 'Archive'}
+						</Button>
 						{#if confirmingDelete}
 							<Button variant="primary" onclick={() => remove(node)}>Delete for good</Button>
 							<Button variant="quiet" onclick={() => (confirmingDelete = false)}>Keep</Button>

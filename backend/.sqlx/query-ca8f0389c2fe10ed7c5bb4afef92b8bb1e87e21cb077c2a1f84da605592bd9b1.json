@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id AS \"id!\", kind AS \"kind!: NodeKind\", status AS \"status?: NodeStatus\",\n            focus AS \"focus?: NodeFocus\", title AS \"title!\",\n            progress_current, progress_total, progress_unit, color, notes,\n            created_at AS \"created_at!\", updated_at AS \"updated_at!\", started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,\n            topic_ids AS \"topic_ids!: Vec<Uuid>\", blocked AS \"blocked!\",\n            container_total AS \"container_total!\", container_done AS \"container_done!\",\n            checklist_total AS \"checklist_total!\", checklist_done AS \"checklist_done!\",\n            last_poked_at,\n            path_progress_done AS \"path_progress_done!\",\n            path_progress_total AS \"path_progress_total!\"\n        FROM node_rows\n        WHERE user_id = $1 AND id = $2\n        ",
+  "query": "\n        SELECT\n            id AS \"id!\", kind AS \"kind!: NodeKind\", status AS \"status?: NodeStatus\",\n            focus AS \"focus?: NodeFocus\", title AS \"title!\",\n            progress_current, progress_total, progress_unit, color, notes,\n            created_at AS \"created_at!\", updated_at AS \"updated_at!\", started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,\n            topic_ids AS \"topic_ids!: Vec<Uuid>\", blocked AS \"blocked!\",\n            container_total AS \"container_total!\", container_done AS \"container_done!\",\n            checklist_total AS \"checklist_total!\", checklist_done AS \"checklist_done!\",\n            last_poked_at,\n            path_progress_done AS \"path_progress_done!\",\n            path_progress_total AS \"path_progress_total!\",\n            archived AS \"archived!\"\n        FROM node_rows\n        WHERE user_id = $1\n          AND ($2::node_status IS NULL OR status = $2)\n          AND ($3::node_focus IS NULL OR focus = $3)\n          AND ($4::node_kind IS NULL OR kind = $4)\n          AND ($5::node_kind IS NULL OR kind = $5)\n          AND ($6::bool IS NULL OR archived = $6)\n        ORDER BY created_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -49,8 +49,7 @@
                 "queued",
                 "active",
                 "paused",
-                "done",
-                "archived"
+                "done"
               ]
             }
           }
@@ -347,12 +346,75 @@
             "name": "path_progress_total"
           }
         }
+      },
+      {
+        "ordinal": 28,
+        "name": "archived!",
+        "type_info": "Bool",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "archived"
+          }
+        }
       }
     ],
     "parameters": {
       "Left": [
         "Uuid",
-        "Uuid"
+        {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_focus",
+            "kind": {
+              "Enum": [
+                "primary",
+                "secondary",
+                "background"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        {
+          "Custom": {
+            "name": "node_kind",
+            "kind": {
+              "Enum": [
+                "idea",
+                "project",
+                "study",
+                "path"
+              ]
+            }
+          }
+        },
+        "Bool"
       ]
     },
     "nullable": [
@@ -383,8 +445,9 @@
       true,
       true,
       true,
+      true,
       true
     ]
   },
-  "hash": "29260d95dfd2cb581e1584b0a26658c84bd62a21c9e2224d921130bd9ad3aca0"
+  "hash": "ca8f0389c2fe10ed7c5bb4afef92b8bb1e87e21cb077c2a1f84da605592bd9b1"
 }

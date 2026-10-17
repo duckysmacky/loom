@@ -27,7 +27,6 @@ pub enum NodeStatus {
     Active,
     Paused,
     Done,
-    Archived,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, sqlx::Type, TS, JsonSchema)]
@@ -100,6 +99,9 @@ pub struct NodeResponse {
     /// it (nested paths included, ideas skipped) summed.
     pub path_progress: Option<Progress>,
     pub last_poked_at: Option<DateTime<Utc>>,
+    /// Hidden from the board and dashboard; independent of status, so any
+    /// node (any kind, ideas and paths included) can be archived.
+    pub archived: bool,
 }
 
 #[derive(Debug, Deserialize, TS, JsonSchema)]
@@ -114,6 +116,10 @@ pub struct CreateNodeRequest {
     #[serde(default)]
     #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
+    /// Defaults to `false`.
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub archived: Option<bool>,
     pub title: String,
     /// Study nodes only: units done so far (0..=progress_total).
     #[serde(default)]
@@ -149,6 +155,9 @@ pub struct UpdateNodeRequest {
     #[serde(default)]
     #[ts(optional = nullable)]
     pub focus: Option<NodeFocus>,
+    #[serde(default)]
+    #[ts(optional = nullable)]
+    pub archived: Option<bool>,
     #[serde(default)]
     #[ts(optional = nullable)]
     pub title: Option<String>,
@@ -190,7 +199,7 @@ pub struct UpdateNodeRequest {
     #[schemars(skip)]
     pub canvas_height: Option<Option<f64>>,
     /// Client preference (not stored server-side), carried on every PATCH:
-    /// when true, pausing/archiving an active node closes its active period
+    /// when true, pausing an active node closes its active period
     /// and reactivating opens a new one; when false, reactivating reopens
     /// the last period. The first period and the done date follow status
     /// changes either way.
@@ -214,7 +223,7 @@ pub struct UpdateNodeRequest {
 #[ts(export)]
 #[serde(rename_all = "snake_case")]
 #[schemars(
-    description = "`ideas` = idea-kind nodes, `archived` = status archived, `all` = no preset"
+    description = "`ideas` = idea-kind nodes, `archived` = archived flag set, `all` = no preset"
 )]
 pub enum NodeView {
     Ideas,

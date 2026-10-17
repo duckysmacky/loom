@@ -611,7 +611,7 @@ async fn view_archived_includes_only_archived(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "archived", "status": "archived"}),
+        json!({"kind": "project", "title": "archived", "archived": true}),
     )
     .await;
     create_node(&app, &token, json!({"kind": "idea", "title": "active"})).await;
@@ -639,7 +639,7 @@ async fn view_all_matches_unfiltered_behavior(pool: PgPool) {
     create_node(
         &app,
         &token,
-        json!({"kind": "project", "title": "b", "status": "archived"}),
+        json!({"kind": "project", "title": "b", "archived": true}),
     )
     .await;
 
@@ -1259,17 +1259,56 @@ async fn done_after_a_pause_adds_a_completion_day_period(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn archiving_an_active_node_closes_its_period(pool: PgPool) {
+async fn archiving_keeps_status_and_period_and_works_on_any_kind(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "archiveperiod@example.com").await;
     let node_id = project(&app, &token).await;
 
     patch_status(&app, &token, &node_id, "active", true).await;
-    let archived = patch_status(&app, &token, &node_id, "archived", true).await;
-    assert_eq!(archived["completed_at"], Value::Null);
+    let (_, archived) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"archived": true, "track_active_periods": true}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(archived["archived"], true);
+    assert_eq!(archived["status"], "active");
     let periods = list_periods(&app, &token, &node_id).await;
     assert_eq!(periods.len(), 1);
-    assert!(!periods[0]["ended_at"].is_null());
+    assert!(periods[0]["ended_at"].is_null());
+
+    let (_, restored) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{node_id}"),
+            json!({"archived": false}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(restored["archived"], false);
+    assert_eq!(restored["status"], "active");
+
+    // Ideas (no status) can be archived too.
+    let idea = create_node(&app, &token, json!({"kind": "idea", "title": "i"})).await;
+    let (code, archived_idea) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{}", idea["id"].as_str().unwrap()),
+            json!({"archived": true}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK);
+    assert_eq!(archived_idea["archived"], true);
+    assert_eq!(archived_idea["status"], Value::Null);
 }
 
 #[sqlx::test]

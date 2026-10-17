@@ -38,8 +38,7 @@
                 "queued",
                 "active",
                 "paused",
-                "done",
-                "archived"
+                "done"
               ]
             }
           }

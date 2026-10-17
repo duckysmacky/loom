@@ -512,15 +512,14 @@ async fn path_status_follows_what_is_inside(pool: PgPool) {
     let token = signup(&app, "pathstatus@example.com").await;
 
     // (statuses of the nodes inside, expected path status)
-    let cases: [(&[&str], &str); 8] = [
+    let cases: [(&[&str], &str); 7] = [
         (&[], "queued"),
         (&["queued"], "queued"),
         (&["idea"], "queued"),
         (&["active", "done"], "active"),
         (&["paused", "done", "queued"], "paused"),
         (&["queued", "done"], "queued"),
-        (&["done", "archived"], "done"),
-        (&["archived", "archived"], "archived"),
+        (&["done", "done"], "done"),
     ];
     for (inside, expected) in cases {
         let path = create_path(&app, &token, "P").await;
@@ -587,13 +586,25 @@ async fn requiring_a_path_blocks_until_everything_inside_is_done(pool: PgPool) {
 }
 
 #[sqlx::test]
-async fn status_filters_use_derived_path_status(pool: PgPool) {
+async fn paths_can_be_archived_without_touching_their_status(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "pathfilter@example.com").await;
     let path = create_path(&app, &token, "P").await;
     let step = create_node(&app, &token, "S").await;
     create_edge(&app, &token, &step, &path, "part_of").await;
-    set_status(&app, &token, &step, "archived").await;
+    let (code, patched) = send(
+        &app,
+        req(
+            "PATCH",
+            &format!("/api/nodes/{path}"),
+            json!({"archived": true}),
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(code, StatusCode::OK);
+    assert_eq!(patched["archived"], true);
+    assert_eq!(patched["status"], "queued");
 
     let (_, archived) = send(
         &app,
@@ -606,7 +617,39 @@ async fn status_filters_use_derived_path_status(pool: PgPool) {
         req("GET", "/api/nodes?status=queued", Value::Null, Some(&token)),
     )
     .await;
-    assert!(!queued.as_array().unwrap().iter().any(|n| n["id"] == path));
+    assert!(queued.as_array().unwrap().iter().any(|n| n["id"] == path));
+}
+
+#[sqlx::test]
+async fn archiving_a_path_archives_and_restores_everything_inside(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "patharchive@example.com").await;
+    let outer = create_path(&app, &token, "Outer").await;
+    let inner = create_path(&app, &token, "Inner").await;
+    let step = create_node(&app, &token, "Step").await;
+    let deep = create_node(&app, &token, "Deep").await;
+    let outside = create_node(&app, &token, "Outside").await;
+    create_edge(&app, &token, &inner, &outer, "part_of").await;
+    create_edge(&app, &token, &step, &outer, "part_of").await;
+    create_edge(&app, &token, &deep, &inner, "part_of").await;
+
+    for archived in [true, false] {
+        let (code, _) = send(
+            &app,
+            req(
+                "PATCH",
+                &format!("/api/nodes/{outer}"),
+                json!({ "archived": archived }),
+                Some(&token),
+            ),
+        )
+        .await;
+        assert_eq!(code, StatusCode::OK);
+        for id in [&outer, &inner, &step, &deep] {
+            assert_eq!(get_node(&app, &token, id).await["archived"], archived);
+        }
+        assert_eq!(get_node(&app, &token, &outside).await["archived"], false);
+    }
 }
 
 #[sqlx::test]

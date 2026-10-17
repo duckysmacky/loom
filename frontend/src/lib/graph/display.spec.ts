@@ -37,7 +37,7 @@ describe('display helpers', () => {
 	it('colours the border by status', () => {
 		expect(borderStyle(makeNode({ blocked: true })).tone).toBe('warn');
 		expect(borderStyle(makeNode({ status: 'done', blocked: true })).tone).toBe('ok');
-		expect(borderStyle(makeNode({ status: 'archived' })).tone).toBe('faded');
+		expect(borderStyle(makeNode({ archived: true })).tone).toBe('faded');
 		expect(borderStyle(makeNode({ kind: 'idea', status: null })).tone).toBe('faded');
 		expect(borderStyle(makeNode({ status: 'idea' })).tone).toBe('muted');
 		expect(borderStyle(makeNode({ status: 'queued' })).tone).toBe('muted');

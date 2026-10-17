@@ -49,14 +49,11 @@
 	const flow = useSvelteFlow();
 
 	// Ideas leave the canvas unless "Show ideas" is on, and archived
-	// nodes leave it unless the filters ask for them. Every other
+	// nodes leave it unless "Show archived" is on. Every other
 	// non-matching node stays in place, dimmed, so the graph's shape doesn't
 	// jump around while filtering.
 	const hidden = (node: NodeResponse) =>
-		(isIdea(node) && !boardFilters.showIdeas) ||
-		(node.status === 'archived' &&
-			!boardFilters.showArchived &&
-			!boardFilters.statuses.includes('archived'));
+		(isIdea(node) && !boardFilters.showIdeas) || (node.archived && !boardFilters.showArchived);
 
 	// With auto-place on, auto-layout depends on which nodes are still
 	// unplaced and where the placed ones sit, so it shifts whenever anything

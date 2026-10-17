@@ -94,7 +94,7 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 		<span class="accent" style:color={accentColor(node)} aria-hidden="true">{KIND_GLYPH[kind]}</span
 		>
 		<span class="kind">{kind}</span>
-		<Badge status={node.status} blocked={node.blocked} />
+		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
 		{#if feature}
 			<span class="touched">
 				{node.last_poked_at ? `touched ${relativeDays(node.last_poked_at)}` : 'never touched'}

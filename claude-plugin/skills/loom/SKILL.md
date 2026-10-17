@@ -31,8 +31,10 @@ Every item is a **node**, and nodes are connected by **edges**. You work with it
 They have **no status and no focus**. Sending either for an idea is an error, and results omit
 them.
 
-**Status** (projects, studies and paths) runs `idea` → `queued` → `active` → `paused` → `done`,
-or `archived`. The `idea` status is an ordinary status, not the Ideas list.
+**Status** (projects, studies and paths) runs `idea` → `queued` → `active` → `paused` → `done`.
+The `idea` status is an ordinary status, not the Ideas list. Any node can also be **archived**
+(`archived: true`): a flag independent of status that hides it from the board and dashboard,
+ideas and paths included. Archiving or restoring a path does the same to everything inside it.
 
 **Focus tier** is `primary`, `secondary` or `background`. It is separate from status, and it
 orders the dashboard's list of active nodes. Keep `primary` for the few things the user is actively
@@ -62,7 +64,7 @@ criteria.
   3/5 = 15/20)
 - a path's `status`: anything active inside makes it `active`, else anything paused makes it
   `paused`, else anything still to do (or nothing at all) makes it `queued`; once everything is
-  finished it's `archived` if all of it is, `done` otherwise. Ideas are skipped, nested paths
+  finished it's `done` (archived flags don't count). Ideas are skipped, nested paths
   walked through. Never send a status or start/completion date for a path.
 - `checklist_progress`
 - `last_poked_at`
@@ -91,7 +93,7 @@ the user what will be lost, and confirm before promoting.
 | --- | --- |
 | `loom_get_overview` | Get dashboard counts plus the active (non-path, primary focus first), stale and recent-idea nodes and paths. Good for "what am I working on?" |
 | `loom_get_graph` | Get every node, edge and topic. **Start here before any bulk change.** |
-| `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived`), or by a title `search`. |
+| `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived` = flag set), or by a title `search`. |
 | `loom_get_node` | Get one node with its edges both ways, its checklist and recent pokes. |
 | `loom_create_node` | Create one node. It can also take `checklist` (projects) and `topic_ids`. |
 | `loom_create_subgraph` | Create many nodes and the edges between them in **one all-or-nothing call**. |
