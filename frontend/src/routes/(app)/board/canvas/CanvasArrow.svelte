@@ -1,6 +1,6 @@
 <script lang="ts">
 	import { BaseEdge, Position, getBezierPath, type EdgeProps } from '@xyflow/svelte';
-	import type { LoomArrowEdge } from './types';
+	import type { LoomArrowEdge } from '$lib/components/canvas/types';
 
 	let {
 		id,

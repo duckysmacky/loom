@@ -4,20 +4,23 @@
 	import { ancestorPaths, parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { isPathCollapsed, prefs, savePrefs, togglePathCollapsed } from '$lib/stores/prefs.svelte';
+	import CollapseToggle from '$lib/components/ui/CollapseToggle.svelte';
+	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	import PathCanvas from './PathCanvas.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
 	/** A path's contents: the nodes sitting inside it (only paths contain nodes). */
 	let { node }: { node: NodeResponse } = $props();
 
 	const parentOf = $derived(parentPathOf(graph.edges));
-	const inside = $derived(
+	const inside = (pathId: string) =>
 		graph.edges
-			.filter((edge) => edge.kind === 'part_of' && edge.to_node_id === node.id)
+			.filter((edge) => edge.kind === 'part_of' && edge.to_node_id === pathId)
 			.flatMap((edge) => {
 				const child = graph.nodeById.get(edge.from_node_id);
 				return child ? [{ edge, child }] : [];
-			})
-	);
+			});
 	// Anything not already in a path, except this path and the paths around it.
 	const candidates = $derived(
 		graph.nodes
@@ -35,32 +38,59 @@
 	}
 </script>
 
+{#snippet rows(pathId: string, depth: number)}
+	{#each inside(pathId) as { edge, child } (edge.id)}
+		{@const collapsed = isPathCollapsed('detail', child.id)}
+		<li class="row" class:done={child.status === 'done'} style:padding-left="{depth * 18}px">
+			{#if child.kind === 'path'}
+				<CollapseToggle {collapsed} ontoggle={() => togglePathCollapsed('detail', child.id)} />
+			{/if}
+			<span class="dot" style:background={accentColor(child)}></span>
+			<button type="button" class="title" onclick={() => openNode(child.id)}>
+				{child.title}
+			</button>
+			<span class="kind">{child.kind}{child.status ? ` · ${child.status}` : ''}</span>
+			<button
+				type="button"
+				class="remove"
+				aria-label="Take “{child.title}” out of its path"
+				onclick={() => graph.mutate(() => edgesApi.remove(edge.id))}>✕</button
+			>
+		</li>
+		{#if child.kind === 'path' && !collapsed}
+			{@render rows(child.id, depth + 1)}
+		{/if}
+	{:else}
+		{#if depth === 0}<li class="none">Nothing inside yet.</li>{/if}
+	{/each}
+{/snippet}
+
 <section>
 	<div class="head">
 		<span class="label">Contains</span>
+		<SegmentedControl
+			label="How to show what's inside"
+			options={[
+				{ value: 'list', label: 'List' },
+				{ value: 'canvas', label: 'Canvas' }
+			]}
+			value={prefs.pathDetailView}
+			onchange={(view) => {
+				prefs.pathDetailView = view;
+				savePrefs();
+			}}
+		/>
 		{#if progressText(node)}
 			<span class="count">{progressText(node)}</span>
 		{/if}
 	</div>
-	<ul class="list">
-		{#each inside as { edge, child } (edge.id)}
-			<li class="row" class:done={child.status === 'done'}>
-				<span class="dot" style:background={accentColor(child)}></span>
-				<button type="button" class="title" onclick={() => openNode(child.id)}>
-					{child.title}
-				</button>
-				<span class="kind">{child.kind}{child.status ? ` · ${child.status}` : ''}</span>
-				<button
-					type="button"
-					class="remove"
-					aria-label="Take “{child.title}” out of this path"
-					onclick={() => graph.mutate(() => edgesApi.remove(edge.id))}>✕</button
-				>
-			</li>
-		{:else}
-			<li class="none">Nothing inside yet.</li>
-		{/each}
-	</ul>
+	{#if prefs.pathDetailView === 'canvas'}
+		{#key node.id}<PathCanvas path={node} />{/key}
+	{:else}
+		<ul class="list">
+			{@render rows(node.id, 0)}
+		</ul>
+	{/if}
 	{#if candidates.length}
 		<select
 			class="field add"
@@ -83,6 +113,12 @@
 	.head {
 		display: flex;
 		align-items: center;
+		gap: 12px;
+	}
+
+	.head :global(.segmented button) {
+		padding: 5px 10px;
+		font-size: 11px;
 	}
 
 	.count {

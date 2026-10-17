@@ -31,6 +31,8 @@ export type Prefs = {
 	 * `loadPrefs` keeps working. ponytail: keys of deleted paths linger.
 	 */
 	collapsedPaths: Record<string, boolean>;
+	/** How a path's card shows what's inside it. */
+	pathDetailView: 'list' | 'canvas';
 	/** The canvas lays out and pins unplaced nodes itself; off: they wait in its Unplaced panel. */
 	autoPlace: boolean;
 	unplacedPanelOpen: boolean;
@@ -46,7 +48,7 @@ export type Prefs = {
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
-export type PathView = 'organized' | 'dashboard' | 'canvas';
+export type PathView = 'organized' | 'dashboard' | 'canvas' | 'detail';
 
 export const PREFS_STORAGE_KEY = 'loom.prefs';
 const MAX_RECENT_COLORS = 8;
@@ -65,6 +67,7 @@ const DEFAULTS: Prefs = {
 	trackActivePeriods: true,
 	splitPeriodOnFocusChange: false,
 	collapsedPaths: {},
+	pathDetailView: 'list',
 	autoPlace: false,
 	unplacedPanelOpen: true,
 	pathAutoExpand: true,
@@ -94,7 +97,7 @@ export function addRecentColor(color: string) {
 	savePrefs();
 }
 
-/** Paths start collapsed on the organized board and dashboard, expanded on the canvas. */
+/** Paths start collapsed on the organized board, dashboard and path cards, expanded on the canvas. */
 export function isPathCollapsed(view: PathView, pathId: string): boolean {
 	return prefs.collapsedPaths[`${view}:${pathId}`] ?? view !== 'canvas';
 }

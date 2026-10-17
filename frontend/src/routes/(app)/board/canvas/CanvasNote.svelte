@@ -1,11 +1,11 @@
 <script lang="ts">
 	import { NodeResizer, type NodeProps } from '@xyflow/svelte';
-	import SideHandles from './SideHandles.svelte';
+	import SideHandles from '$lib/components/canvas/SideHandles.svelte';
 	import { untrack } from 'svelte';
 	import { canvasApi } from '$lib/api/endpoints';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
-	import type { LoomNoteNode } from './types';
+	import type { LoomNoteNode } from '$lib/components/canvas/types';
 
 	// Same minimum the API enforces.
 	const NOTE_MIN_WIDTH = 80;

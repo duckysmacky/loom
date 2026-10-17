@@ -5,3 +5,5 @@ graphify-out/.graphify_*
 graphify-out/cache
 
 .env
+
+.worktrees/

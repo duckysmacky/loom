@@ -18,14 +18,13 @@
 		CANVAS_NODE_WIDTH,
 		PATH_HEADER,
 		PATH_PADDING,
-		flowDirection,
 		grownToFit,
 		layoutCanvas,
 		splitPlaced,
 		type Point,
 		type Size
 	} from '$lib/graph/layout';
-	import { rerouteEdges, standIns } from '$lib/graph/collapse';
+	import { standIns } from '$lib/graph/collapse';
 	import { ancestorPaths, nestingDepth, parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { boardFilters, matchesBoardFilters } from '$lib/stores/filters.svelte';
@@ -38,17 +37,18 @@
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import CanvasArrow from './CanvasArrow.svelte';
 	import CanvasControls from './CanvasControls.svelte';
-	import CanvasEdge from './CanvasEdge.svelte';
-	import CanvasNode from './CanvasNode.svelte';
+	import CanvasEdge from '$lib/components/canvas/CanvasEdge.svelte';
+	import CanvasNode from '$lib/components/canvas/CanvasNode.svelte';
 	import CanvasNote from './CanvasNote.svelte';
-	import CanvasPath from './CanvasPath.svelte';
+	import CanvasPath from '$lib/components/canvas/CanvasPath.svelte';
+	import { toFlowEdges, toFlowNodes } from '$lib/components/canvas/flow';
 	import {
 		isCard,
 		type LoomCardNode,
 		type LoomFlowEdge,
 		type LoomFlowNode,
 		type LoomNoteNode
-	} from './types';
+	} from '$lib/components/canvas/types';
 	import SelectionBar from './SelectionBar.svelte';
 	import UnplacedPanel, { UNPLACED_DRAG_TYPE } from './UnplacedPanel.svelte';
 
@@ -118,25 +118,7 @@
 		const selectedIds = untrack(
 			() => new Set(nodes.filter((flowNode) => flowNode.selected).map((flowNode) => flowNode.id))
 		);
-		// xyflow needs a parent listed before its children.
-		const parentsFirst = drawn.toSorted(
-			(left, right) => nestingDepth(left.id, parentOf) - nestingDepth(right.id, parentOf)
-		);
-		const cards: LoomFlowNode[] = parentsFirst.map((node) => {
-			const { position, size, parentId } = placements.get(node.id)!;
-			const isPath = node.kind === 'path' && !collapsed.has(node.id);
-			return {
-				id: node.id,
-				type: isPath ? ('loomPath' as const) : ('loom' as const),
-				position,
-				parentId,
-				// Path boxes have an explicit size (resizable); cards size themselves.
-				...(isPath ? { width: size.width, height: size.height } : {}),
-				data: { node, dimmed: dimmedIds.has(node.id) },
-				selected: selectedIds.has(node.id),
-				deletable: false
-			};
-		});
+		const cards = toFlowNodes(drawn, placements, collapsed, parentOf, dimmedIds, selectedIds);
 		// Notes sit at the top level or inside an expanded path box; inside a
 		// collapsed, hidden or unplaced path they're hidden with it.
 		const boxIds = new Set(
@@ -156,46 +138,14 @@
 				deletable: false
 			}));
 		nodes = [...cards, ...notes];
-		// Placements are relative to the parent path; walk up for the canvas y.
-		const absoluteY = (id: string): number => {
-			const placement = placements.get(id);
-			if (!placement) return 0;
-			return placement.position.y + (placement.parentId ? absoluteY(placement.parentId) : 0);
-		};
-		// part_of is drawn as containment (the box), not as a line.
-		const graphEdges: LoomFlowEdge[] = rerouteEdges(graph.edges, standIn)
-			.filter(({ edge }) => shownIds.has(edge.from_node_id) && shownIds.has(edge.to_node_id))
-			.map(({ edge, merged, rerouted }) => {
-				let { source, target } = flowDirection(edge);
-				const related = edge.kind === 'related';
-				// related has no arrow: draw it from the upper card down so the
-				// curve never loops back. ponytail: cards side by side at the same
-				// y get an S-curve; compare |dx| to |dy| and fall back to the
-				// left/right handles if that matters.
-				if (related && absoluteY(source) > absoluteY(target)) [source, target] = [target, source];
-				const unmet = merged.some(
-					(underlying) =>
-						underlying.kind === 'requires' &&
-						graph.nodeById.get(underlying.to_node_id)?.status !== 'done'
-				);
-				return {
-					id: edge.id,
-					source,
-					target,
-					// A line standing in for hidden connections isn't one edge to delete.
-					deletable: !rerouted,
-					...(related
-						? { sourceHandle: 'bottom', targetHandle: 'top' }
-						: { sourceHandle: 'right', targetHandle: 'left' }),
-					type: 'loom' as const,
-					zIndex: 1,
-					data: {
-						kind: edge.kind,
-						unmet,
-						dimmed: dimmedIds.has(edge.from_node_id) || dimmedIds.has(edge.to_node_id)
-					}
-				};
-			});
+		const graphEdges = toFlowEdges(
+			graph.edges,
+			standIn,
+			shownIds,
+			placements,
+			dimmedIds,
+			graph.nodeById
+		);
 		// Annotation arrows: an end hidden in a collapsed path points at the
 		// path's card instead; arrows to anything else not drawn are left out.
 		const drawnIds = new Set([...cards, ...notes].map((flowNode) => flowNode.id));

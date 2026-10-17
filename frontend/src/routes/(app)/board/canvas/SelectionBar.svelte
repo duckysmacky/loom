@@ -9,7 +9,7 @@
 	import { graph } from '$lib/stores/graph.svelte';
 	import { prefs } from '$lib/stores/prefs.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
-	import type { LoomCardNode } from './types';
+	import type { LoomCardNode } from '$lib/components/canvas/types';
 
 	/** Actions for the nodes selected on the canvas. */
 	let { selected }: { selected: LoomCardNode[] } = $props();
