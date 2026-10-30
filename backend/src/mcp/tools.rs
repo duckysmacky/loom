@@ -23,6 +23,7 @@ use crate::handlers::error::ApiError;
 use crate::handlers::extract::{ApiJson, ApiPath, ApiQuery};
 use crate::handlers::{board, canvas, checklist, dashboard, edges, nodes, pokes, topics};
 use crate::middleware::auth_user::AuthUser;
+use crate::models::access_token::TokenScope;
 use crate::models::canvas::{
     CreateCanvasArrowRequest, CreateCanvasNoteRequest, UpdateCanvasNoteRequest,
 };
@@ -375,6 +376,9 @@ impl LoomServer {
         Parameters(params): Parameters<CreateNodeParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(self.create_node(user, params).await)
     }
 
@@ -394,6 +398,9 @@ impl LoomServer {
         Parameters(params): Parameters<UpdateNodeParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             nodes::update(
                 self.app(),
@@ -414,6 +421,9 @@ impl LoomServer {
         Parameters(NodeIdParams { node_id }): Parameters<NodeIdParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             nodes::delete(self.app(), user, ApiPath(node_id))
                 .await
@@ -431,6 +441,9 @@ impl LoomServer {
         Parameters(PokeNodeParams { node_id, poked_at }): Parameters<PokeNodeParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             pokes::create(
                 self.app(),
@@ -458,6 +471,9 @@ impl LoomServer {
         Parameters(request): Parameters<CreateEdgeRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             edges::create(self.app(), user, ApiJson(request))
                 .await
@@ -473,6 +489,9 @@ impl LoomServer {
         Parameters(EdgeIdParams { edge_id }): Parameters<EdgeIdParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             edges::delete(self.app(), user, ApiPath(edge_id))
                 .await
@@ -495,6 +514,9 @@ impl LoomServer {
         Parameters(request): Parameters<CreateCanvasNoteRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             canvas::create_note(self.app(), user, ApiJson(request))
                 .await
@@ -516,6 +538,9 @@ impl LoomServer {
         Parameters(params): Parameters<UpdateNoteParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             canvas::update_note(
                 self.app(),
@@ -536,6 +561,9 @@ impl LoomServer {
         Parameters(NoteIdParams { note_id }): Parameters<NoteIdParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             canvas::delete_note(self.app(), user, ApiPath(note_id))
                 .await
@@ -559,6 +587,9 @@ impl LoomServer {
         Parameters(request): Parameters<CreateCanvasArrowRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             canvas::create_arrow(self.app(), user, ApiJson(request))
                 .await
@@ -578,6 +609,9 @@ impl LoomServer {
         Parameters(ArrowIdParams { arrow_id }): Parameters<ArrowIdParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             canvas::delete_arrow(self.app(), user, ApiPath(arrow_id))
                 .await
@@ -597,6 +631,9 @@ impl LoomServer {
         Parameters(params): Parameters<AddChecklistItemsParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             self.add_checklist_items(user, params.node_id, params.titles)
                 .await
@@ -616,6 +653,9 @@ impl LoomServer {
         Parameters(params): Parameters<UpdateChecklistItemParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             checklist::update(
                 self.app(),
@@ -640,6 +680,9 @@ impl LoomServer {
         Parameters(ChecklistItemIdParams { item_id }): Parameters<ChecklistItemIdParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             checklist::delete(self.app(), user, ApiPath(item_id))
                 .await
@@ -673,6 +716,9 @@ impl LoomServer {
         Parameters(request): Parameters<CreateTopicRequest>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             topics::create(self.app(), user, ApiJson(request))
                 .await
@@ -692,6 +738,9 @@ impl LoomServer {
         Parameters(params): Parameters<UpdateTopicParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             topics::update(
                 self.app(),
@@ -716,6 +765,9 @@ impl LoomServer {
         Parameters(TopicIdParams { topic_id }): Parameters<TopicIdParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             topics::delete(self.app(), user, ApiPath(topic_id))
                 .await
@@ -736,6 +788,9 @@ impl LoomServer {
         Parameters(NodeTopicParams { node_id, topic_id }): Parameters<NodeTopicParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             nodes::attach_topic(
                 self.app(),
@@ -761,6 +816,9 @@ impl LoomServer {
         Parameters(NodeTopicParams { node_id, topic_id }): Parameters<NodeTopicParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         respond(
             nodes::detach_topic(self.app(), user, ApiPath((node_id, topic_id)))
                 .await
@@ -787,6 +845,9 @@ impl LoomServer {
         Parameters(params): Parameters<PlaceNodesParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         let total = params.placements.len();
         for (index, placement) in params.placements.into_iter().enumerate() {
             let node_id = placement.node_id;
@@ -829,6 +890,9 @@ impl LoomServer {
         Parameters(params): Parameters<CreateSubgraphParams>,
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
+        if let Some(denied) = read_only_denied(&parts) {
+            return Ok(denied);
+        }
         let mut created_nodes = Vec::new();
         let mut created_edges = Vec::new();
         let outcome = self
@@ -1087,6 +1151,19 @@ fn auth(parts: &Parts) -> Result<AuthUser, ErrorData> {
         .ok_or_else(|| ErrorData::internal_error("request was not authenticated", None))
 }
 
+/// The tool result for a write attempted with a `read` token - an
+/// `isError` result, so the agent sees why and can tell the user. `None`
+/// when the caller's token may write. A request with no scope on it counts
+/// as read-only.
+fn read_only_denied(parts: &Parts) -> Option<CallToolResult> {
+    match parts.extensions.get::<TokenScope>() {
+        Some(scope) if scope.allows_write() => None,
+        _ => Some(CallToolResult::error(vec![ContentBlock::text(error_text(
+            ApiError::Forbidden("this token is read-only"),
+        ))])),
+    }
+}
+
 fn error_text(error: ApiError) -> String {
     let (status, message) = error.status_and_message();
     format!("{message} (HTTP {})", status.as_u16())
@@ -1150,5 +1227,29 @@ mod tests {
                 "edges": [{ "id": "e", "kind": "requires" }],
             })
         );
+    }
+
+    /// A tool annotated as a write must refuse `read` tokens. Tools are
+    /// plain methods, so this reads the source: a new write tool without
+    /// the guard fails here instead of silently letting read-only tokens
+    /// write.
+    #[test]
+    fn every_write_tool_checks_the_token_scope() {
+        let source = include_str!("tools.rs");
+        let production = source.split("#[cfg(test)]").next().unwrap();
+        let mut write_tools = 0;
+        for tool in production.split("#[tool(").skip(1) {
+            let header = tool.split("async fn").next().unwrap();
+            if !header.contains("read_only_hint = false") {
+                continue;
+            }
+            write_tools += 1;
+            let body = tool.split("\n    }\n").next().unwrap();
+            assert!(
+                body.contains("read_only_denied(&parts)"),
+                "write tool without a scope check:\n{header}"
+            );
+        }
+        assert!(write_tools > 15, "found only {write_tools} write tools");
     }
 }

@@ -15,9 +15,9 @@ import type { ConnectedClientResponse } from '$lib/types/ConnectedClientResponse
 import type { CreateCanvasArrowRequest } from '$lib/types/CreateCanvasArrowRequest';
 import type { CreateCanvasNoteRequest } from '$lib/types/CreateCanvasNoteRequest';
 import type { CreateActivePeriodRequest } from '$lib/types/CreateActivePeriodRequest';
-import type { CreatedMcpTokenResponse } from '$lib/types/CreatedMcpTokenResponse';
+import type { CreatedAccessTokenResponse } from '$lib/types/CreatedAccessTokenResponse';
 import type { CreateEdgeRequest } from '$lib/types/CreateEdgeRequest';
-import type { CreateMcpTokenRequest } from '$lib/types/CreateMcpTokenRequest';
+import type { CreateAccessTokenRequest } from '$lib/types/CreateAccessTokenRequest';
 import type { CreateNodeRequest } from '$lib/types/CreateNodeRequest';
 import type { CreatePokeRequest } from '$lib/types/CreatePokeRequest';
 import type { CreateTopicRequest } from '$lib/types/CreateTopicRequest';
@@ -25,7 +25,7 @@ import type { DashboardResponse } from '$lib/types/DashboardResponse';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { LoginRequest } from '$lib/types/LoginRequest';
 import type { McpInfoResponse } from '$lib/types/McpInfoResponse';
-import type { McpTokenResponse } from '$lib/types/McpTokenResponse';
+import type { AccessTokenResponse } from '$lib/types/AccessTokenResponse';
 import type { NodeListQuery } from '$lib/types/NodeListQuery';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { PokeResponse } from '$lib/types/PokeResponse';
@@ -142,11 +142,14 @@ export const canvasApi = {
 };
 
 export const mcpApi = {
-	info: () => request<McpInfoResponse>('GET', '/mcp/info'),
-	tokens: () => request<McpTokenResponse[]>('GET', '/mcp/tokens'),
-	createToken: (body: CreateMcpTokenRequest) =>
-		request<CreatedMcpTokenResponse>('POST', '/mcp/tokens', body),
-	removeToken: (tokenId: string) => request<void>('DELETE', `/mcp/tokens/${tokenId}`)
+	info: () => request<McpInfoResponse>('GET', '/mcp/info')
+};
+
+export const tokensApi = {
+	list: () => request<AccessTokenResponse[]>('GET', '/tokens'),
+	create: (body: CreateAccessTokenRequest) =>
+		request<CreatedAccessTokenResponse>('POST', '/tokens', body),
+	remove: (tokenId: string) => request<void>('DELETE', `/tokens/${tokenId}`)
 };
 
 export const oauthApi = {

@@ -14,6 +14,9 @@ pub struct Config {
     pub allow_signup: bool,
     /// `Some(PUBLIC_URL)` when `MCP_ENABLED=true`, `None` otherwise.
     pub mcp_public_url: Option<String>,
+    /// Origins (`CORS_ORIGINS`) whose browser JavaScript may call `/api`.
+    /// Empty = no CORS headers at all.
+    pub cors_origins: Vec<String>,
 }
 
 impl Config {
@@ -34,6 +37,7 @@ impl Config {
                 .map(|v| v != "false")
                 .unwrap_or(true),
             mcp_public_url: require_mcp_public_url()?,
+            cors_origins: parse_cors_origins(&env::var("CORS_ORIGINS").unwrap_or_default())?,
         })
     }
 }
@@ -51,14 +55,36 @@ fn require_mcp_public_url() -> Result<Option<String>> {
 }
 
 fn validate_public_url(url: &str) -> Result<()> {
+    validate_origin("PUBLIC_URL", url)
+}
+
+/// An origin is scheme + host (+ port) and nothing else.
+fn validate_origin(name: &str, url: &str) -> Result<()> {
     let rest = url
         .strip_prefix("https://")
         .or_else(|| url.strip_prefix("http://"))
-        .context("PUBLIC_URL must start with https:// (or http:// for local testing)")?;
+        .with_context(|| {
+            format!("{name} must start with https:// (or http:// for local testing)")
+        })?;
     if rest.trim_end_matches('/').contains('/') {
-        anyhow::bail!("PUBLIC_URL must be an origin with no path, e.g. https://loom.example.com");
+        anyhow::bail!("{name} must be an origin with no path, e.g. https://loom.example.com");
     }
     Ok(())
+}
+
+/// `CORS_ORIGINS` is a comma-separated allowlist of exact origins. There is
+/// deliberately no `*`: tokens are full-account credentials, so every site
+/// allowed to hold one is named.
+fn parse_cors_origins(value: &str) -> Result<Vec<String>> {
+    value
+        .split(',')
+        .map(str::trim)
+        .filter(|origin| !origin.is_empty())
+        .map(|origin| {
+            validate_origin("CORS_ORIGINS entries", origin)?;
+            Ok(origin.trim_end_matches('/').to_string())
+        })
+        .collect()
 }
 
 /// HS256 signing strength is bounded by key length - a short secret (e.g.
@@ -103,6 +129,19 @@ mod tests {
         assert!(validate_public_url("http://localhost:8081").is_ok());
         assert!(validate_public_url("loom.example.com").is_err());
         assert!(validate_public_url("https://example.com/loom").is_err());
+    }
+
+    #[test]
+    fn cors_origins_are_a_trimmed_list_of_bare_origins() {
+        assert!(parse_cors_origins("").unwrap().is_empty());
+        assert_eq!(
+            parse_cors_origins(" https://a.example.com/ , http://localhost:3000,").unwrap(),
+            ["https://a.example.com", "http://localhost:3000"]
+        );
+        assert!(parse_cors_origins("*").is_err());
+        assert!(parse_cors_origins("a.example.com").is_err());
+        assert!(parse_cors_origins("https://a.example.com/app").is_err());
+        assert!(parse_cors_origins("https://ok.example.com,*").is_err());
     }
 
     #[test]

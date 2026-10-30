@@ -1,0 +1,51 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE access_tokens SET last_used_at = now()\n        WHERE token_hash = $1\n          AND kind = ANY($2)\n          AND (expires_at IS NULL OR expires_at > now())\n        RETURNING user_id, scope AS \"scope: TokenScope\"\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "user_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "access_tokens",
+            "name": "user_id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "scope: TokenScope",
+        "type_info": {
+          "Custom": {
+            "name": "token_scope",
+            "kind": {
+              "Enum": [
+                "read",
+                "read_write"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "access_tokens",
+            "name": "scope"
+          }
+        }
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Text",
+        "TextArray"
+      ]
+    },
+    "nullable": [
+      false,
+      false
+    ]
+  },
+  "hash": "f0c851f89ca17309aa517c7fc4f695b1623dab08d3d94ae3904799c023fc574a"
+}

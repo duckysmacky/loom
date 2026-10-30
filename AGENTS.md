@@ -9,7 +9,8 @@ connected graph. One graph per account; no collaboration.
 - **Frontend:** SvelteKit + TypeScript, `@xyflow/svelte` canvas, `adapter-static` behind its own nginx container.
 - **Types:** `ts-rs` generates frontend TS types from Rust request/response structs.
 - **Auth:** Argon2id password, short-lived JWT, rotated refresh token in httpOnly `Secure` cookie, rate-limited auth endpoints.
-- **MCP:** optional (`MCP_ENABLED` + `PUBLIC_URL`) stateless Streamable HTTP server at `/mcp` via `rmcp`. Auth by opaque `mcp_tokens` (personal `loom_...` or OAuth 2.1 access tokens) - never web-session JWTs, and these tokens never work on `/api`.
+- **MCP:** optional (`MCP_ENABLED` + `PUBLIC_URL`) stateless Streamable HTTP server at `/mcp` via `rmcp`. Auth by opaque `access_tokens` (personal `loom_...` or OAuth 2.1 access tokens) - never web-session JWTs.
+- **API access tokens:** personal `loom_...` tokens (Settings > Connections; scope `read`/`read_write`, optional expiry) also work as bearer on the *data* routes of `/api` (nodes, topics, edges, checklist, periods, canvas, board, dashboard) - never on account routes (`/auth`, `/tokens`, `/oauth`). OAuth tokens work on `/mcp` only. `CORS_ORIGINS` (exact origins, no `*`) opts `/api` in to cross-origin browser calls; off when empty.
 - **Deploy:** three Compose services (backend, frontend, database), images on GHCR, behind a host nginx that terminates TLS.
 
 ## Layout
@@ -17,7 +18,7 @@ connected graph. One graph per account; no collaboration.
 - `backend/src/handlers/` - parse/validate, map errors, call `repo/`. Thin; no `sqlx` here. `oauth.rs` holds OAuth discovery, registration, consent, token.
 - `backend/src/repo/` - only place touching `sqlx`. Every fn takes `user_id` first.
 - `backend/src/models/` - request/response structs (`TS`-derived).
-- `backend/src/auth/`, `middleware/` - hashing/JWT/refresh rotation; `AuthUser` extractor.
+- `backend/src/auth/`, `middleware/` - hashing/JWT/refresh rotation; `AuthUser` extractor; `api_token` layer (personal token -> `AuthUser`, scope by HTTP method).
 - `backend/src/mcp/` - bearer middleware + `loom_*` tools. Tools call REST handlers as plain fns, never `repo/`.
 - `backend/migrations/` - one file per change, auto-run via `sqlx::migrate!`.
 - `frontend/src/lib/{api,graph,stores,components,types}/` - HTTP client (single-flight refresh), board logic (each with a spec), stores, components (`detail/`, `ui/`), generated types (gitignored, never hand-edited).
@@ -45,6 +46,7 @@ connected graph. One graph per account; no collaboration.
 - All queries scoped by `user_id` from the verified JWT via middleware; repo fns take `user_id` first. This is the security model (no roles).
 - Derived state is computed at query time, never stored; node reads go through the `node_rows` view.
 - Kind capabilities enforced in handlers (400s) and DB constraints - never relax one alone.
+- Account routes (login, password, tokens, OAuth clients) must stay session-JWT-only: only data routes get the `api_token` layer in `app.rs`. A new data route goes inside `data_routes`; a new write MCP tool needs the `read_only_denied` guard (a test enforces it).
 - Never edit an applied migration; add a new one.
 - After changing a query: `cargo sqlx prepare` in `backend/`, commit `.sqlx/` (CI builds offline).
 - Regenerate types with `npm run types` in `frontend/`. Missing type -> `#[derive(TS)]` on the Rust struct, never redeclare.

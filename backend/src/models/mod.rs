@@ -1,3 +1,4 @@
+pub mod access_token;
 pub mod active_period;
 pub mod auth;
 pub mod board;
@@ -5,7 +6,7 @@ pub mod canvas;
 pub mod checklist;
 pub mod dashboard;
 pub mod edge;
-pub mod mcp_token;
+pub mod mcp;
 pub mod node;
 pub mod oauth;
 pub mod poke;

@@ -1,44 +1,36 @@
 use axum::{Json, extract::State, http::StatusCode};
+use chrono::{Duration, Utc};
 use uuid::Uuid;
 
 use super::error::ApiError;
 use super::extract::{ApiJson, ApiPath};
 use crate::auth::refresh_token;
 use crate::middleware::auth_user::AuthUser;
-use crate::models::mcp_token::{
-    CreateMcpTokenRequest, CreatedMcpTokenResponse, McpInfoResponse, McpTokenResponse,
+use crate::models::access_token::{
+    AccessTokenResponse, CreateAccessTokenRequest, CreatedAccessTokenResponse,
 };
-use crate::repo::mcp_tokens;
+use crate::repo::access_tokens;
 use crate::state::AppState;
 
 /// Personal tokens are recognisable at a glance (and by secret scanners).
 pub const PERSONAL_TOKEN_PREFIX: &str = "loom_";
 
 const MAX_NAME_LEN: usize = 100;
-
-pub async fn info(State(state): State<AppState>) -> Json<McpInfoResponse> {
-    Json(McpInfoResponse {
-        enabled: state.mcp_public_url.is_some(),
-        url: state
-            .mcp_public_url
-            .as_ref()
-            .map(|url| format!("{url}/mcp")),
-    })
-}
+const MAX_EXPIRY_DAYS: u32 = 3650;
 
 pub async fn list(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-) -> Result<Json<Vec<McpTokenResponse>>, ApiError> {
-    let tokens = mcp_tokens::list_personal(user_id, &state.pool).await?;
+) -> Result<Json<Vec<AccessTokenResponse>>, ApiError> {
+    let tokens = access_tokens::list_personal(user_id, &state.pool).await?;
     Ok(Json(tokens))
 }
 
 pub async fn create(
     State(state): State<AppState>,
     AuthUser { user_id }: AuthUser,
-    ApiJson(request): ApiJson<CreateMcpTokenRequest>,
-) -> Result<(StatusCode, Json<CreatedMcpTokenResponse>), ApiError> {
+    ApiJson(request): ApiJson<CreateAccessTokenRequest>,
+) -> Result<(StatusCode, Json<CreatedAccessTokenResponse>), ApiError> {
     let name = request.name.trim();
     if name.is_empty() {
         return Err(ApiError::InvalidInput("name must not be empty"));
@@ -49,18 +41,32 @@ pub async fn create(
         ));
     }
 
+    if request
+        .expires_in_days
+        .is_some_and(|days| !(1..=MAX_EXPIRY_DAYS).contains(&days))
+    {
+        return Err(ApiError::InvalidInput(
+            "expires_in_days must be between 1 and 3650",
+        ));
+    }
+    let expires_at = request
+        .expires_in_days
+        .map(|days| Utc::now() + Duration::days(days.into()));
+
     let (raw, _) = refresh_token::generate();
     let raw_token = format!("{PERSONAL_TOKEN_PREFIX}{raw}");
-    let token = mcp_tokens::create_personal(
+    let token = access_tokens::create_personal(
         user_id,
         &state.pool,
         name,
         &refresh_token::hash_token(&raw_token),
+        request.scope,
+        expires_at,
     )
     .await?;
     Ok((
         StatusCode::CREATED,
-        Json(CreatedMcpTokenResponse { token, raw_token }),
+        Json(CreatedAccessTokenResponse { token, raw_token }),
     ))
 }
 
@@ -69,7 +75,7 @@ pub async fn delete(
     AuthUser { user_id }: AuthUser,
     ApiPath(token_id): ApiPath<Uuid>,
 ) -> Result<StatusCode, ApiError> {
-    if mcp_tokens::delete_personal(user_id, &state.pool, token_id).await? {
+    if access_tokens::delete_personal(user_id, &state.pool, token_id).await? {
         Ok(StatusCode::NO_CONTENT)
     } else {
         Err(ApiError::NotFound)

@@ -31,7 +31,8 @@ async fn main() -> Result<()> {
         .await
         .context("failed to run database migrations")?;
 
-    let mut state = AppState::with_signup_policy(pool, &config.jwt_secret, config.allow_signup);
+    let mut state = AppState::with_signup_policy(pool, &config.jwt_secret, config.allow_signup)
+        .with_cors_origins(&config.cors_origins);
     if let Some(public_url) = &config.mcp_public_url {
         tracing::info!("MCP server enabled at {public_url}/mcp");
         state = state.with_mcp(public_url);

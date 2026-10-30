@@ -1,5 +1,7 @@
 use std::time::Duration;
 
+use axum::http::{Method, header};
+use axum::middleware;
 use axum::response::IntoResponse;
 use axum::{
     Router,
@@ -9,11 +11,13 @@ use tower_governor::{
     GovernorLayer, errors::GovernorError, governor::GovernorConfigBuilder,
     key_extractor::SmartIpKeyExtractor,
 };
+use tower_http::cors::CorsLayer;
 use tower_http::trace::TraceLayer;
 
 use crate::handlers;
 use crate::handlers::error::ApiError;
 use crate::mcp;
+use crate::middleware::api_token;
 use crate::state::AppState;
 
 /// Governor's default 429/500 responses are plain text - map them to the
@@ -137,26 +141,36 @@ pub fn build_router(state: AppState) -> Router {
         .route("/arrows", post(handlers::canvas::create_arrow))
         .route("/arrows/{id}", delete(handlers::canvas::delete_arrow));
 
-    let mcp_routes = Router::new()
-        .route("/info", get(handlers::mcp_tokens::info))
+    let token_routes = Router::new()
         .route(
-            "/tokens",
-            get(handlers::mcp_tokens::list).post(handlers::mcp_tokens::create),
+            "/",
+            get(handlers::access_tokens::list).post(handlers::access_tokens::create),
         )
-        .route("/tokens/{id}", delete(handlers::mcp_tokens::delete));
+        .route("/{id}", delete(handlers::access_tokens::delete));
+    let mcp_routes = Router::new().route("/info", get(handlers::mcp::info));
 
-    let mut api_routes = Router::new()
-        .route("/health", get(health))
+    // Data routes also accept personal access tokens; everything else on
+    // the API (auth, tokens, OAuth) stays web-session-only.
+    let data_routes = Router::new()
         .route("/board/canvas", get(handlers::board::canvas))
         .route("/board/timeline", get(handlers::board::timeline))
         .route("/dashboard", get(handlers::dashboard::get))
-        .nest("/auth", auth_routes)
         .nest("/nodes", node_routes)
         .nest("/topics", topic_routes)
         .nest("/edges", edge_routes)
         .nest("/checklist", checklist_routes)
         .nest("/periods", period_routes)
         .nest("/canvas", canvas_routes)
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            api_token::authenticate,
+        ));
+
+    let mut api_routes = Router::new()
+        .route("/health", get(health))
+        .merge(data_routes)
+        .nest("/auth", auth_routes)
+        .nest("/tokens", token_routes)
         .nest("/mcp", mcp_routes);
     let mut app = Router::new();
     let mut mcp_router = None;
@@ -212,6 +226,24 @@ pub fn build_router(state: AppState) -> Router {
                 get(handlers::oauth::authorization_server_metadata),
             );
         mcp_router = Some(mcp::router(state.clone(), public_url));
+    }
+
+    // Outermost layer on the API, so preflight requests are answered
+    // before any auth. No credentials: the refresh cookie stays same-origin.
+    if !state.cors_origins.is_empty() {
+        api_routes = api_routes.layer(
+            CorsLayer::new()
+                .allow_origin(state.cors_origins.clone())
+                .allow_methods([
+                    Method::GET,
+                    Method::POST,
+                    Method::PATCH,
+                    Method::PUT,
+                    Method::DELETE,
+                ])
+                .allow_headers([header::AUTHORIZATION, header::CONTENT_TYPE])
+                .max_age(Duration::from_secs(3600)),
+        );
     }
 
     let app = app.nest("/api", api_routes).with_state(state);

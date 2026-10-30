@@ -104,7 +104,7 @@ pub async fn list_connected(
         r#"
         SELECT c.client_id, c.client_name,
                MIN(t.created_at) AS "connected_at!", MAX(t.last_used_at) AS last_used_at
-        FROM mcp_tokens t
+        FROM access_tokens t
         JOIN oauth_clients c ON c.client_id = t.client_id
         WHERE t.user_id = $1
         GROUP BY c.client_id, c.client_name
@@ -125,7 +125,7 @@ pub async fn revoke_client(
     client_id: &str,
 ) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!(
-        "DELETE FROM mcp_tokens WHERE user_id = $1 AND client_id = $2",
+        "DELETE FROM access_tokens WHERE user_id = $1 AND client_id = $2",
         user_id,
         client_id,
     )

@@ -67,7 +67,7 @@ async fn create_list_delete_happy_path(pool: PgPool) {
         &app,
         req(
             "POST",
-            "/api/mcp/tokens",
+            "/api/tokens",
             json!({"name": " laptop "}),
             Some(&token),
         ),
@@ -78,25 +78,17 @@ async fn create_list_delete_happy_path(pool: PgPool) {
     assert!(created["raw_token"].as_str().unwrap().starts_with("loom_"));
     let token_id = created["token"]["id"].as_str().unwrap().to_owned();
 
-    let (status, list) = send(
-        &app,
-        req("GET", "/api/mcp/tokens", Value::Null, Some(&token)),
-    )
-    .await;
+    let (status, list) = send(&app, req("GET", "/api/tokens", Value::Null, Some(&token))).await;
     assert_eq!(status, StatusCode::OK);
     let list = list.as_array().unwrap();
     assert_eq!(list.len(), 1);
     assert!(list[0].get("raw_token").is_none());
     assert!(list[0]["last_used_at"].is_null());
 
-    let uri = format!("/api/mcp/tokens/{token_id}");
+    let uri = format!("/api/tokens/{token_id}");
     let (status, _) = send(&app, req("DELETE", &uri, Value::Null, Some(&token))).await;
     assert_eq!(status, StatusCode::NO_CONTENT);
-    let (_, list) = send(
-        &app,
-        req("GET", "/api/mcp/tokens", Value::Null, Some(&token)),
-    )
-    .await;
+    let (_, list) = send(&app, req("GET", "/api/tokens", Value::Null, Some(&token))).await;
     assert!(list.as_array().unwrap().is_empty());
 }
 
@@ -106,12 +98,7 @@ async fn rejects_blank_name(pool: PgPool) {
     let token = signup(&app, "blank@example.com").await;
     let (status, _) = send(
         &app,
-        req(
-            "POST",
-            "/api/mcp/tokens",
-            json!({"name": "  "}),
-            Some(&token),
-        ),
+        req("POST", "/api/tokens", json!({"name": "  "}), Some(&token)),
     )
     .await;
     assert_eq!(status, StatusCode::BAD_REQUEST);
@@ -120,7 +107,7 @@ async fn rejects_blank_name(pool: PgPool) {
 #[sqlx::test]
 async fn requires_login(pool: PgPool) {
     let app = app(pool);
-    let (status, _) = send(&app, req("GET", "/api/mcp/tokens", Value::Null, None)).await;
+    let (status, _) = send(&app, req("GET", "/api/tokens", Value::Null, None)).await;
     assert_eq!(status, StatusCode::UNAUTHORIZED);
 }
 
@@ -132,32 +119,23 @@ async fn cannot_see_or_delete_another_users_tokens(pool: PgPool) {
 
     let (_, created) = send(
         &app,
-        req(
-            "POST",
-            "/api/mcp/tokens",
-            json!({"name": "mine"}),
-            Some(&owner),
-        ),
+        req("POST", "/api/tokens", json!({"name": "mine"}), Some(&owner)),
     )
     .await;
     let token_id = created["token"]["id"].as_str().unwrap().to_owned();
 
     let (_, list) = send(
         &app,
-        req("GET", "/api/mcp/tokens", Value::Null, Some(&intruder)),
+        req("GET", "/api/tokens", Value::Null, Some(&intruder)),
     )
     .await;
     assert!(list.as_array().unwrap().is_empty());
 
-    let uri = format!("/api/mcp/tokens/{token_id}");
+    let uri = format!("/api/tokens/{token_id}");
     let (status, _) = send(&app, req("DELETE", &uri, Value::Null, Some(&intruder))).await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 
-    let (_, list) = send(
-        &app,
-        req("GET", "/api/mcp/tokens", Value::Null, Some(&owner)),
-    )
-    .await;
+    let (_, list) = send(&app, req("GET", "/api/tokens", Value::Null, Some(&owner))).await;
     assert_eq!(list.as_array().unwrap().len(), 1);
 }
 
@@ -178,4 +156,97 @@ async fn info_reports_url_when_enabled(pool: PgPool) {
         info,
         json!({"enabled": true, "url": "https://loom.example.com/mcp"})
     );
+}
+
+#[sqlx::test]
+async fn scope_defaults_to_read_and_expiry_is_optional(pool: PgPool) {
+    let app = app(pool);
+    let jwt = signup(&app, "scope@example.com").await;
+
+    let (_, created) = send(
+        &app,
+        req("POST", "/api/tokens", json!({"name": "a"}), Some(&jwt)),
+    )
+    .await;
+    assert_eq!(created["token"]["scope"], "read");
+    assert!(created["token"]["expires_at"].is_null());
+
+    let (status, created) = send(
+        &app,
+        req(
+            "POST",
+            "/api/tokens",
+            json!({"name": "b", "scope": "read_write", "expires_in_days": 30}),
+            Some(&jwt),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::CREATED);
+    assert_eq!(created["token"]["scope"], "read_write");
+    assert!(created["token"]["expires_at"].is_string());
+}
+
+#[sqlx::test]
+async fn rejects_out_of_range_expiry_and_unknown_scope(pool: PgPool) {
+    let app = app(pool);
+    let jwt = signup(&app, "range@example.com").await;
+
+    for body in [
+        json!({"name": "x", "expires_in_days": 0}),
+        json!({"name": "x", "expires_in_days": 3651}),
+        json!({"name": "x", "scope": "admin"}),
+    ] {
+        let (status, _) = send(&app, req("POST", "/api/tokens", body, Some(&jwt))).await;
+        assert!(status.is_client_error(), "{status}");
+    }
+}
+
+#[sqlx::test]
+async fn expired_personal_token_stays_listed_and_survives_oauth_cleanup(pool: PgPool) {
+    let app = app(pool.clone());
+    let jwt = signup(&app, "expired@example.com").await;
+    send(
+        &app,
+        req(
+            "POST",
+            "/api/tokens",
+            json!({"name": "old", "expires_in_days": 1}),
+            Some(&jwt),
+        ),
+    )
+    .await;
+    sqlx::query("UPDATE access_tokens SET expires_at = now() - interval '1 minute'")
+        .execute(&pool)
+        .await
+        .unwrap();
+
+    // Issuing an OAuth pair clears the user's expired OAuth tokens - not this.
+    let user_id: uuid::Uuid = sqlx::query_scalar("SELECT id FROM users")
+        .fetch_one(&pool)
+        .await
+        .unwrap();
+    sqlx::query(
+        "INSERT INTO oauth_clients (client_id, client_name, redirect_uris) VALUES ('c', 'c', '{}')",
+    )
+    .execute(&pool)
+    .await
+    .unwrap();
+    loom::repo::access_tokens::insert_oauth_pair(
+        user_id,
+        &pool,
+        "c",
+        &loom::repo::access_tokens::IssuedTokenHashes {
+            access: "a",
+            access_expires_at: chrono::Utc::now() + chrono::Duration::hours(1),
+            refresh: "r",
+            refresh_expires_at: chrono::Utc::now() + chrono::Duration::days(30),
+        },
+    )
+    .await
+    .unwrap();
+
+    let (_, list) = send(&app, req("GET", "/api/tokens", Value::Null, Some(&jwt))).await;
+    let list = list.as_array().unwrap();
+    assert_eq!(list.len(), 1);
+    assert!(list[0]["expires_at"].is_string());
 }

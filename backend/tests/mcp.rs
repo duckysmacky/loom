@@ -57,21 +57,27 @@ async fn signup(app: &axum::Router, email: &str) -> String {
     body["access_token"].as_str().unwrap().to_owned()
 }
 
-/// Signs up and creates a personal MCP token; returns (web JWT, MCP token).
-async fn user_with_token(app: &axum::Router, email: &str) -> (String, String) {
+/// Signs up and creates a personal access token with the given scope;
+/// returns (web JWT, token).
+async fn user_with_scoped_token(app: &axum::Router, email: &str, scope: &str) -> (String, String) {
     let jwt = signup(app, email).await;
     let (status, _, body) = send(
         app,
         req(
             "POST",
-            "/api/mcp/tokens",
-            json!({"name": "test"}),
+            "/api/tokens",
+            json!({"name": "test", "scope": scope}),
             Some(&jwt),
         ),
     )
     .await;
     assert_eq!(status, StatusCode::CREATED);
     (jwt, body["raw_token"].as_str().unwrap().to_owned())
+}
+
+/// Signs up and creates a full-access token; returns (web JWT, token).
+async fn user_with_token(app: &axum::Router, email: &str) -> (String, String) {
+    user_with_scoped_token(app, email, "read_write").await
 }
 
 async fn rpc(
@@ -127,9 +133,9 @@ async fn revoked_token_stops_working(pool: PgPool) {
     let (status, _, _) = rpc(&app, Some(&token), "tools/list", json!({})).await;
     assert_eq!(status, StatusCode::OK);
 
-    let (_, _, tokens) = send(&app, req("GET", "/api/mcp/tokens", Value::Null, Some(&jwt))).await;
+    let (_, _, tokens) = send(&app, req("GET", "/api/tokens", Value::Null, Some(&jwt))).await;
     let token_id = tokens[0]["id"].as_str().unwrap();
-    let uri = format!("/api/mcp/tokens/{token_id}");
+    let uri = format!("/api/tokens/{token_id}");
     send(&app, req("DELETE", &uri, Value::Null, Some(&jwt))).await;
 
     let (status, _, _) = rpc(&app, Some(&token), "tools/list", json!({})).await;
@@ -562,4 +568,44 @@ async fn ideas_have_no_status_and_promote_to_queued(pool: PgPool) {
     .await;
     assert_eq!(promoted["structuredContent"]["status"], "queued");
     assert_eq!(promoted["structuredContent"]["focus"], "secondary");
+}
+
+#[sqlx::test]
+async fn read_only_token_can_read_but_not_write(pool: PgPool) {
+    let app = app(pool);
+    let (_, full) = user_with_token(&app, "scope@example.com").await;
+    let (_, read_only) = user_with_scoped_token(&app, "scope2@example.com", "read").await;
+    let created = call(
+        &app,
+        &full,
+        "loom_create_node",
+        json!({"kind": "project", "title": "mine"}),
+    )
+    .await;
+    assert!(!is_error(&created));
+
+    let listed = call(&app, &read_only, "loom_list_nodes", json!({})).await;
+    assert!(!is_error(&listed), "{listed}");
+    let overview = call(&app, &read_only, "loom_get_overview", json!({})).await;
+    assert!(!is_error(&overview), "{overview}");
+
+    let denied = call(
+        &app,
+        &read_only,
+        "loom_create_node",
+        json!({"kind": "project", "title": "nope"}),
+    )
+    .await;
+    assert!(is_error(&denied));
+    assert!(error_text(&denied).contains("read-only"), "{denied}");
+
+    // The failed writes left nothing behind.
+    let nodes = call(&app, &full, "loom_list_nodes", json!({})).await;
+    assert_eq!(
+        nodes["structuredContent"]["nodes"]
+            .as_array()
+            .unwrap()
+            .len(),
+        1
+    );
 }

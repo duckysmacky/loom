@@ -38,7 +38,8 @@ Pick one of these.
   1. Run `claude mcp add --transport http loom https://loom.example.com/mcp`.
   2. Run `/mcp` to sign in.
 - **Claude Code: manual setup with a token** (headless machines, CI).
-  1. Create a token in Settings → Connections.
+  1. Create a token in Settings → Connections. Choose **Read & write** if the agent should edit
+     (read-only tokens can only use the read tools).
   2. Run
      `claude mcp add --transport http loom https://loom.example.com/mcp --header "Authorization: Bearer loom_..."`.
 - **Any other MCP client** that supports Streamable HTTP: use the same URL, with either OAuth or
@@ -50,7 +51,8 @@ Pick one of these.
 | --- | --- |
 | `404` on `/mcp` | `MCP_ENABLED` isn't `true`, the backend wasn't restarted, or the proxy doesn't pass `/mcp` through. |
 | `403 Forbidden` on `/mcp` | The `Host` header doesn't match `PUBLIC_URL`. Set `proxy_set_header Host $host;` in the host nginx, and check `PUBLIC_URL` is the address clients actually use. |
-| `401` with a token | The token was revoked or mistyped. Personal tokens start with `loom_`. OAuth tokens expire hourly and refresh automatically; if refreshing fails, reconnect. |
+| A write tool says "this token is read-only" | The token was created read-only. Create a Read & write token, or reconnect through OAuth. |
+| `401` with a token | The token was revoked, expired or mistyped. Personal tokens start with `loom_`. OAuth tokens expire hourly and refresh automatically; if refreshing fails, reconnect. |
 | Consent page says "unknown client" | The connector was registered against another instance, or the database was reset. Remove the connector and add it again. |
 | "redirect_uri ... must be https" during connect | Loom only accepts https redirect URIs, or http on localhost. |
 | Tools time out or hang behind a proxy | Turn off response buffering for `/mcp` (`proxy_buffering off;`) and raise `proxy_read_timeout`. |

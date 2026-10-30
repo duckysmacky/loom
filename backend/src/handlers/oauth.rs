@@ -24,7 +24,7 @@ use crate::models::oauth::{
     AuthorizeDecision, AuthorizePreview, AuthorizeRedirect, AuthorizeRequest,
     ConnectedClientResponse, RegisterClientRequest, TokenRequest,
 };
-use crate::repo::mcp_tokens::{self, IssuedTokenHashes};
+use crate::repo::access_tokens::{self, IssuedTokenHashes};
 use crate::repo::oauth::{self, OAuthClient};
 use crate::state::AppState;
 
@@ -287,7 +287,7 @@ pub async fn token(
     let (access, access_hash) = refresh_token::generate();
     let (refresh, refresh_hash) = refresh_token::generate();
     let now = Utc::now();
-    mcp_tokens::insert_oauth_pair(
+    access_tokens::insert_oauth_pair(
         user_id,
         &state.pool,
         &client_id,
@@ -356,7 +356,7 @@ async fn exchange_refresh_token(
     let invalid_grant =
         || OAuthError::bad_request("invalid_grant", "invalid or expired refresh token");
     let (user_id, client_id) =
-        mcp_tokens::consume_refresh(&state.pool, &refresh_token::hash_token(&refresh))
+        access_tokens::consume_refresh(&state.pool, &refresh_token::hash_token(&refresh))
             .await?
             .ok_or_else(invalid_grant)?;
     if request

@@ -18,8 +18,9 @@ use serde_json::json;
 use crate::auth::refresh_token::hash_token;
 use crate::handlers::error::ApiError;
 use crate::handlers::oauth::protected_resource_metadata_url;
+use crate::middleware::api_token::bearer_token;
 use crate::middleware::auth_user::AuthUser;
-use crate::repo::mcp_tokens;
+use crate::repo::access_tokens;
 use crate::state::AppState;
 
 pub use tools::LoomServer;
@@ -53,24 +54,25 @@ pub fn router(state: AppState, public_url: &str) -> Router {
 }
 
 /// Resolves the bearer token (a personal token or an OAuth access token,
-/// both from `mcp_tokens` - never a web-session JWT) to the caller and
-/// hands it to the tools as an `AuthUser` request extension.
+/// both from `access_tokens` - never a web-session JWT) to the caller and
+/// hands it to the tools as an `AuthUser` request extension, along with
+/// the token's `TokenScope` (OAuth tokens are always `read_write`).
 async fn authenticate(State(state): State<AppState>, mut request: Request, next: Next) -> Response {
-    let token = request
-        .headers()
-        .get(header::AUTHORIZATION)
-        .and_then(|value| value.to_str().ok())
-        .and_then(|value| value.split_once(' '))
-        .filter(|(scheme, _)| scheme.eq_ignore_ascii_case("bearer"))
-        .map(|(_, token)| token.trim());
+    let token = bearer_token(request.headers());
 
-    let user_id = match token {
-        Some(token) => mcp_tokens::authenticate(&state.pool, &hash_token(token)).await,
+    let identity = match token {
+        Some(token) => {
+            access_tokens::authenticate(&state.pool, &hash_token(token), access_tokens::MCP_KINDS)
+                .await
+        }
         None => Ok(None),
     };
-    match user_id {
-        Ok(Some(user_id)) => {
-            request.extensions_mut().insert(AuthUser { user_id });
+    match identity {
+        Ok(Some(identity)) => {
+            request.extensions_mut().insert(AuthUser {
+                user_id: identity.user_id,
+            });
+            request.extensions_mut().insert(identity.scope);
             next.run(request).await
         }
         Ok(None) => unauthorized(state.mcp_public_url.as_deref().unwrap_or_default()),

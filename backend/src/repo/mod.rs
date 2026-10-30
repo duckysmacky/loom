@@ -1,10 +1,10 @@
+pub mod access_tokens;
 pub mod active_periods;
 pub mod board;
 pub mod canvas;
 pub mod checklist;
 pub mod dashboard;
 pub mod edges;
-pub mod mcp_tokens;
 pub mod node_topics;
 pub mod nodes;
 pub mod oauth;

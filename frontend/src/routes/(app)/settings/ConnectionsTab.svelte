@@ -2,29 +2,35 @@
 	import { Copy, Plus, Unplug } from '@lucide/svelte';
 	import './settings.css';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { mcpApi, oauthApi } from '$lib/api/endpoints';
+	import { mcpApi, oauthApi, tokensApi } from '$lib/api/endpoints';
 	import { relativeDays, shortDate } from '$lib/graph/display';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import type { ConnectedClientResponse } from '$lib/types/ConnectedClientResponse';
 	import type { McpInfoResponse } from '$lib/types/McpInfoResponse';
-	import type { McpTokenResponse } from '$lib/types/McpTokenResponse';
+	import type { AccessTokenResponse } from '$lib/types/AccessTokenResponse';
+	import type { TokenScope } from '$lib/types/TokenScope';
 
 	let info = $state<McpInfoResponse | null>(null);
-	let tokens = $state<McpTokenResponse[]>([]);
+	let tokens = $state<AccessTokenResponse[]>([]);
 	let clients = $state<ConnectedClientResponse[]>([]);
 	let newName = $state('');
+	let newScope = $state<TokenScope>('read');
+	// Days until expiry; null = never.
+	let newExpiry = $state<number | null>(90);
 	let revealed = $state<string | null>(null);
 	let revokingId = $state<string | null>(null);
 
 	async function load() {
 		try {
-			[info, tokens] = await Promise.all([mcpApi.info(), mcpApi.tokens()]);
+			[info, tokens] = await Promise.all([mcpApi.info(), tokensApi.list()]);
 			// The OAuth routes only exist while the MCP server is on.
 			if (info.enabled) clients = await oauthApi.clients();
 		} catch (error) {
 			notifyError(error);
 		}
 	}
+
+	const apiUrl = `${window.location.origin}/api`;
 
 	load();
 
@@ -42,13 +48,22 @@
 		const name = newName.trim();
 		if (!name) return;
 		try {
-			const created = await mcpApi.createToken({ name });
+			const created = await tokensApi.create({ name, scope: newScope, expires_in_days: newExpiry });
 			tokens = [created.token, ...tokens];
 			revealed = created.raw_token;
 			newName = '';
 		} catch (error) {
 			notifyError(error);
 		}
+	}
+
+	const scopeLabel: Record<TokenScope, string> = { read: 'read-only', read_write: 'read & write' };
+
+	function expiryText(token: AccessTokenResponse): string {
+		if (!token.expires_at) return 'never expires';
+		return new Date(token.expires_at) <= new Date()
+			? 'expired'
+			: `expires ${shortDate(token.expires_at)}`;
 	}
 
 	async function disconnect(client: ConnectedClientResponse) {
@@ -62,10 +77,10 @@
 		}
 	}
 
-	async function revoke(token: McpTokenResponse) {
+	async function revoke(token: AccessTokenResponse) {
 		revokingId = null;
 		try {
-			await mcpApi.removeToken(token.id);
+			await tokensApi.remove(token.id);
 			tokens = tokens.filter((candidate) => candidate.id !== token.id);
 			notify(`Revoked “${token.name}”`);
 		} catch (error) {
@@ -138,8 +153,10 @@
 <section class="settings-section">
 	<h2>Access tokens</h2>
 	<p class="explain">
-		For agents that send an <code>Authorization: Bearer</code> header, like Claude Code or scripts. A
-		token is shown once - store it somewhere safe.
+		For scripts, other websites and agents that send an <code>Authorization: Bearer</code> header -
+		to the REST API at <code>{apiUrl}</code>{#if info?.enabled}
+			or the MCP server{/if}. Read-only tokens can only read. A token is shown once - store it
+		somewhere safe.
 	</p>
 
 	<form class="create" onsubmit={create}>
@@ -150,6 +167,16 @@
 			maxlength="100"
 			bind:value={newName}
 		/>
+		<select class="field scope" aria-label="Token access" bind:value={newScope}>
+			<option value="read">Read-only</option>
+			<option value="read_write">Read & write</option>
+		</select>
+		<select class="field scope" aria-label="Token expiry" bind:value={newExpiry}>
+			<option value={30}>Expires in 30 days</option>
+			<option value={90}>Expires in 90 days</option>
+			<option value={365}>Expires in 1 year</option>
+			<option value={null}>Never expires</option>
+		</select>
 		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}>Create</Button>
 	</form>
 
@@ -169,7 +196,7 @@
 			<li class="token">
 				<span class="name">{token.name}</span>
 				<span class="meta">
-					created {shortDate(token.created_at)} · {token.last_used_at
+					{scopeLabel[token.scope]} · {expiryText(token)} · created {shortDate(token.created_at)} · {token.last_used_at
 						? `used ${relativeDays(token.last_used_at)}`
 						: 'never used'}
 				</span>
@@ -219,6 +246,11 @@
 	.create .field {
 		flex: 1;
 		min-width: 180px;
+	}
+
+	.create .scope {
+		flex: 0 0 auto;
+		min-width: 0;
 	}
 
 	.revealed {

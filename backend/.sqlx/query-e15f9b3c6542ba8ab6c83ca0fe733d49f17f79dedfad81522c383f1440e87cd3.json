@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT c.client_id, c.client_name,\n               MIN(t.created_at) AS \"connected_at!\", MAX(t.last_used_at) AS last_used_at\n        FROM mcp_tokens t\n        JOIN oauth_clients c ON c.client_id = t.client_id\n        WHERE t.user_id = $1\n        GROUP BY c.client_id, c.client_name\n        ORDER BY MIN(t.created_at) DESC\n        ",
+  "query": "\n        SELECT c.client_id, c.client_name,\n               MIN(t.created_at) AS \"connected_at!\", MAX(t.last_used_at) AS last_used_at\n        FROM access_tokens t\n        JOIN oauth_clients c ON c.client_id = t.client_id\n        WHERE t.user_id = $1\n        GROUP BY c.client_id, c.client_name\n        ORDER BY MIN(t.created_at) DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -50,5 +50,5 @@
       null
     ]
   },
-  "hash": "01a6fd62ceb4f7ba7a4841a3cbcac251ea7e67da7c8c3d774f242951c6f5c120"
+  "hash": "e15f9b3c6542ba8ab6c83ca0fe733d49f17f79dedfad81522c383f1440e87cd3"
 }

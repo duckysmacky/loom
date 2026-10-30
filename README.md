@@ -26,6 +26,7 @@ A flexible manager for everything you're building, studying, and dreaming up.
   - [Updating](#updating)
   - [Using an external Postgres](#using-an-external-postgres)
   - [Backups](#backups)
+- [REST API access](#rest-api-access)
 - [MCP server setup (optional)](#mcp-server-setup-optional)
   - [Setting up](#setting-up)
   - [Connecting Claude](#connecting-claude)
@@ -174,8 +175,8 @@ a dialog to set its real kind, status, and focus in one step.
 
 Account (email, password), appearance (theme, density, canvas connection
 labels), topics & tags, functionality defaults (default board view,
-quick-capture defaults, poke-from-cards), and connections (MCP 
-server URL, access tokens, connected apps).
+quick-capture defaults, poke-from-cards), and connections (MCP
+server URL, access tokens for the REST API and MCP, connected apps).
 
 ### MCP Server
 
@@ -234,6 +235,7 @@ All variables live in `.env` (see `.env.example`):
 | `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. |
 | `MCP_ENABLED` | `false` | Turns on the [MCP server](#mcp-server-optional) for AI agents |
 | `PUBLIC_URL` | - | Public origin Loom is served at, e.g. `https://loom.example.com` (no path, no trailing slash). Required when `MCP_ENABLED=true` |
+| `CORS_ORIGINS` | - | Comma-separated origins (e.g. `https://dashboard.example.com`) whose browser JavaScript may call `/api` with an [access token](#rest-api-access). Exact origins only - no paths, no `*`. Empty = off |
 
 ### Self-hosting on a VPS
 
@@ -303,6 +305,38 @@ docker compose up -d backend frontend
 ```sh
 docker compose exec database pg_dump -U loom loom > backup.sql
 ```
+
+## REST API access
+
+Scripts, other websites and services can read (and optionally edit) your
+graph through the same REST API the web app uses, with a long-lived access
+token instead of a login.
+
+1. In Loom, open **Settings → Connections → Access tokens**, pick a name,
+   a scope and an expiry, and create the token. It is shown once.
+   - **Read-only** tokens can only make `GET` requests (and read-only MCP tools).
+   - **Read & write** tokens can do everything your account can, except the
+     account routes below.
+2. Send it as a bearer token:
+
+   ```sh
+   curl -H "Authorization: Bearer loom_..." \
+     "https://loom.example.com/api/nodes?status=active&focus=primary"
+   ```
+
+Tokens work on the data endpoints: `/api/nodes`, `/api/topics`,
+`/api/edges`, `/api/checklist`, `/api/periods`, `/api/canvas`,
+`/api/board/*` and `/api/dashboard`. They never work on account endpoints
+(`/api/auth/*`, `/api/tokens`, `/api/oauth/*`), so a leaked token can't
+change your password or mint more tokens - revoke it in Settings. Tokens
+that Claude connectors and other apps get through the OAuth sign-in work on
+`/mcp` only.
+
+Calling from a *server* needs nothing more. Calling from browser JavaScript
+on another site is blocked by the browser unless you list that site's
+origin in `CORS_ORIGINS` (see [Configuration](#configuration)). Don't put a
+read & write token in public page source - anyone who can view the page can
+use it; prefer a read-only token with an expiry.
 
 ## MCP server setup
 

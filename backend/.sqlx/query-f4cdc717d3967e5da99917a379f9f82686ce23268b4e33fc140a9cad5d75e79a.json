@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "DELETE FROM mcp_tokens WHERE id = $1 AND user_id = $2 AND kind = 'personal'",
+  "query": "DELETE FROM access_tokens WHERE id = $1 AND user_id = $2 AND kind = 'personal'",
   "describe": {
     "columns": [],
     "parameters": {
@@ -11,5 +11,5 @@
     },
     "nullable": []
   },
-  "hash": "7ae2d18fd2d307e55577a6d5ec318304042af6552a5a9594a1c33b458aebf0ea"
+  "hash": "f4cdc717d3967e5da99917a379f9f82686ce23268b4e33fc140a9cad5d75e79a"
 }

@@ -1,3 +1,4 @@
+pub mod access_tokens;
 pub mod active_periods;
 pub mod auth;
 pub mod board;
@@ -7,7 +8,7 @@ pub mod dashboard;
 pub mod edges;
 pub mod error;
 pub mod extract;
-pub mod mcp_tokens;
+pub mod mcp;
 pub mod nodes;
 pub mod oauth;
 pub mod pokes;

@@ -2,24 +2,29 @@ use chrono::{DateTime, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::mcp_token::McpTokenResponse;
+use crate::models::access_token::{AccessTokenResponse, TokenScope};
 
 pub async fn create_personal(
     user_id: Uuid,
     pool: &PgPool,
     name: &str,
     token_hash: &str,
-) -> Result<McpTokenResponse, sqlx::Error> {
+    scope: TokenScope,
+    expires_at: Option<DateTime<Utc>>,
+) -> Result<AccessTokenResponse, sqlx::Error> {
     sqlx::query_as!(
-        McpTokenResponse,
+        AccessTokenResponse,
         r#"
-        INSERT INTO mcp_tokens (user_id, kind, name, token_hash)
-        VALUES ($1, 'personal', $2, $3)
-        RETURNING id, name AS "name!", created_at, last_used_at
+        INSERT INTO access_tokens (user_id, kind, name, token_hash, scope, expires_at)
+        VALUES ($1, 'personal', $2, $3, $4, $5)
+        RETURNING id, name AS "name!", scope AS "scope: TokenScope",
+                  created_at, last_used_at, expires_at
         "#,
         user_id,
         name,
         token_hash,
+        scope as TokenScope,
+        expires_at,
     )
     .fetch_one(pool)
     .await
@@ -28,12 +33,13 @@ pub async fn create_personal(
 pub async fn list_personal(
     user_id: Uuid,
     pool: &PgPool,
-) -> Result<Vec<McpTokenResponse>, sqlx::Error> {
+) -> Result<Vec<AccessTokenResponse>, sqlx::Error> {
     sqlx::query_as!(
-        McpTokenResponse,
+        AccessTokenResponse,
         r#"
-        SELECT id, name AS "name!", created_at, last_used_at
-        FROM mcp_tokens
+        SELECT id, name AS "name!", scope AS "scope: TokenScope",
+               created_at, last_used_at, expires_at
+        FROM access_tokens
         WHERE user_id = $1 AND kind = 'personal'
         ORDER BY created_at DESC
         "#,
@@ -49,7 +55,7 @@ pub async fn delete_personal(
     token_id: Uuid,
 ) -> Result<bool, sqlx::Error> {
     let result = sqlx::query!(
-        "DELETE FROM mcp_tokens WHERE id = $1 AND user_id = $2 AND kind = 'personal'",
+        "DELETE FROM access_tokens WHERE id = $1 AND user_id = $2 AND kind = 'personal'",
         token_id,
         user_id,
     )
@@ -58,20 +64,38 @@ pub async fn delete_personal(
     Ok(result.rows_affected() > 0)
 }
 
-/// Resolves a presented bearer token (personal or OAuth access - never a
-/// refresh token) to its owner, stamping `last_used_at` in the same
-/// statement. The only function here not keyed by `user_id`: this is
-/// where the `user_id` comes from.
-pub async fn authenticate(pool: &PgPool, token_hash: &str) -> Result<Option<Uuid>, sqlx::Error> {
-    sqlx::query_scalar!(
+/// Token kinds accepted on `/mcp`: personal tokens and OAuth access tokens.
+pub const MCP_KINDS: &[&str] = &["personal", "access"];
+/// Token kinds accepted on the REST API: only tokens the user made
+/// themselves, never ones issued to OAuth connector clients.
+pub const API_KINDS: &[&str] = &["personal"];
+
+/// Who a presented token belongs to, and what it may do.
+pub struct TokenIdentity {
+    pub user_id: Uuid,
+    pub scope: TokenScope,
+}
+
+/// Resolves a presented bearer token of one of `kinds` (never a refresh
+/// token) to its owner, stamping `last_used_at` in the same statement.
+/// The only function here not keyed by `user_id`: this is where the
+/// `user_id` comes from.
+pub async fn authenticate(
+    pool: &PgPool,
+    token_hash: &str,
+    kinds: &[&str],
+) -> Result<Option<TokenIdentity>, sqlx::Error> {
+    sqlx::query_as!(
+        TokenIdentity,
         r#"
-        UPDATE mcp_tokens SET last_used_at = now()
+        UPDATE access_tokens SET last_used_at = now()
         WHERE token_hash = $1
-          AND kind IN ('personal', 'access')
+          AND kind = ANY($2)
           AND (expires_at IS NULL OR expires_at > now())
-        RETURNING user_id
+        RETURNING user_id, scope AS "scope: TokenScope"
         "#,
         token_hash,
+        kinds as &[&str],
     )
     .fetch_optional(pool)
     .await
@@ -86,7 +110,8 @@ pub struct IssuedTokenHashes<'a> {
 
 /// Stores a fresh OAuth access/refresh pair for `client_id`, clearing this
 /// user's expired tokens on the way (access tokens are hourly - without
-/// this they'd pile up forever).
+/// this they'd pile up forever). Personal tokens are left alone: an
+/// expired one stays listed until the user revokes it.
 pub async fn insert_oauth_pair(
     user_id: Uuid,
     pool: &PgPool,
@@ -94,14 +119,14 @@ pub async fn insert_oauth_pair(
     hashes: &IssuedTokenHashes<'_>,
 ) -> Result<(), sqlx::Error> {
     sqlx::query!(
-        "DELETE FROM mcp_tokens WHERE user_id = $1 AND expires_at <= now()",
+        "DELETE FROM access_tokens WHERE user_id = $1 AND kind <> 'personal' AND expires_at <= now()",
         user_id,
     )
     .execute(pool)
     .await?;
     sqlx::query!(
         r#"
-        INSERT INTO mcp_tokens (user_id, kind, client_id, token_hash, expires_at)
+        INSERT INTO access_tokens (user_id, kind, client_id, token_hash, expires_at)
         VALUES ($1, 'access', $2, $3, $4), ($1, 'refresh', $2, $5, $6)
         "#,
         user_id,
@@ -124,7 +149,7 @@ pub async fn consume_refresh(
 ) -> Result<Option<(Uuid, String)>, sqlx::Error> {
     let row = sqlx::query!(
         r#"
-        DELETE FROM mcp_tokens
+        DELETE FROM access_tokens
         WHERE token_hash = $1 AND kind = 'refresh' AND expires_at > now()
         RETURNING user_id, client_id AS "client_id!"
         "#,
