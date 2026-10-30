@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import Chip from '$lib/components/ui/Chip.svelte';
 	import { nodesApi, topicsApi } from '$lib/api/endpoints';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -29,7 +30,7 @@
 </script>
 
 <section>
-	<div class="label">Topics</div>
+	<div class="label">{m.field_topics()}</div>
 	<div class="chips">
 		{#each attached as topic (topic.id)}
 			<Chip
@@ -38,21 +39,21 @@
 				onremove={() => graph.mutate(() => nodesApi.detachTopic(node.id, topic.id))}
 			/>
 		{:else}
-			<span class="none">No topics</span>
+			<span class="none">{m.topics_none()}</span>
 		{/each}
 	</div>
 	<div class="add">
 		{#if available.length}
 			<select
 				class="field"
-				aria-label="Attach a topic"
+				aria-label={m.topics_attach_label()}
 				value=""
 				onchange={(event) => {
 					attach(event.currentTarget.value);
 					event.currentTarget.value = '';
 				}}
 			>
-				<option value="">+ Attach topic…</option>
+				<option value="">{m.topics_attach_option()}</option>
 				{#each available as topic (topic.id)}
 					<option value={topic.id}>{topic.name}</option>
 				{/each}
@@ -61,8 +62,8 @@
 		<form onsubmit={createAndAttach}>
 			<input
 				class="field"
-				placeholder="New topic…"
-				aria-label="New topic name"
+				placeholder={m.topics_new_placeholder()}
+				aria-label={m.topics_new_label()}
 				bind:value={newTopicName}
 			/>
 		</form>

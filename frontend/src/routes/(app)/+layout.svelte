@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import CommandPalette from '$lib/components/CommandPalette.svelte';
@@ -61,10 +62,10 @@
 	}
 
 	const pageTitles: [string, string][] = [
-		['/dashboard', 'Dashboard'],
-		['/board', 'Board'],
-		['/nodes', 'Nodes'],
-		['/settings', 'Settings']
+		['/dashboard', m.nav_dashboard()],
+		['/board', m.nav_board()],
+		['/nodes', m.nav_nodes()],
+		['/settings', m.nav_settings()]
 	];
 	const section = $derived(page.url.pathname.split('/')[1]);
 	const title = $derived(

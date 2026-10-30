@@ -118,8 +118,8 @@ describe('display helpers', () => {
 
 	it('formats short dates, adding the year outside the current one', () => {
 		const now = new Date('2026-09-10T12:00:00');
-		expect(shortDate('2026-09-02T12:00:00', now)).toBe('2 Sep');
-		expect(shortDate('2025-07-02T12:00:00', now)).toBe('2 Jul 2025');
+		expect(shortDate('2026-09-02T12:00:00', now)).toBe('Sep 2');
+		expect(shortDate('2025-07-02T12:00:00', now)).toBe('Jul 2, 2025');
 	});
 
 	it('round-trips dates through date inputs in local time', () => {

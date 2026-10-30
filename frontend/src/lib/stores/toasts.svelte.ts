@@ -1,4 +1,6 @@
+import { m } from '$lib/paraglide/messages';
 import { ApiError } from '$lib/api/client';
+import { errorMessage } from '$lib/i18n';
 
 export type ToastAction = { label: string; run: () => void };
 export type Toast = { id: number; message: string; tone: 'info' | 'error'; action?: ToastAction };
@@ -19,5 +21,5 @@ export function dismiss(id: number) {
 }
 
 export function notifyError(error: unknown) {
-	notify(error instanceof ApiError ? error.message : 'Something went wrong', 'error');
+	notify(error instanceof ApiError ? errorMessage(error) : m.error_generic(), 'error');
 }

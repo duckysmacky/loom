@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	let {
 		label,
 		color = null,
@@ -10,7 +11,9 @@
 	{#if color}<span class="swatch" style:background={color}></span>{/if}
 	{label}
 	{#if onremove}
-		<button type="button" class="remove" aria-label="Remove {label}" onclick={onremove}>✕</button>
+		<button type="button" class="remove" aria-label={m.chip_remove({ label })} onclick={onremove}
+			>✕</button
+		>
 	{/if}
 </span>
 

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Tabs from '$lib/components/ui/Tabs.svelte';
@@ -12,11 +13,11 @@
 	import TopicsTab from './TopicsTab.svelte';
 
 	const TABS = [
-		{ value: 'account', label: 'Account' },
-		{ value: 'appearance', label: 'Appearance' },
-		{ value: 'topics', label: 'Topics & tags' },
-		{ value: 'features', label: 'Features' },
-		{ value: 'connections', label: 'Connections' }
+		{ value: 'account', label: m.settings_account() },
+		{ value: 'appearance', label: m.settings_appearance() },
+		{ value: 'topics', label: m.settings_topics() },
+		{ value: 'features', label: m.settings_features() },
+		{ value: 'connections', label: m.settings_connections() }
 	] as const;
 	type Tab = (typeof TABS)[number]['value'];
 
@@ -41,11 +42,11 @@
 	{#if tab === 'appearance' || tab === 'features'}
 		<p class="sync" class:failed={syncState.status === 'error'} role="status">
 			{#if syncState.status === 'saving'}
-				Saving…
+				{m.settings_saving()}
 			{:else if syncState.status === 'error'}
-				Couldn't save to your account. Kept on this device; retries on your next change.
+				{m.settings_save_failed()}
 			{:else}
-				Changes save to your account automatically.
+				{m.settings_autosave()}
 			{/if}
 		</p>
 	{/if}

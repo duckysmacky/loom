@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Pencil, Plus, Trash2 } from '@lucide/svelte';
 	import './settings.css';
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
@@ -41,26 +42,27 @@
 
 	async function remove(topicId: string, name: string) {
 		deletingId = null;
-		if (await graph.mutate(() => topicsApi.remove(topicId))) notify(`Deleted topic “${name}”`);
+		if (await graph.mutate(() => topicsApi.remove(topicId))) notify(m.topics_deleted({ name }));
 	}
 </script>
 
 <section class="settings-section">
-	<h2>Topics & tags</h2>
+	<h2>{m.settings_topics()}</h2>
 	<p class="explain">
-		Free-form tags for filtering and grouping. They never block anything - that's what connections
-		are for.
+		{m.topics_explain()}
 	</p>
 
 	<form class="create" onsubmit={create}>
 		<input
 			class="field"
-			placeholder="New topic name…"
-			aria-label="New topic name"
+			placeholder={m.topics_new_name_placeholder()}
+			aria-label={m.topics_new_label()}
 			bind:value={newName}
 		/>
 		<AccentPicker value={newColor} onchange={(color) => (newColor = color)} />
-		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}>Add</Button>
+		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}
+			>{m.action_add()}</Button
+		>
 	</form>
 
 	<ul class="topics">
@@ -71,7 +73,7 @@
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						class="field rename"
-						aria-label="Rename {topic.name}"
+						aria-label={m.topics_rename({ name: topic.name })}
 						autofocus
 						bind:value={renameDraft}
 						onblur={() => rename(topic.id)}
@@ -83,7 +85,7 @@
 				{:else}
 					<span class="name">{topic.name}</span>
 				{/if}
-				<span class="count">{nodeCounts.get(topic.id)} nodes</span>
+				<span class="count">{m.node_count({ count: nodeCounts.get(topic.id) ?? 0 })}</span>
 				<div class="colors">
 					<AccentPicker
 						value={topic.color}
@@ -92,9 +94,9 @@
 					/>
 				</div>
 				{#if deletingId === topic.id}
-					<Button variant="quiet" onclick={() => (deletingId = null)}>Keep</Button>
+					<Button variant="quiet" onclick={() => (deletingId = null)}>{m.action_keep()}</Button>
 					<Button variant="primary" onclick={() => remove(topic.id, topic.name)} icon={Trash2}
-						>Delete</Button
+						>{m.action_delete()}</Button
 					>
 				{:else}
 					<Button
@@ -103,15 +105,15 @@
 							renamingId = topic.id;
 							renameDraft = topic.name;
 						}}
-						icon={Pencil}>Rename</Button
+						icon={Pencil}>{m.topics_rename_action()}</Button
 					>
 					<Button variant="quiet" onclick={() => (deletingId = topic.id)} icon={Trash2}
-						>Delete</Button
+						>{m.action_delete()}</Button
 					>
 				{/if}
 			</li>
 		{:else}
-			<li class="empty">No topics yet.</li>
+			<li class="empty">{m.topics_empty()}</li>
 		{/each}
 	</ul>
 </section>

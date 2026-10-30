@@ -4,6 +4,7 @@
 </script>
 
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import { accentColor } from '$lib/graph/display';
@@ -43,15 +44,15 @@
 
 <aside class="unplaced" class:expanded={prefs.unplacedPanelOpen}>
 	<button type="button" class="tab" aria-expanded={prefs.unplacedPanelOpen} onclick={toggle}>
-		Unplaced · {nodes.length}
+		{m.unplaced_tab({ count: nodes.length })}
 	</button>
 	{#if prefs.unplacedPanelOpen}
 		<div class="body">
 			<div class="head">
-				<span class="label">Unplaced</span>
-				<span class="hint">drag onto the canvas</span>
+				<span class="label">{m.unplaced()}</span>
+				<span class="hint">{m.unplaced_hint()}</span>
 			</div>
-			<input class="field" type="search" placeholder="Find a node…" bind:value={query} />
+			<input class="field" type="search" placeholder={m.unplaced_find()} bind:value={query} />
 			<ul class="list">
 				{#each listed as node (node.id)}
 					{@const path = graph.nodeById.get(parentOf.get(node.id) ?? '')}
@@ -68,7 +69,7 @@
 								><KindMark kind={node.kind} /></span
 							>
 							<span class="title">{node.title}</span>
-							{#if path}<span class="in">in {path.title}</span>{/if}
+							{#if path}<span class="in">{m.unplaced_in_path({ path: path.title })}</span>{/if}
 						</button>
 						<Badge
 							status={node.status}
@@ -77,10 +78,12 @@
 							archived={node.archived}
 							staleSince={node.stale_since}
 						/>
-						<button type="button" class="place" onclick={() => onplace(node.id)}>Place</button>
+						<button type="button" class="place" onclick={() => onplace(node.id)}
+							>{m.unplaced_place()}</button
+						>
 					</li>
 				{:else}
-					<li class="none">{nodes.length ? 'No matches.' : 'Everything is on the canvas.'}</li>
+					<li class="none">{nodes.length ? m.unplaced_no_matches() : m.unplaced_all_placed()}</li>
 				{/each}
 			</ul>
 		</div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { graph } from '$lib/stores/graph.svelte';
 
 	/** Toggle buttons for every topic; `selected` holds the chosen topic ids. */
@@ -13,7 +14,7 @@
 
 {#if graph.topics.length}
 	<div class="group">
-		<span class="label">Topics</span>
+		<span class="label">{m.field_topics()}</span>
 		<div class="topics">
 			{#each graph.topics as topic (topic.id)}
 				<button

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { displayToIsoDate, isoDateToDisplay } from '$lib/graph/display';
 
 	/**
@@ -54,7 +55,7 @@
 	class:invalid
 	type="text"
 	inputmode="numeric"
-	placeholder="dd.mm.yyyy"
+	placeholder={m.date_placeholder()}
 	maxlength="10"
 	autocomplete="off"
 	aria-label={label}

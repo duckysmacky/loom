@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { boardApi } from '$lib/api/endpoints';
 	import { accentColor, shortDate } from '$lib/graph/display';
 	import {
@@ -13,6 +14,7 @@
 		weekStarts,
 		xOf
 	} from '$lib/graph/timeline';
+	import { focusLabel, kindLabel, statusLabel } from '$lib/i18n';
 	import { openNode } from '$lib/navigation';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -169,12 +171,23 @@
 
 	function barCaption(node: NodeResponse): string {
 		const from = shortDate(node.started_at!);
-		return node.completed_at ? `${from} – ${shortDate(node.completed_at)}` : `since ${from}`;
+		return node.completed_at
+			? m.timeline_range({ from, to: shortDate(node.completed_at) })
+			: m.timeline_since({ from });
 	}
 
 	function periodCaption(period: ActivePeriodResponse): string {
 		const from = shortDate(period.started_at);
-		return period.ended_at ? `${from} – ${shortDate(period.ended_at)}` : `since ${from}`;
+		return period.ended_at
+			? m.timeline_range({ from, to: shortDate(period.ended_at) })
+			: m.timeline_since({ from });
+	}
+
+	/** A bar's text: done / blocked on the latest bar, else the focus it had (an idea's kind). */
+	function barLabel(node: NodeResponse, tone: string, focus: NodeFocus | null): string {
+		if (tone === 'done') return statusLabel('done');
+		if (tone === 'blocked') return m.status_blocked();
+		return focus ? focusLabel(focus) : kindLabel(node.kind);
 	}
 
 	const dayLabel = (time: number) => new Date(time).getDate();
@@ -182,16 +195,16 @@
 
 <div class="page">
 	<div class="toolbar">
-		<button type="button" aria-label="Zoom out" onclick={() => zoomTo(pxPerDay / ZOOM_STEP)}
+		<button type="button" aria-label={m.zoom_out()} onclick={() => zoomTo(pxPerDay / ZOOM_STEP)}
 			>−</button
 		>
-		<span class="zoom">{Math.round(pxPerDay * 7)} px / week</span>
-		<button type="button" aria-label="Zoom in" onclick={() => zoomTo(pxPerDay * ZOOM_STEP)}
+		<span class="zoom">{m.timeline_zoom({ px: Math.round(pxPerDay * 7) })}</span>
+		<button type="button" aria-label={m.zoom_in()} onclick={() => zoomTo(pxPerDay * ZOOM_STEP)}
 			>+</button
 		>
-		<button type="button" onclick={() => scrollToToday()}>Today</button>
-		<button type="button" onclick={fitAll}>Fit</button>
-		<span class="hint">drag to pan · Ctrl + scroll to zoom</span>
+		<button type="button" onclick={() => scrollToToday()}>{m.timeline_today()}</button>
+		<button type="button" onclick={fitAll}>{m.action_fit()}</button>
+		<span class="hint">{m.timeline_hint()}</span>
 	</div>
 
 	<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -213,7 +226,7 @@
 	>
 		<div class="sheet" style:width="{NAME_COLUMN + axisWidth}px">
 			<div class="row head">
-				<div class="name corner label">Node</div>
+				<div class="name corner label">{m.timeline_node()}</div>
 				<div class="axis" style:width="{axisWidth}px">
 					{#each weeks as week, index (week)}
 						{#if index % labelEvery === 0}
@@ -259,50 +272,48 @@
 								class="bar {tone}"
 								style:left="{span.left}px"
 								style:width="{span.width}px"
-								title="{node.title} · {node.status ?? node.kind} · {span.focus ??
-									node.kind} · {caption}"
+								title="{node.title} · {node.status
+									? statusLabel(node.status)
+									: kindLabel(node.kind)} · {span.focus
+									? focusLabel(span.focus)
+									: kindLabel(node.kind)} · {caption}"
 								onclick={() => openNode(node.id)}
 							>
-								<span
-									>{tone === 'blocked' || tone === 'done' ? tone : (span.focus ?? node.kind)}</span
-								>
+								<span>{barLabel(node, tone, span.focus)}</span>
 							</button>
 						{/each}
 						{#each pokeXs as x, index (index)}
-							<span class="poke" style:left="{x}px" title="Poked"></span>
+							<span class="poke" style:left="{x}px" title={m.timeline_poked()}></span>
 						{/each}
 					</div>
 				</div>
 			{:else}
 				<div class="empty">
-					Nothing started yet{visible.length ? ' among the filtered nodes' : ''}. A bar appears once
-					a node goes active.
+					{visible.length ? m.timeline_empty_filtered() : m.timeline_empty()}
 				</div>
 			{/each}
 
-			<div class="today" style:left="{NAME_COLUMN + todayX}px" title="Today"></div>
+			<div class="today" style:left="{NAME_COLUMN + todayX}px" title={m.timeline_today()}></div>
 		</div>
 	</div>
 
 	<div class="legend">
-		<span><span class="swatch primary"></span>primary focus</span>
-		<span><span class="swatch secondary"></span>secondary focus</span>
-		<span><span class="swatch background"></span>background focus / idea</span>
-		<span><span class="swatch blocked"></span>blocked — waiting on a requirement</span>
-		<span><span class="swatch done"></span>done</span>
-		<span><span class="tick"></span>poke</span>
-		<span><span class="today-mark"></span>today</span>
-		<span class="note"
-			>actual history: started → completed, or today - active periods, when tracked</span
-		>
+		<span><span class="swatch primary"></span>{m.legend_primary()}</span>
+		<span><span class="swatch secondary"></span>{m.legend_secondary()}</span>
+		<span><span class="swatch background"></span>{m.legend_background()}</span>
+		<span><span class="swatch blocked"></span>{m.legend_blocked()}</span>
+		<span><span class="swatch done"></span>{m.legend_done()}</span>
+		<span><span class="tick"></span>{m.legend_poke()}</span>
+		<span><span class="today-mark"></span>{m.legend_today()}</span>
+		<span class="note">{m.legend_history()}</span>
 	</div>
 
 	{#if notStarted.length}
 		<section class="not-started">
 			<div class="section-head">
 				<span class="bar-mark"></span>
-				<h2 class="title-head">Not started</h2>
-				<span class="meta-head">{notStarted.length} without a start date</span>
+				<h2 class="title-head">{m.timeline_not_started()}</h2>
+				<span class="meta-head">{m.timeline_no_start({ count: notStarted.length })}</span>
 			</div>
 			<div class="chips">
 				{#each notStarted as node (node.id)}

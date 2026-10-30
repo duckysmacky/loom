@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import { type NodeProps } from '@xyflow/svelte';
 	import SideHandles from './SideHandles.svelte';
@@ -15,6 +16,7 @@
 		progressText,
 		tierBorderWidth
 	} from '$lib/graph/display';
+	import { focusLabel } from '$lib/i18n';
 	import { CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 
@@ -60,7 +62,9 @@
 	</div>
 	<div class="title">{node.title}</div>
 	{#if kind === 'path'}
-		<div class="inside-count">{insideCount ? `${insideCount} inside` : 'empty'}</div>
+		<div class="inside-count">
+			{insideCount ? m.path_inside_count({ count: insideCount }) : m.path_empty()}
+		</div>
 	{/if}
 	{#if progress}
 		<div class="progress">
@@ -74,7 +78,7 @@
 			? 'var(--ink-2)'
 			: TIER_COLOR[node.focus ?? 'background']}
 	>
-		{node.focus}
+		{node.focus && focusLabel(node.focus)}
 	</div>
 </div>
 <SideHandles />

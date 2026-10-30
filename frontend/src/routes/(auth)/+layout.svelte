@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import { nextPath } from '$lib/navigation';
@@ -20,7 +21,7 @@
 		<div class="brand">
 			<span class="mark"></span>
 			<span class="wordmark">LOOM</span>
-			<span class="tagline">projects · studies · ideas, as one graph</span>
+			<span class="tagline">{m.auth_tagline()}</span>
 		</div>
 		{@render children()}
 	</div>

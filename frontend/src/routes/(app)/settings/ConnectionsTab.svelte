@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Copy, Plus, Unplug } from '@lucide/svelte';
 	import './settings.css';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -37,9 +38,9 @@
 	async function copy(text: string) {
 		try {
 			await navigator.clipboard.writeText(text);
-			notify('Copied');
+			notify(m.conn_copied());
 		} catch {
-			notify('Could not copy - select it and copy by hand', 'error');
+			notify(m.conn_copy_failed(), 'error');
 		}
 	}
 
@@ -57,13 +58,16 @@
 		}
 	}
 
-	const scopeLabel: Record<TokenScope, string> = { read: 'read-only', read_write: 'read & write' };
+	const scopeLabel: Record<TokenScope, () => string> = {
+		read: m.conn_scope_read,
+		read_write: m.conn_scope_read_write
+	};
 
 	function expiryText(token: AccessTokenResponse): string {
-		if (!token.expires_at) return 'never expires';
+		if (!token.expires_at) return m.conn_never_expires();
 		return new Date(token.expires_at) <= new Date()
-			? 'expired'
-			: `expires ${shortDate(token.expires_at)}`;
+			? m.conn_expired()
+			: m.conn_expires({ date: shortDate(token.expires_at) });
 	}
 
 	async function disconnect(client: ConnectedClientResponse) {
@@ -71,7 +75,7 @@
 		try {
 			await oauthApi.revokeClient(client.client_id);
 			clients = clients.filter((candidate) => candidate.client_id !== client.client_id);
-			notify(`Disconnected “${client.client_name}”`);
+			notify(m.conn_disconnected({ name: client.client_name }));
 		} catch (error) {
 			notifyError(error);
 		}
@@ -82,7 +86,7 @@
 		try {
 			await tokensApi.remove(token.id);
 			tokens = tokens.filter((candidate) => candidate.id !== token.id);
-			notify(`Revoked “${token.name}”`);
+			notify(m.conn_revoked({ name: token.name }));
 		} catch (error) {
 			notifyError(error);
 		}
@@ -90,103 +94,106 @@
 </script>
 
 <section class="settings-section">
-	<h2>MCP server</h2>
+	<h2>{m.conn_mcp_server()}</h2>
 	<p class="explain">
-		Lets AI agents (Claude and other MCP clients) read and edit your graph. Anything connected has
-		full access to your nodes.
+		{m.conn_lets_ai_agents_claude()}
 	</p>
 	{#if info === null}
-		<p class="muted">Loading…</p>
+		<p class="muted">{m.loading()}</p>
 	{:else if info.enabled && info.url}
 		<div class="settings-row">
 			<span>
-				<span class="row-label">Server URL</span>
+				<span class="row-label">{m.conn_server_url()}</span>
 				<span class="row-help">
-					Add it as a custom connector in Claude, or to any MCP client. Connectors sign in through
-					Loom; clients that can send headers can use a token below instead.
+					{m.conn_add_as_custom_connector()}
 				</span>
 			</span>
 			<span class="url-row">
 				<code class="url">{info.url}</code>
-				<Button variant="quiet" onclick={() => copy(info!.url!)} icon={Copy}>Copy</Button>
+				<Button variant="quiet" onclick={() => copy(info!.url!)} icon={Copy}>{m.conn_copy()}</Button
+				>
 			</span>
 		</div>
 	{:else}
 		<p class="muted">
-			The MCP server is switched off on this instance. Set <code>MCP_ENABLED=true</code> and
-			<code>PUBLIC_URL</code> in the server's <code>.env</code> to turn it on - see the README.
+			{m.conn_mcp_server_switched_off()} <code>MCP_ENABLED=true</code>
+			{m.conn_and()}
+			<code>PUBLIC_URL</code>
+			{m.conn_in_server()} <code>.env</code>
+			{m.conn_turn_see_readme()}
 		</p>
 	{/if}
 </section>
 
 {#if info?.enabled}
 	<section class="settings-section">
-		<h2>Connected apps</h2>
-		<p class="explain">Apps you approved through Loom's sign-in page, like Claude connectors.</p>
+		<h2>{m.conn_connected_apps()}</h2>
+		<p class="explain">{m.conn_apps_you_approved_through()}</p>
 		<ul class="tokens">
 			{#each clients as client (client.client_id)}
 				<li class="token">
 					<span class="name">{client.client_name}</span>
 					<span class="meta">
-						connected {shortDate(client.connected_at)} · {client.last_used_at
-							? `used ${relativeDays(client.last_used_at)}`
-							: 'never used'}
+						{m.conn_connected_on({ date: shortDate(client.connected_at) })} · {client.last_used_at
+							? m.conn_used({ when: relativeDays(client.last_used_at) })
+							: m.conn_never_used()}
 					</span>
 					{#if revokingId === client.client_id}
-						<Button variant="quiet" onclick={() => (revokingId = null)}>Keep</Button>
+						<Button variant="quiet" onclick={() => (revokingId = null)}>{m.action_keep()}</Button>
 						<Button variant="primary" onclick={() => disconnect(client)} icon={Unplug}
-							>Disconnect</Button
+							>{m.conn_disconnect()}</Button
 						>
 					{:else}
 						<Button variant="quiet" onclick={() => (revokingId = client.client_id)} icon={Unplug}
-							>Disconnect</Button
+							>{m.conn_disconnect()}</Button
 						>
 					{/if}
 				</li>
 			{:else}
-				<li class="empty">No connected apps.</li>
+				<li class="empty">{m.conn_no_connected_apps()}</li>
 			{/each}
 		</ul>
 	</section>
 {/if}
 
 <section class="settings-section">
-	<h2>Access tokens</h2>
+	<h2>{m.conn_access_tokens()}</h2>
 	<p class="explain">
-		For scripts, other websites and agents that send an <code>Authorization: Bearer</code> header -
-		to the REST API at <code>{apiUrl}</code>{#if info?.enabled}
-			or the MCP server{/if}. Read-only tokens can only read. A token is shown once - store it
-		somewhere safe.
+		{m.conn_scripts_other_websites_agents()} <code>Authorization: Bearer</code>
+		{m.conn_header_rest_api_at()} <code>{apiUrl}</code>{#if info?.enabled}
+			{m.conn_or_mcp()}{/if}. {m.conn_tokens_explain_end()}
 	</p>
 
 	<form class="create" onsubmit={create}>
 		<input
 			class="field"
-			placeholder="Token name, e.g. “laptop Claude Code”"
-			aria-label="New token name"
+			placeholder={m.conn_token_name_e_g()}
+			aria-label={m.conn_new_token_name()}
 			maxlength="100"
 			bind:value={newName}
 		/>
-		<select class="field scope" aria-label="Token access" bind:value={newScope}>
-			<option value="read">Read-only</option>
-			<option value="read_write">Read & write</option>
+		<select class="field scope" aria-label={m.conn_token_access()} bind:value={newScope}>
+			<option value="read">{m.conn_read_only()}</option>
+			<option value="read_write">{m.conn_read_write()}</option>
 		</select>
-		<select class="field scope" aria-label="Token expiry" bind:value={newExpiry}>
-			<option value={30}>Expires in 30 days</option>
-			<option value={90}>Expires in 90 days</option>
-			<option value={365}>Expires in 1 year</option>
-			<option value={null}>Never expires</option>
+		<select class="field scope" aria-label={m.conn_token_expiry()} bind:value={newExpiry}>
+			<option value={30}>{m.conn_expires_30_days()}</option>
+			<option value={90}>{m.conn_expires_90_days()}</option>
+			<option value={365}>{m.conn_expires_1_year()}</option>
+			<option value={null}>{m.conn_expiry_never()}</option>
 		</select>
-		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}>Create</Button>
+		<Button type="submit" variant="primary" disabled={!newName.trim()} icon={Plus}
+			>{m.action_create()}</Button
+		>
 	</form>
 
 	{#if revealed}
 		<div class="revealed" role="status">
-			<span class="row-help">Copy this token now - it won't be shown again.</span>
+			<span class="row-help">{m.conn_copy_this_token_now()}</span>
 			<span class="url-row">
 				<code class="url">{revealed}</code>
-				<Button variant="quiet" onclick={() => copy(revealed!)} icon={Copy}>Copy</Button>
-				<Button variant="quiet" onclick={() => (revealed = null)}>Done</Button>
+				<Button variant="quiet" onclick={() => copy(revealed!)} icon={Copy}>{m.conn_copy()}</Button>
+				<Button variant="quiet" onclick={() => (revealed = null)}>{m.action_done()}</Button>
 			</span>
 		</div>
 	{/if}
@@ -196,21 +203,25 @@
 			<li class="token">
 				<span class="name">{token.name}</span>
 				<span class="meta">
-					{scopeLabel[token.scope]} · {expiryText(token)} · created {shortDate(token.created_at)} · {token.last_used_at
-						? `used ${relativeDays(token.last_used_at)}`
-						: 'never used'}
+					{scopeLabel[token.scope]()} · {expiryText(token)} · {m.conn_created_on({
+						date: shortDate(token.created_at)
+					})} · {token.last_used_at
+						? m.conn_used({ when: relativeDays(token.last_used_at) })
+						: m.conn_never_used()}
 				</span>
 				{#if revokingId === token.id}
-					<Button variant="quiet" onclick={() => (revokingId = null)}>Keep</Button>
-					<Button variant="primary" onclick={() => revoke(token)} icon={Unplug}>Revoke</Button>
+					<Button variant="quiet" onclick={() => (revokingId = null)}>{m.action_keep()}</Button>
+					<Button variant="primary" onclick={() => revoke(token)} icon={Unplug}
+						>{m.conn_revoke()}</Button
+					>
 				{:else}
 					<Button variant="quiet" onclick={() => (revokingId = token.id)} icon={Unplug}
-						>Revoke</Button
+						>{m.conn_revoke()}</Button
 					>
 				{/if}
 			</li>
 		{:else}
-			<li class="empty">No tokens yet.</li>
+			<li class="empty">{m.conn_no_tokens_yet()}</li>
 		{/each}
 	</ul>
 </section>

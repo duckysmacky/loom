@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { slide } from 'svelte/transition';
 	import ProgressBar from '$lib/components/ui/ProgressBar.svelte';
 	import { ms } from '$lib/motion';
@@ -46,9 +47,9 @@
 
 <section>
 	<div class="head">
-		<span class="label">Checklist</span>
+		<span class="label">{m.checklist_title()}</span>
 		{#if items.length}
-			<span class="count">{doneCount} of {items.length} tasks</span>
+			<span class="count">{m.checklist_count({ done: doneCount, total: items.length })}</span>
 		{/if}
 	</div>
 
@@ -62,14 +63,16 @@
 				<input
 					type="checkbox"
 					checked={item.done}
-					aria-label="Mark “{item.title}” {item.done ? 'not done' : 'done'}"
+					aria-label={item.done
+						? m.checklist_mark_not_done({ title: item.title })
+						: m.checklist_mark_done({ title: item.title })}
 					onchange={() => graph.mutate(() => checklistApi.update(item.id, { done: !item.done }))}
 				/>
 				{#if editingId === item.id}
 					<!-- svelte-ignore a11y_autofocus -->
 					<input
 						class="field edit"
-						aria-label="Task title"
+						aria-label={m.checklist_task_title()}
 						autofocus
 						bind:value={editDraft}
 						onblur={() => rename(item)}
@@ -94,7 +97,7 @@
 				<button
 					type="button"
 					class="remove"
-					aria-label="Delete “{item.title}”"
+					aria-label={m.checklist_delete({ title: item.title })}
 					onclick={() => graph.mutate(() => checklistApi.remove(item.id))}>✕</button
 				>
 			</li>
@@ -102,7 +105,12 @@
 	</ul>
 
 	<form class="add" onsubmit={add}>
-		<input class="field" placeholder="Add a task…" aria-label="New task" bind:value={newTitle} />
+		<input
+			class="field"
+			placeholder={m.checklist_add()}
+			aria-label={m.checklist_new()}
+			bind:value={newTitle}
+		/>
 	</form>
 </section>
 

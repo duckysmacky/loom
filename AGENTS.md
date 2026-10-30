@@ -8,6 +8,7 @@ connected graph. One graph per account; no collaboration.
 - **Backend:** Rust, Axum, `sqlx` (compile-time-checked, no ORM), Postgres.
 - **Frontend:** SvelteKit + TypeScript, `@xyflow/svelte` canvas, `adapter-static` behind its own nginx container.
 - **Types:** `ts-rs` generates frontend TS types from Rust request/response structs.
+- **i18n:** Paraglide JS 2 compiles `frontend/messages/<locale>.json` into typed `m.*` functions (`$lib/paraglide`, gitignored). Locale: per-browser override in localStorage (`loom.locale`, Settings > Appearance, shown once there are 2+ locales), else browser language, else English. Server error strings stay English.
 - **Auth:** Argon2id password, short-lived JWT, rotated refresh token in httpOnly `Secure` cookie, rate-limited auth endpoints.
 - **MCP:** optional (`MCP_ENABLED` + `PUBLIC_URL`) stateless Streamable HTTP server at `/mcp` via `rmcp`. Auth by opaque `access_tokens` (personal `loom_...` or OAuth 2.1 access tokens) - never web-session JWTs.
 - **API access tokens:** personal `loom_...` tokens (Settings > Connections; scope `read`/`read_write`, optional expiry) also work as bearer on the *data* routes of `/api` (nodes, topics, edges, checklist, periods, canvas, board, dashboard) - never on account routes (`/auth`, `/tokens`, `/oauth`). OAuth tokens work on `/mcp` only. `CORS_ORIGINS` (exact origins, no `*`) opts `/api` in to cross-origin browser calls; off when empty.
@@ -22,6 +23,7 @@ connected graph. One graph per account; no collaboration.
 - `backend/src/mcp/` - bearer middleware + `loom_*` tools. Tools call REST handlers as plain fns, never `repo/`.
 - `backend/migrations/` - one file per change, auto-run via `sqlx::migrate!`.
 - `frontend/src/lib/{api,graph,stores,components,types}/` - HTTP client (single-flight refresh), board logic (each with a spec), stores, components (`detail/`, `ui/`), generated types (gitignored, never hand-edited).
+- `frontend/messages/`, `frontend/project.inlang/settings.json` - UI strings per locale and the locale list; `frontend/src/lib/i18n.ts` - enum labels (`kindLabel`/`statusLabel`/`focusLabel`) and `errorMessage`.
 - `claude-plugin/` - MCP config + `loom` skill. Keep skill in sync when tools or domain rules change.
 - `.github/workflows/` - `test.yml` (PRs, called by release), `release.yml` (GHCR on `master` pushes and `v*` tags; drafts release on tags).
 - `.context/` - gitignored agent/working notes (`API.md` REST reference, `PROJECT_OVERVIEW.md`, `PROMPT.md`, `IDEAS.md`, `plans/`). Local only, never committed.
@@ -51,6 +53,7 @@ connected graph. One graph per account; no collaboration.
 - After changing a query: `cargo sqlx prepare` in `backend/`, commit `.sqlx/` (CI builds offline).
 - Regenerate types with `npm run types` in `frontend/`. Missing type -> `#[derive(TS)]` on the Rust struct, never redeclare.
 - Frontend graph store refetches the whole graph after any mutation.
+- UI text goes through `m.*` (`$lib/paraglide/messages`), never string literals; enum values through `$lib/i18n.ts` labels, dates through `Intl` (`shortDate`/`relativeDays`). New locale = `messages/<locale>.json` + add it to `locales` in `project.inlang/settings.json`; missing keys fall back to English.
 
 ## Code conventions
 
