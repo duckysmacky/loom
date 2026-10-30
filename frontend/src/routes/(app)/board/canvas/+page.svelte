@@ -54,6 +54,7 @@
 
 	const nodeTypes = { loom: CanvasNode, loomPath: CanvasPath, loomNote: CanvasNote };
 	const edgeTypes = { loom: CanvasEdge, loomArrow: CanvasArrow };
+	const GRID_GAP = 26;
 
 	let nodes = $state.raw<LoomFlowNode[]>([]);
 	let edges = $state.raw<LoomFlowEdge[]>([]);
@@ -580,7 +581,9 @@
 			fitView
 			minZoom={0.01}
 			maxZoom={2}
-			snapGrid={prefs.canvasSnapToGrid ? [13, 13] : undefined}
+			snapGrid={prefs.canvasSnapToGrid
+				? [GRID_GAP * prefs.canvasSnapStep, GRID_GAP * prefs.canvasSnapStep]
+				: undefined}
 			deleteKey={['Delete', 'Backspace']}
 			proOptions={{ hideAttribution: true }}
 			onnodeclick={({ node, event }) => {
@@ -626,7 +629,7 @@
 				);
 			}}
 		>
-			<Background patternColor="var(--grid-dot)" bgColor="var(--bg)" gap={26} size={1.4} />
+			<Background patternColor="var(--grid-dot)" bgColor="var(--bg)" gap={GRID_GAP} size={1.4} />
 			<CanvasControls {zoom} onaddnote={addNote} />
 			<SelectionBar {selected} />
 		</SvelteFlow>

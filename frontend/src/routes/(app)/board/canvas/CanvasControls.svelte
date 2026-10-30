@@ -2,7 +2,7 @@
 	import { Panel, useNodesInitialized, useSvelteFlow } from '@xyflow/svelte';
 	import { page } from '$app/state';
 	import { CANVAS_NODE_HEIGHT, CANVAS_NODE_WIDTH } from '$lib/graph/layout';
-	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
+	import { prefs, savePrefs, type Prefs } from '$lib/stores/prefs.svelte';
 
 	let { zoom, onaddnote }: { zoom: number; onaddnote: () => void } = $props();
 
@@ -78,6 +78,24 @@
 				savePrefs();
 			}}>Snap to grid</button
 		>
+		<label class="snap-step">
+			Step
+			<select
+				aria-label="Grid snap step"
+				value={prefs.canvasSnapStep}
+				disabled={!prefs.canvasSnapToGrid}
+				onchange={(event) => {
+					prefs.canvasSnapStep = Number(event.currentTarget.value) as Prefs['canvasSnapStep'];
+					savePrefs();
+				}}
+			>
+				<option value={2}>2 cells</option>
+				<option value={1}>1 cell</option>
+				<option value={0.5}>1/2 cell</option>
+				<option value={0.25}>1/4 cell</option>
+				<option value={0.125}>1/8 cell</option>
+			</select>
+		</label>
 		<span class="hint">drag to pan · shift-drag to select · scroll to zoom · handle to connect</span
 		>
 	</div>
@@ -128,6 +146,22 @@
 		background: var(--accent);
 		color: var(--surface);
 		border-color: var(--accent);
+	}
+
+	.snap-step {
+		display: inline-flex;
+		align-items: center;
+		gap: 4px;
+		font: 700 11px/1 var(--font-mono);
+		color: var(--ink-2);
+	}
+
+	.snap-step select {
+		height: 24px;
+		border: var(--border-width-hair) solid var(--line);
+		background: var(--surface);
+		color: var(--ink);
+		font: inherit;
 	}
 
 	.add-note {
