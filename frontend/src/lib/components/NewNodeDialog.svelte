@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Link, Plus } from '@lucide/svelte';
 	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import AccentPicker from '$lib/components/ui/AccentPicker.svelte';
@@ -30,10 +31,10 @@
 	// Outgoing only, read from the new node's side; incoming ones are added
 	// later from the detail panel.
 	const RELATIONS: { kind: EdgeKind; label: string }[] = [
-		{ kind: 'requires', label: 'Requires' },
-		{ kind: 'precedes', label: 'Comes before' },
-		{ kind: 'part_of', label: 'Inside path' },
-		{ kind: 'related', label: 'Related to' }
+		{ kind: 'requires', label: m.relation_requires() },
+		{ kind: 'precedes', label: m.relation_precedes() },
+		{ kind: 'part_of', label: m.relation_part_of() },
+		{ kind: 'related', label: m.relation_related() }
 	];
 
 	let kind = $state<NodeKind>('project');
@@ -139,8 +140,8 @@
 		saving = false;
 		if (created) {
 			overlays.newOpen = false;
-			notify(`Created “${created.title}”`, 'info', {
-				label: 'Open',
+			notify(m.created({ title: created.title }), 'info', {
+				label: m.action_open(),
 				run: () => openNode(created.id)
 			});
 		}
@@ -150,31 +151,37 @@
 <Modal
 	open={overlays.newOpen}
 	onclose={() => (overlays.newOpen = false)}
-	label="New node"
+	label={m.new_node()}
 	width={600}
 >
 	<form class="new" onsubmit={create}>
-		<div class="label">New node</div>
+		<div class="label">{m.new_node()}</div>
 		<!-- svelte-ignore a11y_autofocus -->
-		<input class="title" placeholder="Title" aria-label="Title" autofocus bind:value={title} />
+		<input
+			class="title"
+			placeholder={m.field_title()}
+			aria-label={m.field_title()}
+			autofocus
+			bind:value={title}
+		/>
 
 		<div class="row">
 			<div class="group">
-				<span class="label">Kind</span>
+				<span class="label">{m.field_kind()}</span>
 				<SegmentedControl
-					label="Kind"
+					label={m.field_kind()}
 					value={kind}
 					onchange={(value) => (kind = value)}
 					options={[
-						{ value: 'idea', label: 'Idea', icon: KIND_ICON.idea },
-						{ value: 'project', label: 'Project', icon: KIND_ICON.project },
-						{ value: 'study', label: 'Study', icon: KIND_ICON.study },
-						{ value: 'path', label: 'Path', icon: KIND_ICON.path }
+						{ value: 'idea', label: m.kind_idea(), icon: KIND_ICON.idea },
+						{ value: 'project', label: m.kind_project(), icon: KIND_ICON.project },
+						{ value: 'study', label: m.kind_study(), icon: KIND_ICON.study },
+						{ value: 'path', label: m.kind_path(), icon: KIND_ICON.path }
 					]}
 				/>
 			</div>
 			<div class="group">
-				<span class="label">Accent</span>
+				<span class="label">{m.field_accent()}</span>
 				<AccentPicker value={color} onchange={(value) => (color = value)} size="small" />
 			</div>
 		</div>
@@ -183,35 +190,35 @@
 			<div class="row">
 				{#if kind !== 'path'}
 					<div class="group">
-						<span class="label">Status</span>
+						<span class="label">{m.field_status()}</span>
 						<SegmentedControl
-							label="Status"
+							label={m.field_status()}
 							value={status}
 							onchange={(value) => (status = value)}
 							options={[
-								{ value: 'idea', label: 'Idea' },
-								{ value: 'queued', label: 'Queued' },
-								{ value: 'active', label: 'Active' }
+								{ value: 'idea', label: m.status_idea() },
+								{ value: 'queued', label: m.status_queued() },
+								{ value: 'active', label: m.status_active() }
 							]}
 						/>
 					</div>
 				{/if}
 				<div class="group">
-					<span class="label">Focus</span>
+					<span class="label">{m.field_focus()}</span>
 					<SegmentedControl
-						label="Focus"
+						label={m.field_focus()}
 						value={focus}
 						onchange={(value) => (focus = value)}
 						options={[
-							{ value: 'primary', label: 'Primary' },
-							{ value: 'secondary', label: 'Secondary' },
-							{ value: 'background', label: 'Background' }
+							{ value: 'primary', label: m.focus_primary() },
+							{ value: 'secondary', label: m.focus_secondary() },
+							{ value: 'background', label: m.focus_background() }
 						]}
 					/>
 				</div>
 				{#if kind !== 'path'}
 					<label class="group">
-						<span class="label">Started</span>
+						<span class="label">{m.field_started()}</span>
 						<DateInput bind:value={started} />
 					</label>
 				{/if}
@@ -219,34 +226,40 @@
 		{/if}
 
 		<label class="group wide">
-			<span class="label">Notes</span>
-			<textarea class="field" rows="3" placeholder="Markdown" bind:value={notes}></textarea>
+			<span class="label">{m.field_notes()}</span>
+			<textarea class="field" rows="3" placeholder={m.notes_placeholder()} bind:value={notes}
+			></textarea>
 		</label>
 
 		{#if kind === 'project'}
 			<label class="group wide">
-				<span class="label">Checklist · one item per line</span>
+				<span class="label">{m.new_checklist()}</span>
 				<textarea class="field" rows="3" bind:value={checklist}></textarea>
 			</label>
 		{:else if kind === 'study'}
 			<div class="row">
 				<label class="group">
-					<span class="label">Done</span>
+					<span class="label">{m.progress_done()}</span>
 					<input class="field number" type="number" min="0" bind:value={progressCurrent} />
 				</label>
 				<label class="group">
-					<span class="label">Total</span>
+					<span class="label">{m.progress_total()}</span>
 					<input class="field number" type="number" min="1" bind:value={progressTotal} />
 				</label>
 				<label class="group">
-					<span class="label">Unit</span>
-					<input class="field" placeholder="chapters" maxlength="40" bind:value={progressUnit} />
+					<span class="label">{m.progress_unit()}</span>
+					<input
+						class="field"
+						placeholder={m.progress_unit_placeholder()}
+						maxlength="40"
+						bind:value={progressUnit}
+					/>
 				</label>
 			</div>
 		{/if}
 
 		<div class="group wide">
-			<span class="label">Connections</span>
+			<span class="label">{m.field_connections()}</span>
 			{#if links.length}
 				<div class="chips">
 					{#each links as link, index (`${link.kind}-${link.targetId}`)}
@@ -261,27 +274,29 @@
 				</div>
 			{/if}
 			<div class="link-row">
-				<select class="field" aria-label="Relation" bind:value={linkKind}>
+				<select class="field" aria-label={m.field_relation()} bind:value={linkKind}>
 					{#each relations as relation (relation.kind)}
 						<option value={relation.kind}>{relation.label}</option>
 					{/each}
 				</select>
-				<select class="field target" aria-label="Node" bind:value={linkTarget}>
-					<option value="">Pick a node…</option>
+				<select class="field target" aria-label={m.field_node()} bind:value={linkTarget}>
+					<option value="">{m.pick_node()}</option>
 					{#each candidates as candidate (candidate.id)}
 						<option value={candidate.id}>{candidate.title}</option>
 					{/each}
 				</select>
-				<Button variant="quiet" onclick={addLink} disabled={!linkTarget} icon={Link}>Add</Button>
+				<Button variant="quiet" onclick={addLink} disabled={!linkTarget} icon={Link}
+					>{m.action_add()}</Button
+				>
 			</div>
 		</div>
 
 		<TopicToggles bind:selected={topicIds} />
 
 		<div class="actions">
-			<span class="hint">esc to close</span>
+			<span class="hint">{m.esc_to_close()}</span>
 			<Button type="submit" variant="primary" disabled={!title.trim() || saving} icon={Plus}
-				>Create</Button
+				>{m.action_create()}</Button
 			>
 		</div>
 	</form>

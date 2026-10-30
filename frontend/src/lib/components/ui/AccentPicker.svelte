@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { ACCENT_PALETTE } from '$lib/graph/display';
 	import { addRecentColor, prefs } from '$lib/stores/prefs.svelte';
 
@@ -40,7 +41,7 @@
 			class="swatch"
 			class:chosen={value === color}
 			style:background={color}
-			aria-label="Accent {color}"
+			aria-label={m.accent_swatch({ color })}
 			aria-pressed={value === color}
 			onclick={() => toggle(color)}
 		></button>
@@ -51,12 +52,12 @@
 			class="swatch"
 			class:chosen={value === color}
 			style:background={color}
-			aria-label="Recent accent {color}"
+			aria-label={m.accent_recent({ color })}
 			aria-pressed={value === color}
 			onclick={() => toggle(color)}
 		></button>
 	{/each}
-	<label class="swatch custom" aria-label="Pick a custom color">
+	<label class="swatch custom" aria-label={m.accent_custom()}>
 		<input type="color" value={value ?? '#888888'} onchange={pickCustom} />
 	</label>
 </div>

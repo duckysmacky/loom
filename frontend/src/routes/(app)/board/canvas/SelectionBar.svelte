@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Trash2, Undo2 } from '@lucide/svelte';
 	import { Panel } from '@xyflow/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -16,13 +17,13 @@
 
 	let confirming = $state(false);
 	const ids = $derived(selected.map((flowNode) => flowNode.id));
-	const count = $derived(ids.length === 1 ? '1 node' : `${ids.length} nodes`);
+	const count = $derived(m.node_count({ count: ids.length }));
 
 	async function unplace() {
 		const done = await graph.mutate(() =>
 			Promise.all(ids.map((id) => nodesApi.update(id, { canvas_x: null, canvas_y: null })))
 		);
-		if (done) notify(`Sent ${count} to Unplaced`);
+		if (done) notify(m.selection_sent_unplaced({ nodes: count }));
 	}
 
 	async function remove() {
@@ -34,33 +35,37 @@
 		});
 		if (!done) return;
 		if (doomed.includes(page.url.searchParams.get('node') ?? '')) closeNode();
-		notify(`Deleted ${doomed.length === 1 ? '1 node' : `${doomed.length} nodes`}`);
+		notify(m.selection_deleted({ nodes: m.node_count({ count: doomed.length }) }));
 	}
 </script>
 
 {#if selected.length}
 	<Panel position="top-center">
 		<div class="bar">
-			<span class="count">{count} selected</span>
+			<span class="count">{m.selection_count({ nodes: count })}</span>
 			<!-- With auto-place on, an unplaced node would be laid out again at once. -->
 			{#if !prefs.autoPlace}
-				<Button variant="quiet" onclick={unplace} icon={Undo2}>Unplace</Button>
+				<Button variant="quiet" onclick={unplace} icon={Undo2}>{m.selection_unplace()}</Button>
 			{/if}
-			<Button variant="quiet" onclick={() => (confirming = true)} icon={Trash2}>Delete</Button>
+			<Button variant="quiet" onclick={() => (confirming = true)} icon={Trash2}
+				>{m.action_delete()}</Button
+			>
 		</div>
 	</Panel>
 {/if}
 
-<Modal open={confirming} onclose={() => (confirming = false)} label="Delete nodes" width={440}>
+<Modal
+	open={confirming}
+	onclose={() => (confirming = false)}
+	label={m.selection_delete_title()}
+	width={440}
+>
 	<div class="confirm">
-		<div class="label">Delete {count}</div>
-		<p>
-			Deletes {ids.length === 1 ? 'it' : 'them'} for good, with {ids.length === 1 ? 'its' : 'their'}
-			connections, checklists and pokes. A deleted path lets go of what's inside it.
-		</p>
+		<div class="label">{m.selection_delete_heading({ nodes: count })}</div>
+		<p>{m.selection_delete_body({ count: ids.length })}</p>
 		<div class="actions">
-			<Button variant="quiet" onclick={() => (confirming = false)}>Keep</Button>
-			<Button variant="primary" onclick={remove} icon={Trash2}>Delete for good</Button>
+			<Button variant="quiet" onclick={() => (confirming = false)}>{m.action_keep()}</Button>
+			<Button variant="primary" onclick={remove} icon={Trash2}>{m.action_delete_for_good()}</Button>
 		</div>
 	</div>
 </Modal>

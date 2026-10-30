@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { History, Pointer } from '@lucide/svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -24,9 +25,9 @@
 	const pokedAt = $derived(combineDateTime(date, time));
 	const error = $derived(
 		!date || pokedAt === null
-			? 'Enter a date and a 24h time like 14:30.'
+			? m.poke_at_invalid()
 			: new Date(pokedAt) > new Date()
-				? 'A poke can’t be in the future.'
+				? m.poke_at_future()
 				: ''
 	);
 
@@ -43,7 +44,9 @@
 		const poked = await graph.poke(node, pokedAt);
 		saving = false;
 		if (poked) {
-			notify(`Poked “${node.title}” on ${isoDateToDisplay(date)} ${time.trim()}`);
+			notify(
+				m.poke_at_done({ title: node.title, date: isoDateToDisplay(date), time: time.trim() })
+			);
 			open = false;
 		}
 	}
@@ -55,14 +58,14 @@
 	<button
 		type="button"
 		class="square"
-		title="Log a poke at a past date and time"
-		aria-label="Log a poke at a past date and time"
+		title={m.poke_at_open()}
+		aria-label={m.poke_at_open()}
 		onclick={show}
 	>
 		<Icon icon={History} always />
 	</button>
 
-	<Modal {open} onclose={() => (open = false)} label="Log a past poke" width={380}>
+	<Modal {open} onclose={() => (open = false)} label={m.poke_at_title()} width={380}>
 		<form
 			class="dialog"
 			onsubmit={(event) => {
@@ -70,21 +73,21 @@
 				save();
 			}}
 		>
-			<div class="label">Log a past poke</div>
+			<div class="label">{m.poke_at_title()}</div>
 			<div class="title">{node.title}</div>
 
 			<div class="fields">
 				<label class="field-group">
-					<span class="label">Date</span>
-					<DateInput bind:value={date} max={today()} label="Date" />
+					<span class="label">{m.field_date()}</span>
+					<DateInput bind:value={date} max={today()} label={m.field_date()} />
 				</label>
 				<label class="field-group">
-					<span class="label">Time</span>
+					<span class="label">{m.field_time()}</span>
 					<input
 						class="field"
 						type="text"
 						inputmode="numeric"
-						placeholder="HH:MM"
+						placeholder={m.time_placeholder()}
 						maxlength="5"
 						autocomplete="off"
 						bind:value={time}
@@ -94,9 +97,9 @@
 			{#if error}<p class="error">{error}</p>{/if}
 
 			<div class="actions">
-				<Button variant="quiet" onclick={() => (open = false)}>Cancel</Button>
+				<Button variant="quiet" onclick={() => (open = false)}>{m.action_cancel()}</Button>
 				<Button variant="primary" type="submit" disabled={saving || !!error} icon={Pointer}
-					>Add poke</Button
+					>{m.poke_at_submit()}</Button
 				>
 			</div>
 		</form>

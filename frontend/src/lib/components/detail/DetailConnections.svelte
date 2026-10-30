@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Link } from '@lucide/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { edgesApi } from '$lib/api/endpoints';
@@ -13,13 +14,13 @@
 	// Edges are stored in one direction only; each relation reads it from
 	// this node's point of view.
 	const RELATIONS = {
-		requires: { label: 'Requires', kind: 'requires', outgoing: true },
-		required_by: { label: 'Required by', kind: 'requires', outgoing: false },
-		precedes: { label: 'Comes before', kind: 'precedes', outgoing: true },
-		preceded_by: { label: 'Comes after', kind: 'precedes', outgoing: false },
-		part_of: { label: 'Inside path', kind: 'part_of', outgoing: true },
-		contains: { label: 'Contains', kind: 'part_of', outgoing: false },
-		related: { label: 'Related', kind: 'related', outgoing: true }
+		requires: { label: m.relation_requires(), kind: 'requires', outgoing: true },
+		required_by: { label: m.edge_required_by(), kind: 'requires', outgoing: false },
+		precedes: { label: m.relation_precedes(), kind: 'precedes', outgoing: true },
+		preceded_by: { label: m.relation_preceded_by(), kind: 'precedes', outgoing: false },
+		part_of: { label: m.relation_part_of(), kind: 'part_of', outgoing: true },
+		contains: { label: m.relation_contains(), kind: 'part_of', outgoing: false },
+		related: { label: m.edge_related(), kind: 'related', outgoing: true }
 	} as const;
 	type Relation = keyof typeof RELATIONS;
 
@@ -89,7 +90,7 @@
 </script>
 
 <section>
-	<div class="label">Connections</div>
+	<div class="label">{m.field_connections()}</div>
 	<ul class="list">
 		{#each connections as connection (connection.edge.id)}
 			<li class="row">
@@ -102,41 +103,44 @@
 				</button>
 				{#if connection.relation === 'requires'}
 					<span class="state" class:unmet={connection.unmet}>
-						{connection.unmet ? 'unmet' : 'met ✓'}
+						{connection.unmet ? m.connections_unmet() : m.connections_met()}
 					</span>
 				{/if}
 				<button
 					type="button"
 					class="remove"
-					aria-label="Remove connection to {connection.other.title}"
+					aria-label={m.connections_remove({ title: connection.other.title })}
 					onclick={() => graph.mutate(() => edgesApi.remove(connection.edge.id))}>✕</button
 				>
 			</li>
 		{:else}
-			<li class="none">No connections</li>
+			<li class="none">{m.connections_none()}</li>
 		{/each}
 	</ul>
 
 	{#if adding}
 		<div class="add">
-			<select class="field" aria-label="Relation" bind:value={relation}>
+			<select class="field" aria-label={m.field_relation()} bind:value={relation}>
 				{#each addable as value (value)}
 					<option {value}>{RELATIONS[value].label}</option>
 				{/each}
 			</select>
-			<select class="field" aria-label="Node" bind:value={otherId}>
-				<option value="">Choose a node…</option>
+			<select class="field" aria-label={m.field_node()} bind:value={otherId}>
+				<option value="">{m.connections_choose()}</option>
 				{#each candidates as candidate (candidate.id)}
 					<option value={candidate.id}>{candidate.title}</option>
 				{/each}
 			</select>
 			<div class="add-actions">
-				<Button variant="quiet" onclick={() => (adding = false)}>Cancel</Button>
-				<Button variant="primary" onclick={add} disabled={!otherId} icon={Link}>Connect</Button>
+				<Button variant="quiet" onclick={() => (adding = false)}>{m.action_cancel()}</Button>
+				<Button variant="primary" onclick={add} disabled={!otherId} icon={Link}
+					>{m.connections_connect()}</Button
+				>
 			</div>
 		</div>
 	{:else}
-		<button type="button" class="link" onclick={() => (adding = true)}>+ Add connection</button>
+		<button type="button" class="link" onclick={() => (adding = true)}>{m.connections_add()}</button
+		>
 	{/if}
 </section>
 

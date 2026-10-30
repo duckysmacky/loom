@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { ScrollText } from '@lucide/svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import Modal from '$lib/components/ui/Modal.svelte';
@@ -43,22 +44,22 @@
 	<button
 		type="button"
 		class="square"
-		title="Poke history"
-		aria-label="Poke history"
+		title={m.poke_history()}
+		aria-label={m.poke_history()}
 		onclick={show}
 	>
 		<Icon icon={ScrollText} always />
 	</button>
 
-	<Modal {open} onclose={() => (open = false)} label="Poke history" width={420}>
+	<Modal {open} onclose={() => (open = false)} label={m.poke_history()} width={420}>
 		<div class="dialog">
-			<div class="label">Poke history</div>
+			<div class="label">{m.poke_history()}</div>
 			<div class="title">{node.title}</div>
 
 			{#if pokes === null}
-				<p class="empty">Loading…</p>
+				<p class="empty">{m.loading()}</p>
 			{:else if pokes.length === 0}
-				<p class="empty">No pokes yet.</p>
+				<p class="empty">{m.poke_history_empty()}</p>
 			{:else}
 				<ol class="pokes">
 					{#each pokes as poke (poke.id)}
@@ -66,7 +67,7 @@
 							<span class="when">{shortDate(poke.poked_at)} · {toTimeInput(poke.poked_at)}</span>
 							{#if poke.node_id !== node.id}
 								<button type="button" class="node" onclick={() => openPoked(poke.node_id)}>
-									{graph.nodeById.get(poke.node_id)?.title ?? 'Unknown node'}
+									{graph.nodeById.get(poke.node_id)?.title ?? m.poke_unknown_node()}
 								</button>
 							{/if}
 						</li>

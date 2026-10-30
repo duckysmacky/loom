@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { NodeResizer, type NodeProps } from '@xyflow/svelte';
 	import SideHandles from '$lib/components/canvas/SideHandles.svelte';
 	import { untrack } from 'svelte';
@@ -39,7 +40,7 @@
 
 	async function remove() {
 		const removed = await graph.mutate(() => canvasApi.removeNote(note.id));
-		if (removed !== undefined) notify('Note deleted');
+		if (removed !== undefined) notify(m.note_deleted());
 	}
 
 	// The textarea grows with its text so the flex box can centre it.
@@ -73,8 +74,8 @@
 	{#if editing}
 		<textarea
 			class="nodrag nowheel"
-			aria-label="Note text"
-			placeholder="Type a note…"
+			aria-label={m.note_text()}
+			placeholder={m.note_placeholder()}
 			rows="1"
 			bind:value={draft}
 			use:focus
@@ -92,8 +93,8 @@
 	<button
 		type="button"
 		class="remove nodrag"
-		aria-label="Delete note"
-		title="Delete note"
+		aria-label={m.note_delete()}
+		title={m.note_delete()}
 		onclick={remove}>×</button
 	>
 </div>

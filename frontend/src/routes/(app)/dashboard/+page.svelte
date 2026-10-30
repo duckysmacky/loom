@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Plus, Pointer } from '@lucide/svelte';
 	import NodeCard from '$lib/components/NodeCard.svelte';
 	import AnimatedNumber from '$lib/components/ui/AnimatedNumber.svelte';
@@ -17,12 +18,14 @@
 		shortDate
 	} from '$lib/graph/display';
 	import { parentPathOf } from '$lib/graph/paths';
+	import { focusLabel, statusLabel } from '$lib/i18n';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { isPathCollapsed, prefs, togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
+	import type { NodeStatus } from '$lib/types/NodeStatus';
 
 	let dashboard = $state<DashboardResponse | null>(null);
 
@@ -54,12 +57,13 @@
 	});
 
 	const staleSummary = $derived.by(() => {
-		const statuses = ['active'];
-		if (prefs.staleQueued !== 'never') statuses.push('queued');
-		if (prefs.stalePaused !== 'never') statuses.push('paused');
-		if (prefs.staleIdeaStatus !== 'never') statuses.push('idea-status');
-		const warning = prefs.staleWarnDays ? `, warned ${prefs.staleWarnDays} days ahead` : '';
-		return `${statuses.join(', ')} - stale after ${prefs.staleDays} days without a poke${warning}. Poke to keep it.`;
+		const lower = (status: NodeStatus) => statusLabel(status).toLocaleLowerCase();
+		const statuses = [lower('active')];
+		if (prefs.staleQueued !== 'never') statuses.push(lower('queued'));
+		if (prefs.stalePaused !== 'never') statuses.push(lower('paused'));
+		if (prefs.staleIdeaStatus !== 'never') statuses.push(m.dash_stale_idea_status());
+		const warning = prefs.staleWarnDays ? m.dash_stale_warning({ days: prefs.staleWarnDays }) : '';
+		return m.dash_stale_summary({ statuses: statuses.join(', '), days: prefs.staleDays, warning });
 	});
 	/** Whole days until a node goes stale (at least 0). */
 	const daysUntilStale = (node: NodeResponse) => {
@@ -82,11 +86,11 @@
 	const tiles = $derived(
 		dashboard
 			? [
-					{ label: 'Total nodes', value: dashboard.counts.total, tone: '' },
-					{ label: 'Active', value: dashboard.active.length, tone: '' },
-					{ label: 'Blocked', value: dashboard.counts.blocked, tone: 'warn' },
-					{ label: 'Ideas', value: dashboard.counts.ideas, tone: '' },
-					{ label: 'Done', value: dashboard.counts.by_status.done, tone: 'ok' }
+					{ label: m.dash_total_nodes(), value: dashboard.counts.total, tone: '' },
+					{ label: m.status_active(), value: dashboard.active.length, tone: '' },
+					{ label: m.status_blocked(), value: dashboard.counts.blocked, tone: 'warn' },
+					{ label: m.dash_ideas(), value: dashboard.counts.ideas, tone: '' },
+					{ label: m.status_done(), value: dashboard.counts.by_status.done, tone: 'ok' }
 				]
 			: []
 	);
@@ -98,18 +102,18 @@
 		const created = await graph.mutate(() => nodesApi.create({ kind: 'idea', title }));
 		if (created) {
 			ideaTitle = '';
-			notify(`Captured “${created.title}”`);
+			notify(m.capture_done({ title: created.title }));
 		}
 	}
 
 	function poke(node: NodeResponse) {
-		graph.poke(node).then((poked) => poked && notify(`Poked “${node.title}”`));
+		graph.poke(node).then((poked) => poked && notify(m.poked({ title: node.title })));
 	}
 </script>
 
 <div class="page">
 	{#if !dashboard}
-		<p class="muted">{loadFailed ? 'Could not load the dashboard. Try reloading.' : 'Loading…'}</p>
+		<p class="muted">{loadFailed ? m.dash_load_failed() : m.loading()}</p>
 	{:else}
 		<div class="tiles">
 			{#each tiles as tile (tile.label)}
@@ -124,15 +128,17 @@
 			<section aria-labelledby="active-heading">
 				<div class="section-head">
 					<span class="bar"></span>
-					<h2 class="title" id="active-heading">Active</h2>
-					<span class="meta">{actionableCount} actionable · {blockedActiveCount} blocked</span>
+					<h2 class="title" id="active-heading">{m.status_active()}</h2>
+					<span class="meta"
+						>{m.dash_actionable({ actionable: actionableCount, blocked: blockedActiveCount })}</span
+					>
 				</div>
 
 				{#if dashboard.active.length}
 					{#each activeTiers as group (group.tier)}
 						<div class="tier-head">
 							<span class="tier-bar" style:background={TIER_COLOR[group.tier]}></span>
-							{group.tier}
+							{focusLabel(group.tier)}
 							<span class="tier-count">{group.nodes.length}</span>
 						</div>
 						<div class="active-nodes">
@@ -143,15 +149,15 @@
 					{/each}
 				{:else}
 					<div class="empty">
-						Nothing is active right now. Set a node's status to <strong>Active</strong> from its
-						detail panel, or browse everything on the <a href="/board/organized">board</a>.
+						{m.dash_empty_before()} <strong>{m.status_active()}</strong>
+						{m.dash_empty_middle()} <a href="/board/organized">{m.dash_empty_board()}</a>.
 					</div>
 				{/if}
 			</section>
 
 			<aside class="rail">
 				<div class="panel">
-					<h2 class="panel-title">Haven't touched in a while</h2>
+					<h2 class="panel-title">{m.dash_untouched()}</h2>
 					<p class="panel-sub">{staleSummary}</p>
 					{#if dashboard.stale.length || dashboard.going_stale.length}
 						<ul class="rows">
@@ -163,36 +169,38 @@
 										<span class="row-meta" class:soon={!node.stale_since}>
 											{node.stale_since
 												? ''
-												: `stale in ${daysUntilStale(node)}d · `}{node.last_poked_at
-												? `touched ${relativeDays(node.last_poked_at)}`
-												: `never touched · ${shortDate(node.created_at)}`}
+												: m.dash_stale_in({ days: daysUntilStale(node) })}{node.last_poked_at
+												? m.dash_touched({ when: relativeDays(node.last_poked_at) })
+												: m.dash_never_touched({ date: shortDate(node.created_at) })}
 										</span>
 									</button>
 									{#if canPoke(node)}
-										<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
+										<Button variant="poke" onclick={() => poke(node)} icon={Pointer}
+											>{m.action_poke()}</Button
+										>
 									{/if}
 								</li>
 							{/each}
 						</ul>
 					{:else}
-						<p class="nothing">Nothing going stale.</p>
+						<p class="nothing">{m.dash_nothing_stale()}</p>
 					{/if}
 				</div>
 
 				<div class="panel">
 					<div class="panel-head">
-						<h2 class="panel-title">Ideas</h2>
-						<a class="more" href="/nodes">{dashboard.counts.ideas} ideas →</a>
+						<h2 class="panel-title">{m.dash_ideas()}</h2>
+						<a class="more" href="/nodes">{m.dash_idea_count({ count: dashboard.counts.ideas })}</a>
 					</div>
 					<form class="capture" onsubmit={captureIdea}>
 						<input
 							class="field"
-							placeholder="Capture an idea…"
-							aria-label="New idea title"
+							placeholder={m.dash_capture_placeholder()}
+							aria-label={m.dash_capture_label()}
 							bind:value={ideaTitle}
 						/>
 						<Button variant="primary" type="submit" disabled={!ideaTitle.trim()} icon={Plus}
-							>Add</Button
+							>{m.action_add()}</Button
 						>
 					</form>
 					{#if dashboard.recent_ideas.length}
@@ -202,7 +210,9 @@
 									<span class="dot" style:background={accentColor(node)}></span>
 									<button type="button" class="row-main" onclick={() => openNode(node.id)}>
 										<span class="row-title">{node.title}</span>
-										<span class="row-meta">captured {shortDate(node.created_at)}</span>
+										<span class="row-meta"
+											>{m.dash_captured_on({ date: shortDate(node.created_at) })}</span
+										>
 									</button>
 								</li>
 							{/each}
@@ -212,7 +222,7 @@
 
 				{#if dashboard.paths.length}
 					<div class="panel">
-						<h2 class="panel-title">Paths</h2>
+						<h2 class="panel-title">{m.dash_paths()}</h2>
 						<ul class="rows">
 							{#each topPaths as node (node.id)}
 								{@render pathItem(node)}
@@ -246,7 +256,7 @@
 					{#if node.focus}
 						<span class="focus">
 							<span class="tier-bar" style:background={TIER_COLOR[node.focus]}></span>
-							{node.focus}
+							{focusLabel(node.focus)}
 						</span>
 					{/if}
 				</span>
@@ -256,7 +266,7 @@
 						<span class="row-meta">{progressText(node)}</span>
 					</span>
 				{:else}
-					<span class="row-meta">no steps yet</span>
+					<span class="row-meta">{m.dash_no_steps()}</span>
 				{/if}
 			</button>
 		</div>
@@ -270,7 +280,9 @@
 							<button type="button" class="path-child" onclick={() => openNode(child.id)}>
 								<span class="dot" style:background={accentColor(child)}></span>
 								<span class="row-title">{child.title}</span>
-								<span class="row-meta">{progressText(child) ?? child.status}</span>
+								<span class="row-meta"
+									>{progressText(child) ?? (child.status && statusLabel(child.status))}</span
+								>
 							</button>
 						</li>
 					{/if}

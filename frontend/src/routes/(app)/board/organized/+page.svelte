@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import { flip } from 'svelte/animate';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -7,6 +8,7 @@
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { kindChangeLosses } from '$lib/graph/display';
 	import { groupNodes, type Section } from '$lib/graph/grouping';
+	import { kindLabel } from '$lib/i18n';
 	import { dependencyOrder, manualOrder } from '$lib/graph/order';
 	import { matchesOrContainsMatch, parentPathOf } from '$lib/graph/paths';
 	import { matchesOrganizedFilters } from '$lib/stores/filters.svelte';
@@ -64,33 +66,31 @@
 
 <div class="page">
 	<div class="group-by">
-		<span class="label">Group by</span>
+		<span class="label">{m.organized_group_by()}</span>
 		<SegmentedControl
-			label="Group by"
+			label={m.organized_group_by()}
 			value={prefs.organizedGrouping}
 			onchange={(grouping) => {
 				prefs.organizedGrouping = grouping;
 				savePrefs();
 			}}
 			options={[
-				{ value: 'focus', label: 'Focus' },
-				{ value: 'kind', label: 'Kind' },
-				{ value: 'status', label: 'Status' },
-				{ value: 'tag', label: 'Tag' }
+				{ value: 'focus', label: m.field_focus() },
+				{ value: 'kind', label: m.field_kind() },
+				{ value: 'status', label: m.field_status() },
+				{ value: 'tag', label: m.field_tag() }
 			]}
 		/>
 		{#if anyManuallyOrdered}
-			<Button variant="quiet" onclick={resetOrder}>Reset order</Button>
+			<Button variant="quiet" onclick={resetOrder}>{m.organized_reset_order()}</Button>
 		{/if}
 	</div>
 
 	{#if !graph.loaded}
-		<p class="muted">Loading…</p>
+		<p class="muted">{m.loading()}</p>
 	{:else if !topLevel.length}
 		<div class="empty">
-			{graph.nodes.length
-				? 'No nodes match these filters.'
-				: 'No nodes yet. Press N to capture one.'}
+			{graph.nodes.length ? m.board_no_match() : m.board_no_nodes()}
 		</div>
 	{/if}
 
@@ -104,8 +104,7 @@
 						{section.title}
 					</h2>
 					<span class="meta">
-						{section.nodes.length}
-						{section.nodes.length === 1 ? 'node' : 'nodes'}
+						{m.node_count({ count: section.nodes.length })}
 					</span>
 				</div>
 				<!-- svelte-ignore a11y_no_static_element_interactions -->
@@ -159,21 +158,25 @@
 <Modal
 	open={dragState.pendingKindDrop !== null}
 	onclose={cancelKindDrop}
-	label="Confirm kind change"
+	label={m.kind_change_title()}
 	width={440}
 >
 	{#if dragState.pendingKindDrop}
 		<div class="confirm">
-			<div class="label">Change kind to {dragState.pendingKindDrop.kind}?</div>
-			<p>Each kind keeps different data. Dropping it here will remove:</p>
+			<div class="label">
+				{m.kind_change_question({
+					kind: kindLabel(dragState.pendingKindDrop.kind).toLocaleLowerCase()
+				})}
+			</div>
+			<p>{m.kind_change_drop_body()}</p>
 			<ul>
 				{#each kindChangeLosses(dragState.pendingKindDrop.request.node, dragState.pendingKindDrop.kind) as loss (loss)}
 					<li>{loss}</li>
 				{/each}
 			</ul>
 			<div class="confirm-actions">
-				<Button variant="quiet" onclick={cancelKindDrop}>Cancel</Button>
-				<Button variant="primary" onclick={confirmKindDrop}>Change kind</Button>
+				<Button variant="quiet" onclick={cancelKindDrop}>{m.action_cancel()}</Button>
+				<Button variant="primary" onclick={confirmKindDrop}>{m.kind_change_confirm()}</Button>
 			</div>
 		</div>
 	{/if}

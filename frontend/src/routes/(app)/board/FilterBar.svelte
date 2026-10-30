@@ -1,41 +1,41 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { boardFilters, clearBoardFilters } from '$lib/stores/filters.svelte';
+	import { focusLabel, kindLabel, statusLabel } from '$lib/i18n';
 
 	type ListKey = 'kinds' | 'statuses' | 'focuses' | 'topicIds';
 
 	const groups = $derived<{ key: ListKey; label: string; options: [string, string][] }[]>([
 		{
 			key: 'kinds',
-			label: 'Kind',
-			options: [
-				['idea', 'Idea'],
-				['project', 'Project'],
-				['study', 'Study'],
-				['path', 'Path']
-			]
+			label: m.field_kind(),
+			options: (['idea', 'project', 'study', 'path'] as const).map((kind) => [
+				kind,
+				kindLabel(kind)
+			])
 		},
 		{
 			key: 'statuses',
-			label: 'Status',
-			options: [
-				['idea', 'Idea'],
-				['queued', 'Queued'],
-				['active', 'Active'],
-				['paused', 'Paused'],
-				['done', 'Done']
-			]
+			label: m.field_status(),
+			options: (['idea', 'queued', 'active', 'paused', 'done'] as const).map((status) => [
+				status,
+				statusLabel(status)
+			])
 		},
 		{
 			key: 'focuses',
-			label: 'Focus',
-			options: [
-				['primary', 'Primary'],
-				['secondary', 'Secondary'],
-				['background', 'Background']
-			]
+			label: m.field_focus(),
+			options: (['primary', 'secondary', 'background'] as const).map((focus) => [
+				focus,
+				focusLabel(focus)
+			])
 		},
-		{ key: 'topicIds', label: 'Tag', options: graph.topics.map((topic) => [topic.id, topic.name]) }
+		{
+			key: 'topicIds',
+			label: m.field_tag(),
+			options: graph.topics.map((topic) => [topic.id, topic.name])
+		}
 	]);
 
 	function toggle(key: ListKey, value: string) {
@@ -67,8 +67,8 @@
 	<input
 		class="field search"
 		type="search"
-		placeholder="Filter by title…"
-		aria-label="Filter nodes by title"
+		placeholder={m.filter_placeholder()}
+		aria-label={m.filter_label()}
 		bind:value={boardFilters.search}
 	/>
 
@@ -87,22 +87,25 @@
 						{label}
 					</label>
 				{:else}
-					<span class="muted">None yet</span>
+					<span class="muted">{m.filter_none_yet()}</span>
 				{/each}
 			</div>
 		</details>
 	{/each}
 
 	<label class="archived">
-		<input type="checkbox" bind:checked={boardFilters.showIdeas} /> Show ideas
+		<input type="checkbox" bind:checked={boardFilters.showIdeas} />
+		{m.filter_show_ideas()}
 	</label>
 
 	<label class="archived">
-		<input type="checkbox" bind:checked={boardFilters.showDone} /> Show done
+		<input type="checkbox" bind:checked={boardFilters.showDone} />
+		{m.filter_show_done()}
 	</label>
 
 	<label class="archived">
-		<input type="checkbox" bind:checked={boardFilters.showArchived} /> Show archived
+		<input type="checkbox" bind:checked={boardFilters.showArchived} />
+		{m.filter_show_archived()}
 	</label>
 
 	{#each activeChips as chip (chip.key + chip.value)}
@@ -112,9 +115,9 @@
 	{/each}
 
 	{#if anyActive}
-		<button type="button" class="clear" onclick={clearBoardFilters}>Clear</button>
+		<button type="button" class="clear" onclick={clearBoardFilters}>{m.filter_clear()}</button>
 	{/if}
-	<span class="note">filters persist across all three views</span>
+	<span class="note">{m.filter_note()}</span>
 </div>
 
 <svelte:window

@@ -1,6 +1,8 @@
+import { m } from '$lib/paraglide/messages';
 import type { NodeKind } from '$lib/types/NodeKind';
 import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
+import { focusLabel, statusLabel } from '$lib/i18n';
 import { TIER_COLOR } from './display';
 
 export type Grouping = 'focus' | 'kind' | 'status' | 'tag';
@@ -18,17 +20,17 @@ type Bucket = Omit<Section, 'nodes'> & { holds: (node: NodeResponse) => boolean 
 
 const FOCUS_BUCKETS: Bucket[] = (['primary', 'secondary', 'background'] as const).map((focus) => ({
 	id: focus,
-	title: focus,
+	title: focusLabel(focus),
 	bar: TIER_COLOR[focus],
 	holds: (node) => node.focus === focus
 }));
 
 const KIND_BUCKETS: Bucket[] = (
 	[
-		['project', 'projects', 'var(--node-blue)'],
-		['study', 'studies', 'var(--node-course)'],
-		['path', 'paths', 'var(--node-path)'],
-		['idea', 'ideas', 'var(--node-idea)']
+		['project', m.group_projects(), 'var(--node-blue)'],
+		['study', m.group_studies(), 'var(--node-course)'],
+		['path', m.group_paths(), 'var(--node-path)'],
+		['idea', m.group_ideas(), 'var(--node-idea)']
 	] as const
 ).map(([kind, title, bar]) => ({
 	id: kind,
@@ -48,7 +50,7 @@ const STATUS_BUCKETS: Bucket[] = (
 	] as const
 ).map(([status, bar]) => ({
 	id: status,
-	title: status,
+	title: statusLabel(status),
 	bar,
 	holds: (node) => node.status === status
 }));
@@ -56,7 +58,7 @@ const STATUS_BUCKETS: Bucket[] = (
 /** Ideas have no focus or status: they get their own section in those groupings. */
 const IDEA_BUCKET: Bucket = {
 	id: 'ideas',
-	title: 'ideas',
+	title: m.group_ideas(),
 	kind: 'idea',
 	bar: 'var(--node-idea)',
 	holds: (node) => node.kind === 'idea'
@@ -74,7 +76,7 @@ function tagBuckets(topics: TopicResponse[]): Bucket[] {
 			})),
 		{
 			id: 'untagged',
-			title: 'untagged',
+			title: m.group_untagged(),
 			bar: 'var(--line)',
 			holds: (node) => !node.topic_ids.length
 		}

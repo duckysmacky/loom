@@ -2,9 +2,19 @@ import { defineConfig } from 'vitest/config';
 import { playwright } from '@vitest/browser-playwright';
 import adapter from '@sveltejs/adapter-static';
 import { sveltekit } from '@sveltejs/kit/vite';
+import { paraglideVitePlugin } from '@inlang/paraglide-js';
 
 export default defineConfig({
 	plugins: [
+		// UI messages (`messages/<locale>.json`) compiled to `$lib/paraglide`.
+		// Locale: the user's override in localStorage, else the browser's
+		// language, else English.
+		paraglideVitePlugin({
+			project: './project.inlang',
+			outdir: './src/lib/paraglide',
+			strategy: ['localStorage', 'preferredLanguage', 'baseLocale'],
+			localStorageKey: 'loom.locale'
+		}),
 		sveltekit({
 			compilerOptions: {
 				// Force runes mode for the project, except for libraries. Can be removed in svelte 6.

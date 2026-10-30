@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Pointer } from '@lucide/svelte';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -64,7 +65,7 @@
 		event.stopPropagation();
 		const poked = await graph.poke(node);
 		if (poked) {
-			notify(`Poked “${node.title}”`);
+			notify(m.poked({ title: node.title }));
 			pulsing = true;
 			setTimeout(() => (pulsing = false), 400);
 		}
@@ -104,7 +105,9 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 		/>
 		{#if feature}
 			<span class="touched">
-				{node.last_poked_at ? `touched ${relativeDays(node.last_poked_at)}` : 'never touched'}
+				{node.last_poked_at
+					? m.dash_touched({ when: relativeDays(node.last_poked_at) })
+					: m.card_never_touched()}
 			</span>
 		{/if}
 	</div>
@@ -117,7 +120,9 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 	{/if}
 
 	{#if unmet.length}
-		<div class="requires">⟵ requires {unmet.map(({ node }) => node.title).join(', ')} · unmet</div>
+		<div class="requires">
+			{m.card_requires_unmet({ titles: unmet.map(({ node }) => node.title).join(', ') })}
+		</div>
 	{:else if progress}
 		<div class="progress">
 			<ProgressBar value={progress[0]} total={progress[1]} />
@@ -127,7 +132,7 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 					type="button"
 					class="bump"
 					disabled={nextProgress === null}
-					title="Add one to the progress"
+					title={m.card_bump()}
 					onclick={increment}>+1</button
 				>
 			{/if}
@@ -139,8 +144,8 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 	{#if pokeable}
 		<div class="actions">
 			<span class:pulse={pulsing}>
-				<Button variant="poke" onclick={poke} title="Log that you worked on this" icon={Pointer}
-					>Poke</Button
+				<Button variant="poke" onclick={poke} title={m.card_poke_title()} icon={Pointer}
+					>{m.action_poke()}</Button
 				>
 			</span>
 		</div>

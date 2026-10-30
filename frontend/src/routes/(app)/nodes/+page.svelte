@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { ArchiveRestore, ArrowUpRight } from '@lucide/svelte';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import { goto } from '$app/navigation';
@@ -8,6 +9,7 @@
 	import Tabs from '$lib/components/ui/Tabs.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
 	import { accentColor, isIdea, notesExcerpt, shortDate } from '$lib/graph/display';
+	import { focusLabel, kindLabel, statusLabel } from '$lib/i18n';
 	import { openNode, withParam } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
@@ -54,13 +56,13 @@
 	const tabs = $derived([
 		{
 			value: 'ideas' as const,
-			label: 'Ideas',
+			label: m.dash_ideas(),
 			count: graph.nodes.filter((node) => isIdea(node) && !node.archived).length
 		},
-		{ value: 'all' as const, label: 'All', count: graph.nodes.length },
+		{ value: 'all' as const, label: m.nodes_tab_all(), count: graph.nodes.length },
 		{
 			value: 'archived' as const,
-			label: 'Archived',
+			label: m.nodes_tab_archived(),
 			count: graph.nodes.filter((node) => node.archived).length
 		}
 	]);
@@ -101,15 +103,15 @@
 
 	async function restore(node: NodeResponse) {
 		const restored = await graph.mutate(() => nodesApi.update(node.id, { archived: false }));
-		if (restored) notify(`Restored “${node.title}”`);
+		if (restored) notify(m.restored({ title: node.title }));
 	}
 
 	const footer = $derived(
 		view === 'ideas'
-			? `${visibleRows.length} ideas · promoting sets a kind, status and focus tier`
+			? m.nodes_footer_ideas({ count: visibleRows.length })
 			: view === 'archived'
-				? `${visibleRows.length} archived · restoring brings a node back with its status`
-				: `${visibleRows.length} nodes`
+				? m.nodes_footer_archived({ count: visibleRows.length })
+				: m.nodes_footer_all({ count: visibleRows.length })
 	);
 </script>
 
@@ -123,53 +125,52 @@
 	<div class="filters">
 		{#if view !== 'ideas'}
 			<label class="filter">
-				<span>Kind</span>
+				<span>{m.field_kind()}</span>
 				<select bind:value={kind}>
-					<option value="">Any</option>
-					<option value="idea">Idea</option>
-					<option value="project">Project</option>
-					<option value="study">Study</option>
-					<option value="path">Path</option>
+					<option value="">{m.filter_any()}</option>
+					{#each ['idea', 'project', 'study', 'path'] as const as option (option)}
+						<option value={option}>{kindLabel(option)}</option>
+					{/each}
 				</select>
 			</label>
 		{/if}
 		{#if view === 'all'}
 			<label class="filter">
-				<span>Status</span>
+				<span>{m.field_status()}</span>
 				<select bind:value={status}>
-					<option value="">Any</option>
-					{#each ['idea', 'queued', 'active', 'paused', 'done'] as option (option)}
-						<option value={option}>{option[0].toUpperCase() + option.slice(1)}</option>
+					<option value="">{m.filter_any()}</option>
+					{#each ['idea', 'queued', 'active', 'paused', 'done'] as const as option (option)}
+						<option value={option}>{statusLabel(option)}</option>
 					{/each}
 				</select>
 			</label>
 		{/if}
 		{#if view !== 'ideas'}
 			<label class="filter">
-				<span>Focus</span>
+				<span>{m.field_focus()}</span>
 				<select bind:value={focus}>
-					<option value="">Any</option>
-					<option value="primary">Primary</option>
-					<option value="secondary">Secondary</option>
-					<option value="background">Background</option>
+					<option value="">{m.filter_any()}</option>
+					{#each ['primary', 'secondary', 'background'] as const as option (option)}
+						<option value={option}>{focusLabel(option)}</option>
+					{/each}
 				</select>
 			</label>
 		{/if}
 		<label class="filter">
-			<span>Tag</span>
+			<span>{m.field_tag()}</span>
 			<select bind:value={topicId}>
-				<option value="">Any</option>
+				<option value="">{m.filter_any()}</option>
 				{#each graph.topics as topic (topic.id)}
 					<option value={topic.id}>{topic.name}</option>
 				{/each}
 			</select>
 		</label>
 		<label class="filter sort">
-			<span>Sort</span>
+			<span>{m.nodes_sort()}</span>
 			<select bind:value={sort}>
-				<option value="captured">Captured ↓</option>
-				<option value="touched">Last touched ↓</option>
-				<option value="title">Title A–Z</option>
+				<option value="captured">{m.nodes_sort_captured()}</option>
+				<option value="touched">{m.nodes_sort_touched()}</option>
+				<option value="title">{m.nodes_sort_title()}</option>
 			</select>
 		</label>
 	</div>
@@ -178,25 +179,25 @@
 		<table>
 			<thead>
 				<tr>
-					<th class="dot-col"><span class="visually-hidden">Accent</span></th>
-					<th>Node</th>
-					<th class="links-col">Links</th>
-					<th class="tags-col">Tags</th>
-					<th class="date-col">Captured</th>
-					<th class="action-col">Action</th>
+					<th class="dot-col"><span class="visually-hidden">{m.field_accent()}</span></th>
+					<th>{m.field_node()}</th>
+					<th class="links-col">{m.nodes_col_links()}</th>
+					<th class="tags-col">{m.nodes_col_tags()}</th>
+					<th class="date-col">{m.nodes_col_captured()}</th>
+					<th class="action-col">{m.nodes_col_action()}</th>
 				</tr>
 			</thead>
 			<tbody>
 				{#if rows === null}
-					<tr><td colspan="6" class="empty">Loading…</td></tr>
+					<tr><td colspan="6" class="empty">{m.loading()}</td></tr>
 				{:else if !visibleRows.length}
 					<tr>
 						<td colspan="6" class="empty">
 							{view === 'ideas'
-								? 'No ideas yet. Press N to capture one.'
+								? m.nodes_no_ideas()
 								: view === 'archived'
-									? 'Nothing archived.'
-									: 'No nodes match these filters.'}
+									? m.nodes_nothing_archived()
+									: m.board_no_match()}
 						</td>
 					</tr>
 				{/if}
@@ -214,7 +215,10 @@
 							<div class="sub">
 								<span class="kind">
 									<KindMark kind={node.kind} />
-									{node.kind}{node.status ? ` · ${node.status}` : ''}
+									{[kindLabel(node.kind), node.status && statusLabel(node.status)]
+										.filter(Boolean)
+										.join(' · ')
+										.toLocaleLowerCase()}
 								</span>
 								{notesExcerpt(node.notes)}
 							</div>
@@ -223,9 +227,11 @@
 							{#each links.slice(0, 2) as link (link.id)}
 								<div class="link" class:unmet={link.unmet}>{link.mark} {link.title}</div>
 							{:else}
-								<span class="link">no links</span>
+								<span class="link">{m.nodes_no_links()}</span>
 							{/each}
-							{#if links.length > 2}<div class="link">+{links.length - 2} more</div>{/if}
+							{#if links.length > 2}<div class="link">
+									{m.nodes_more_links({ count: links.length - 2 })}
+								</div>{/if}
 						</td>
 						<td class="tags-col">
 							<div class="tags">
@@ -242,11 +248,11 @@
 							<span onclick={(event) => event.stopPropagation()}>
 								{#if node.archived}
 									<Button variant="poke" onclick={() => restore(node)} icon={ArchiveRestore}
-										>Restore</Button
+										>{m.action_restore()}</Button
 									>
 								{:else if isIdea(node)}
 									<Button variant="poke" onclick={() => (promoting = node)} icon={ArrowUpRight}
-										>To board</Button
+										>{m.nodes_to_board()}</Button
 									>
 								{/if}
 							</span>

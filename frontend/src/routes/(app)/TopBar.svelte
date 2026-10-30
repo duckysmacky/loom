@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { LogOut, Plus, Search, Settings, Zap } from '@lucide/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
@@ -19,29 +20,32 @@
 
 	<button type="button" class="search" onclick={() => (overlays.paletteOpen = true)}>
 		{#if prefs.iconStyle === 'icons'}<Icon icon={Search} />{:else}<span class="lens"></span>{/if}
-		<span class="placeholder">Search nodes…</span>
+		<span class="placeholder">{m.topbar_search()}</span>
 		<span class="key">Ctrl K</span>
 	</button>
 
 	<div class="actions">
-		<Button variant="quiet" icon={Plus} onclick={() => (overlays.newOpen = true)}>New</Button>
+		<Button variant="quiet" icon={Plus} onclick={() => (overlays.newOpen = true)}
+			>{m.topbar_new()}</Button
+		>
 		<Button variant="accent" onclick={() => (overlays.captureOpen = true)}>
-			<Icon icon={Zap} glyph="+" /><span class="capture-label">Quick capture</span>
+			<Icon icon={Zap} glyph="+" /><span class="capture-label">{m.quick_capture()}</span>
 		</Button>
 		<div class="account">
 			<button
 				type="button"
 				class="avatar"
-				aria-label="Account menu"
+				aria-label={m.topbar_account_menu()}
 				aria-expanded={menuOpen}
 				onclick={() => (menuOpen = !menuOpen)}>{initial}</button
 			>
 			{#if menuOpen}
 				<div class="menu" transition:fly={{ y: -6, duration: ms(140) }}>
 					<div class="email">{session.user?.email}</div>
-					<a href="/settings" onclick={() => (menuOpen = false)}><Icon icon={Settings} />Settings</a
+					<a href="/settings" onclick={() => (menuOpen = false)}
+						><Icon icon={Settings} />{m.nav_settings()}</a
 					>
-					<button type="button" onclick={logout}><Icon icon={LogOut} />Sign out</button>
+					<button type="button" onclick={logout}><Icon icon={LogOut} />{m.sign_out()}</button>
 				</div>
 			{/if}
 		</div>
