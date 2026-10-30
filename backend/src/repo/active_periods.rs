@@ -123,7 +123,7 @@ pub async fn delete_period(
     Ok(result.rows_affected() == 1)
 }
 
-/// Client preferences carried on a node PATCH (not stored server-side).
+/// The account's period settings, applied on a node PATCH.
 #[derive(Debug, Clone, Copy, Default)]
 pub struct PeriodSettings {
     /// Pausing closes the open period; reactivating opens a new one.

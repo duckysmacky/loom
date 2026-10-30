@@ -10,5 +10,6 @@ pub mod nodes;
 pub mod oauth;
 pub mod pokes;
 pub mod refresh_tokens;
+pub mod settings;
 pub mod topics;
 pub mod users;

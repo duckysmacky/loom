@@ -12,6 +12,7 @@ pub mod mcp;
 pub mod nodes;
 pub mod oauth;
 pub mod pokes;
+pub mod settings;
 pub mod topics;
 
 use self::error::ApiError;

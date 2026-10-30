@@ -24,7 +24,7 @@
 	let topicIds = $state<string[]>([]);
 	let saving = $state(false);
 
-	// Fresh form with the configured defaults (Settings > Functionality)
+	// Fresh form with the configured defaults (Settings > Features)
 	// every time it opens. Ideas carry no status/focus; everything else
 	// defaults to queued.
 	$effect(() => {

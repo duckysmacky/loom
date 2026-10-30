@@ -534,3 +534,41 @@ async fn stale_modes_and_days_are_configurable(pool: PgPool) {
             .contains(&"active-recent".to_string())
     );
 }
+
+#[sqlx::test]
+async fn stale_list_falls_back_to_the_stored_threshold(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "storedstale@example.com").await;
+    let node_id = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "ten-days", "status": "active"}),
+    )
+    .await;
+    backdate_created_at(&pool, &node_id, 10).await;
+
+    let stale_count = |dashboard: Value| dashboard["stale"].as_array().unwrap().len();
+    let (_, before) = send(
+        &app,
+        req("GET", "/api/dashboard", Value::Null, Some(&token)),
+    )
+    .await;
+    assert_eq!(stale_count(before), 0);
+
+    send(
+        &app,
+        req(
+            "PATCH",
+            "/api/settings",
+            json!({"stale_days": 7}),
+            Some(&token),
+        ),
+    )
+    .await;
+    let (_, after) = send(
+        &app,
+        req("GET", "/api/dashboard", Value::Null, Some(&token)),
+    )
+    .await;
+    assert_eq!(stale_count(after), 1);
+}

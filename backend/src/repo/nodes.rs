@@ -6,6 +6,7 @@ use crate::models::node::{
     CreateNodeRequest, NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus, NodeView,
     Progress, ReorderNodesRequest, UpdateNodeRequest,
 };
+use crate::models::settings::Settings;
 use crate::repo::active_periods::PeriodSettings;
 use crate::repo::{active_periods, canvas, checklist, edges, pokes};
 
@@ -244,6 +245,7 @@ pub async fn update_node(
     pool: &PgPool,
     node_id: Uuid,
     request: &UpdateNodeRequest,
+    settings: &Settings,
 ) -> Result<Option<NodeResponse>, sqlx::Error> {
     let progress_current_set = request.progress_current.is_some();
     let progress_current = request.progress_current.flatten();
@@ -371,12 +373,12 @@ pub async fn update_node(
             row.status,
             row.focus.unwrap_or(NodeFocus::Secondary),
             PeriodSettings {
-                track_active_periods: request.track_active_periods,
-                split_on_focus_change: request.split_period_on_focus_change,
+                track_active_periods: settings.track_active_periods,
+                split_on_focus_change: settings.split_period_on_focus_change,
             },
         )
         .await?;
-        if request.split_period_on_focus_change
+        if settings.split_period_on_focus_change
             && let Some(focus) = row.focus
         {
             active_periods::sync_focus_change(user_id, &mut tx, node_id, focus).await?;

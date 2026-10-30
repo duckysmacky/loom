@@ -10,6 +10,7 @@ pub mod mcp;
 pub mod node;
 pub mod oauth;
 pub mod poke;
+pub mod settings;
 pub mod topic;
 pub mod user;
 

@@ -67,7 +67,7 @@ pub struct DashboardResponse {
 }
 
 /// Whether a queued/paused node can show up as stale.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, TS)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
 #[ts(export)]
 #[serde(rename_all = "snake_case")]
 pub enum StaleMode {

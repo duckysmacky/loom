@@ -6,7 +6,7 @@
 
 <section class="settings-section">
 	<h2>Appearance</h2>
-	<p class="explain">Saved in this browser only.</p>
+	<p class="explain">How Loom looks.</p>
 	<div class="settings-row">
 		<span>
 			<span class="row-label">Theme</span>
@@ -61,24 +61,5 @@
 				{ value: 'glyphs', label: 'Glyphs' }
 			]}
 		/>
-	</div>
-	<div class="settings-row">
-		<label class="toggle">
-			<span>
-				<span class="row-label">Connection labels</span>
-				<span class="row-help"
-					>Name each connection on the canvas (requires, next, related) in small text above its
-					line.</span
-				>
-			</span>
-			<input
-				type="checkbox"
-				checked={prefs.showEdgeLabels}
-				onchange={(event) => {
-					prefs.showEdgeLabels = event.currentTarget.checked;
-					savePrefs();
-				}}
-			/>
-		</label>
 	</div>
 </section>

@@ -198,21 +198,6 @@ pub struct UpdateNodeRequest {
     #[ts(optional = nullable)]
     #[schemars(skip)]
     pub canvas_height: Option<Option<f64>>,
-    /// Client preference (not stored server-side), carried on every PATCH:
-    /// when true, pausing an active node closes its active period
-    /// and reactivating opens a new one; when false, reactivating reopens
-    /// the last period. The first period and the done date follow status
-    /// changes either way.
-    #[serde(default)]
-    #[schemars(skip)]
-    pub track_active_periods: bool,
-    /// Client preference (not stored server-side), like `track_active_periods`:
-    /// when true, a focus change on a node with an open active period closes
-    /// it and opens a new one under the new focus. When false (the default,
-    /// and what API/MCP callers get) a period keeps the focus it opened with.
-    #[serde(default)]
-    #[schemars(skip)]
-    pub split_period_on_focus_change: bool,
 }
 
 /// A view preset for `GET /api/nodes` - translated into `kind`/`status`

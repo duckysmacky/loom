@@ -10,7 +10,7 @@ use crate::models::node::{
     ReorderNodesRequest, UpdateNodeRequest,
 };
 use crate::repo::node_topics::{AttachOutcome, DetachOutcome};
-use crate::repo::{node_topics, nodes};
+use crate::repo::{node_topics, nodes, settings};
 use crate::state::AppState;
 
 pub async fn list(
@@ -138,7 +138,8 @@ pub async fn update(
         }
     }
 
-    let node = nodes::update_node(user_id, &state.pool, node_id, &request)
+    let settings = settings::get(user_id, &state.pool).await?;
+    let node = nodes::update_node(user_id, &state.pool, node_id, &request, &settings)
         .await
         .map_err(map_node_error)?
         .ok_or(ApiError::NotFound)?;

@@ -10,6 +10,7 @@
 	import { fade } from 'svelte/transition';
 	import { ms } from '$lib/motion';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { loadSettings } from '$lib/stores/prefs.svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import TopBar from './TopBar.svelte';
@@ -20,6 +21,16 @@
 		if (!session.user) goto('/login', { replaceState: true });
 		else if (!graph.loaded) graph.load();
 	});
+
+	// Account settings load once signed in, and again when the tab regains
+	// focus so a change made on another device shows up.
+	$effect(() => {
+		if (session.user) loadSettings();
+	});
+
+	function onvisibilitychange() {
+		if (session.user && document.visibilityState === 'visible') loadSettings();
+	}
 
 	function onkeydown(event: KeyboardEvent) {
 		if (event.ctrlKey && event.key.toLowerCase() === 'k') {
@@ -57,6 +68,7 @@
 
 <svelte:head><title>{title} · Loom</title></svelte:head>
 <svelte:window {onkeydown} />
+<svelte:document {onvisibilitychange} />
 
 {#if session.user}
 	<div class="shell drafting-grid">

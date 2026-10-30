@@ -1,5 +1,4 @@
 import { queryString, request } from './client';
-import { prefs } from '$lib/stores/prefs.svelte';
 import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 import type { AuthResponse } from '$lib/types/AuthResponse';
 import type { AuthorizeDecision } from '$lib/types/AuthorizeDecision';
@@ -31,6 +30,7 @@ import type { NodeResponse } from '$lib/types/NodeResponse';
 import type { PokeResponse } from '$lib/types/PokeResponse';
 import type { RefreshResponse } from '$lib/types/RefreshResponse';
 import type { ReorderNodesRequest } from '$lib/types/ReorderNodesRequest';
+import type { Settings } from '$lib/types/Settings';
 import type { SignupRequest } from '$lib/types/SignupRequest';
 import type { TimelineResponse } from '$lib/types/TimelineResponse';
 import type { TopicResponse } from '$lib/types/TopicResponse';
@@ -62,20 +62,8 @@ export const nodesApi = {
 		),
 	get: (nodeId: string) => request<NodeResponse>('GET', `/nodes/${nodeId}`),
 	create: (body: CreateNodeRequest) => request<NodeResponse>('POST', '/nodes', body),
-	// `track_active_periods` and `split_period_on_focus_change` are added here, not by the caller - it rides on
-	// every PATCH (harmless when status isn't in the body; the backend only
-	// acts on it for a real active-boundary transition), keeping the
-	// "record active periods" setting a single frontend choke point instead
-	// of something every status-changing call site has to remember to add.
-	update: (
-		nodeId: string,
-		body: Omit<UpdateNodeRequest, 'track_active_periods' | 'split_period_on_focus_change'>
-	) =>
-		request<NodeResponse>('PATCH', `/nodes/${nodeId}`, {
-			...body,
-			track_active_periods: prefs.trackActivePeriods,
-			split_period_on_focus_change: prefs.splitPeriodOnFocusChange
-		} satisfies UpdateNodeRequest),
+	update: (nodeId: string, body: UpdateNodeRequest) =>
+		request<NodeResponse>('PATCH', `/nodes/${nodeId}`, body),
 	remove: (nodeId: string) => request<void>('DELETE', `/nodes/${nodeId}`),
 	attachTopic: (nodeId: string, topicId: string) =>
 		request<void>('POST', `/nodes/${nodeId}/topics`, { topic_id: topicId }),
@@ -161,15 +149,12 @@ export const oauthApi = {
 		request<void>('DELETE', `/oauth/clients/${encodeURIComponent(clientId)}`)
 };
 
+// The stale list follows the account's saved settings (applied by the server).
 export const dashboardApi = {
-	// Reads the stale-list prefs, so calling it inside an $effect refetches when they change.
-	get: () =>
-		request<DashboardResponse>(
-			'GET',
-			`/dashboard${queryString({
-				stale_days: String(prefs.staleDays),
-				stale_queued: prefs.staleQueued,
-				stale_paused: prefs.stalePaused
-			})}`
-		)
+	get: () => request<DashboardResponse>('GET', '/dashboard')
+};
+
+export const settingsApi = {
+	get: () => request<Settings>('GET', '/settings'),
+	patch: (changes: Partial<Settings>) => request<Settings>('PATCH', '/settings', changes)
 };

@@ -6,10 +6,10 @@ use crate::models::dashboard::{
     DashboardCounts, DashboardQuery, DashboardResponse, KindCounts, StaleMode, StatusCounts,
 };
 use crate::models::node::{NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus};
+use crate::models::settings::Settings;
 use crate::repo::nodes;
 
 const RECENT_IDEAS_LIMIT: usize = 5;
-const STALE_AFTER_DAYS: i64 = 14;
 
 /// Assembles the whole dashboard, all carved out of one full node listing -
 /// a single-user graph is small, and every extra `node_rows` read re-derives
@@ -18,10 +18,11 @@ pub async fn get_dashboard(
     user_id: Uuid,
     pool: &PgPool,
     query: &DashboardQuery,
+    settings: &Settings,
 ) -> Result<DashboardResponse, sqlx::Error> {
     let all_nodes = nodes::list_nodes(user_id, pool, &NodeListQuery::default()).await?;
     let mut counts = count_nodes(&all_nodes);
-    let stale = stale_nodes(&all_nodes, query);
+    let stale = stale_nodes(&all_nodes, query, settings);
 
     // Ideas (no status) aren't in play: they're off the board until promoted.
     // Archived nodes are hidden, whatever their status.
@@ -130,10 +131,17 @@ fn count_nodes(all_nodes: &[NodeResponse]) -> DashboardCounts {
 /// Nodes untouched (no poke, else created) for the threshold days. Active
 /// ones always qualify; queued/paused per `StaleMode`; done/archived/ideas
 /// never. Oldest-touched first (most urgently stale first).
-fn stale_nodes(all_nodes: &[NodeResponse], query: &DashboardQuery) -> Vec<NodeResponse> {
-    let days = query.stale_days.unwrap_or(STALE_AFTER_DAYS).clamp(1, 365);
-    let queued_mode = query.stale_queued.unwrap_or(StaleMode::Poked);
-    let paused_mode = query.stale_paused.unwrap_or(StaleMode::Never);
+fn stale_nodes(
+    all_nodes: &[NodeResponse],
+    query: &DashboardQuery,
+    settings: &Settings,
+) -> Vec<NodeResponse> {
+    let days = query
+        .stale_days
+        .unwrap_or(settings.stale_days)
+        .clamp(1, 365);
+    let queued_mode = query.stale_queued.unwrap_or(settings.stale_queued);
+    let paused_mode = query.stale_paused.unwrap_or(settings.stale_paused);
     let cutoff = Utc::now() - Duration::days(days);
     let last_touched = |node: &NodeResponse| node.last_poked_at.unwrap_or(node.created_at);
     let eligible = |node: &NodeResponse| {

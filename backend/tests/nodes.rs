@@ -1124,6 +1124,12 @@ async fn kind_change_clears_data_the_new_kind_cannot_have(pool: PgPool) {
     assert_eq!(body["error"], "only projects have a checklist");
 }
 
+/// Period behavior is an account setting the server reads, not a request flag.
+async fn set_settings(app: &axum::Router, token: &str, changes: Value) {
+    let (status, _) = send(app, req("PATCH", "/api/settings", changes, Some(token))).await;
+    assert_eq!(status, StatusCode::OK);
+}
+
 async fn patch_status(
     app: &axum::Router,
     token: &str,
@@ -1131,12 +1137,13 @@ async fn patch_status(
     status: &str,
     track: bool,
 ) -> Value {
+    set_settings(app, token, json!({"track_active_periods": track})).await;
     let (_, body) = send(
         app,
         req(
             "PATCH",
             &format!("/api/nodes/{node_id}"),
-            json!({"status": status, "track_active_periods": track}),
+            json!({"status": status}),
             Some(token),
         ),
     )
@@ -1270,7 +1277,7 @@ async fn archiving_keeps_status_and_period_and_works_on_any_kind(pool: PgPool) {
         req(
             "PATCH",
             &format!("/api/nodes/{node_id}"),
-            json!({"archived": true, "track_active_periods": true}),
+            json!({"archived": true}),
             Some(&token),
         ),
     )
@@ -1625,12 +1632,13 @@ async fn patch_focus(
     focus: &str,
     split: bool,
 ) -> Value {
+    set_settings(app, token, json!({"split_period_on_focus_change": split})).await;
     let (_, body) = send(
         app,
         req(
             "PATCH",
             &format!("/api/nodes/{node_id}"),
-            json!({"focus": focus, "split_period_on_focus_change": split}),
+            json!({"focus": focus}),
             Some(token),
         ),
     )
@@ -1713,12 +1721,13 @@ async fn status_and_focus_in_one_patch_open_a_single_period(pool: PgPool) {
     .await;
     let node_id = node["id"].as_str().unwrap();
 
+    set_settings(&app, &token, json!({"split_period_on_focus_change": true})).await;
     send(
         &app,
         req(
             "PATCH",
             &format!("/api/nodes/{node_id}"),
-            json!({"status": "active", "focus": "background", "split_period_on_focus_change": true}),
+            json!({"status": "active", "focus": "background"}),
             Some(&token),
         ),
     )
@@ -1743,12 +1752,18 @@ async fn reactivating_after_a_focus_change_starts_a_new_period_when_splitting(po
     patch_focus(&app, &token, node_id, "background", false).await;
 
     // Tracking is off for this PATCH, so without splitting it would reopen.
+    set_settings(
+        &app,
+        &token,
+        json!({"track_active_periods": false, "split_period_on_focus_change": true}),
+    )
+    .await;
     send(
         &app,
         req(
             "PATCH",
             &format!("/api/nodes/{node_id}"),
-            json!({"status": "active", "track_active_periods": false, "split_period_on_focus_change": true}),
+            json!({"status": "active"}),
             Some(&token),
         ),
     )

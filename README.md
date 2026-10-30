@@ -112,7 +112,7 @@ touched" is tracked, independent of any field edit. Anything active that
 hasn't been poked in 14 days shows up on the dashboard as going stale,
 with a poke button right there. Queued and paused nodes can show up too
 (by default queued only if poked before, paused never), and the number of
-days is adjustable - all under Settings > Functionality.
+days is adjustable - all under Settings > Features.
 
 Forgot to poke? The small clock button to the right of the poke button
 in a node's detail view logs a poke at a past date and time instead (never in the future). It doesn't
@@ -145,7 +145,7 @@ newer poke.
   background). Each active period records the focus it ran under, so
   moving a node between focus tiers shows up as separate bars. By default
   a period keeps its focus until you edit it in the node editor; turn on
-  "New period on focus change" in Settings > Functionality to start a new
+  "New period on focus change" in Settings > Features to start a new
   period automatically whenever you change focus.
 
 All three board views share one filter/search bar (kind, status, focus,

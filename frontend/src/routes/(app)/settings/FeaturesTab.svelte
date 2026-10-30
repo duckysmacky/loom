@@ -7,8 +7,8 @@
 </script>
 
 <section class="settings-section">
-	<h2>Functionality</h2>
-	<p class="explain">Saved in this browser only.</p>
+	<h2>Board</h2>
+	<p class="explain">Where the board opens.</p>
 	<div class="settings-row">
 		<span>
 			<span class="row-label">Default board view</span>
@@ -28,6 +28,11 @@
 			]}
 		/>
 	</div>
+</section>
+
+<section class="settings-section">
+	<h2>Quick capture</h2>
+	<p class="explain">Defaults for new nodes when you press N.</p>
 	<div class="settings-row">
 		<span>
 			<span class="row-label">Quick capture kind</span>
@@ -67,6 +72,11 @@
 			]}
 		/>
 	</div>
+</section>
+
+<section class="settings-section">
+	<h2>Canvas</h2>
+	<p class="explain">How the canvas places and draws things.</p>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
@@ -107,6 +117,30 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
+				<span class="row-label">Connection labels</span>
+				<span class="row-help"
+					>Name each connection on the canvas (requires, next, related) in small text above its
+					line.</span
+				>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.showEdgeLabels}
+				onchange={(event) => {
+					prefs.showEdgeLabels = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+</section>
+
+<section class="settings-section">
+	<h2>Pokes</h2>
+	<p class="explain">The "worked on this" log.</p>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
 				<span class="row-label">Poke from cards</span>
 				<span class="row-help">Show the Poke button on dashboard and board cards.</span>
 			</span>
@@ -136,6 +170,11 @@
 			/>
 		</label>
 	</div>
+</section>
+
+<section class="settings-section">
+	<h2>Active periods</h2>
+	<p class="explain">How status and focus changes are recorded on the timeline.</p>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
@@ -175,6 +214,11 @@
 			/>
 		</label>
 	</div>
+</section>
+
+<section class="settings-section">
+	<h2>Dashboard</h2>
+	<p class="explain">What counts as stale on the dashboard.</p>
 	<div class="settings-row">
 		<span>
 			<span class="row-label">Stale after</span>

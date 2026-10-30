@@ -148,6 +148,11 @@ pub fn build_router(state: AppState) -> Router {
         )
         .route("/{id}", delete(handlers::access_tokens::delete));
     let mcp_routes = Router::new().route("/info", get(handlers::mcp::info));
+    // Account route: session JWT only, like /auth and /tokens.
+    let settings_routes = Router::new().route(
+        "/",
+        get(handlers::settings::get).patch(handlers::settings::patch),
+    );
 
     // Data routes also accept personal access tokens; everything else on
     // the API (auth, tokens, OAuth) stays web-session-only.
@@ -171,6 +176,7 @@ pub fn build_router(state: AppState) -> Router {
         .merge(data_routes)
         .nest("/auth", auth_routes)
         .nest("/tokens", token_routes)
+        .nest("/settings", settings_routes)
         .nest("/mcp", mcp_routes);
     let mut app = Router::new();
     let mut mcp_router = None;

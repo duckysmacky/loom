@@ -18,7 +18,7 @@
 	} from '$lib/graph/display';
 	import { parentPathOf } from '$lib/graph/paths';
 	import { graph } from '$lib/stores/graph.svelte';
-	import { isPathCollapsed, prefs, togglePathCollapsed } from '$lib/stores/prefs.svelte';
+	import { isPathCollapsed, prefs, syncState, togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
@@ -37,9 +37,11 @@
 	let loadFailed = $state(false);
 	let ideaTitle = $state('');
 
-	// Refetch whenever the graph cache reloads, i.e. after any mutation.
+	// Refetch whenever the graph cache reloads (after any mutation) or the
+	// stale-list settings were saved.
 	$effect(() => {
 		void graph.version;
+		void syncState.saves;
 		dashboardApi
 			.get()
 			.then((response) => {
