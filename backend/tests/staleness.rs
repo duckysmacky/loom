@@ -591,3 +591,56 @@ async fn a_sweep_never_touches_another_account(pool: PgPool) {
     assert!(!is_stale(&node));
     assert_eq!(node["status"], "active");
 }
+
+#[sqlx::test]
+async fn path_poke_history_rolls_up_the_nodes_inside(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "history@example.com").await;
+    let intruder = signup(&app, "historyintruder@example.com").await;
+
+    let outer = create_node(&app, &token, json!({"kind": "path", "title": "outer"})).await;
+    let inner = create_node(&app, &token, json!({"kind": "path", "title": "inner"})).await;
+    add_edge(&app, &token, &inner, &outer, "part_of").await;
+    let direct = create_node(&app, &token, json!({"kind": "project", "title": "direct"})).await;
+    add_edge(&app, &token, &direct, &outer, "part_of").await;
+    let nested = create_node(&app, &token, json!({"kind": "study", "title": "nested"})).await;
+    add_edge(&app, &token, &nested, &inner, "part_of").await;
+    let outside = create_node(&app, &token, json!({"kind": "project", "title": "outside"})).await;
+    for node in [&direct, &nested, &outside] {
+        poke(&app, &token, node, json!({})).await;
+    }
+
+    let (status, history) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{outer}/pokes"),
+            Value::Null,
+            Some(&token),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    let mut node_ids: Vec<&str> = history
+        .as_array()
+        .unwrap()
+        .iter()
+        .map(|poke| poke["node_id"].as_str().unwrap())
+        .collect();
+    node_ids.sort();
+    let mut expected = vec![direct.as_str(), nested.as_str()];
+    expected.sort();
+    assert_eq!(node_ids, expected);
+
+    let (status, _) = send(
+        &app,
+        req(
+            "GET",
+            &format!("/api/nodes/{outer}/pokes"),
+            Value::Null,
+            Some(&intruder),
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::NOT_FOUND);
+}

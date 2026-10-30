@@ -19,7 +19,7 @@ pub async fn create_poke(
         r#"
         INSERT INTO pokes (node_id, poked_at)
         SELECT $2, COALESCE($3, now()) WHERE EXISTS (SELECT 1 FROM nodes WHERE id = $2 AND user_id = $1)
-        RETURNING id, poked_at
+        RETURNING id, node_id, poked_at
         "#,
         user_id,
         node_id,
@@ -29,8 +29,10 @@ pub async fn create_poke(
     .await
 }
 
-/// `None` means `node_id` isn't owned by `user_id`; `Some(vec)` (possibly
-/// empty) means it is. A plain SELECT can't itself report "not owned" the
+/// A node's poke history, newest first; a path's is every poke on the
+/// nodes inside it (nested paths walked through, ideas skipped - the same
+/// set its last touch comes from). `None` means `node_id` isn't owned by
+/// `user_id`; `Some(vec)` (possibly empty) means it is. A plain SELECT can't itself report "not owned" the
 /// way `create_poke`'s conditional INSERT can, so this needs an explicit
 /// ownership check first.
 pub async fn list_pokes(
@@ -52,7 +54,11 @@ pub async fn list_pokes(
 
     let pokes = sqlx::query_as!(
         PokeResponse,
-        "SELECT id, poked_at FROM pokes WHERE node_id = $1 ORDER BY poked_at DESC",
+        r#"
+        SELECT id, node_id, poked_at FROM pokes
+        WHERE node_id = $1 OR node_id IN (SELECT path_leaves($1))
+        ORDER BY poked_at DESC
+        "#,
         node_id,
     )
     .fetch_all(pool)

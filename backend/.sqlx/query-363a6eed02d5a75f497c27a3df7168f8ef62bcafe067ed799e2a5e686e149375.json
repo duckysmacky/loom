@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "SELECT id, poked_at FROM pokes WHERE node_id = $1 ORDER BY poked_at DESC",
+  "query": "\n        SELECT id, node_id, poked_at FROM pokes\n        WHERE node_id = $1 OR node_id IN (SELECT path_leaves($1))\n        ORDER BY poked_at DESC\n        ",
   "describe": {
     "columns": [
       {
@@ -16,6 +16,17 @@
       },
       {
         "ordinal": 1,
+        "name": "node_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "pokes",
+            "name": "node_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
         "name": "poked_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -33,8 +44,9 @@
     },
     "nullable": [
       false,
+      false,
       false
     ]
   },
-  "hash": "39af0e608cd0f6c5813a8771b36846bafe05f3a7c4df3088c33a2518b77f181b"
+  "hash": "363a6eed02d5a75f497c27a3df7168f8ef62bcafe067ed799e2a5e686e149375"
 }

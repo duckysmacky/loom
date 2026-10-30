@@ -20,7 +20,7 @@
 	import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
-	import type { TimelinePokeResponse } from '$lib/types/TimelinePokeResponse';
+	import type { PokeResponse } from '$lib/types/PokeResponse';
 
 	/** Width of the node-name column, which stays fixed while the time axis scrolls. */
 	const NAME_COLUMN = 240;
@@ -39,7 +39,7 @@
 	// Every poke and active period the caller owns, refetched whenever the
 	// graph reloads after a mutation (same trigger `DetailChecklist.svelte`
 	// uses) - grouped by node for O(1) lookup per row.
-	let pokesByNode = $state(new Map<string, TimelinePokeResponse[]>());
+	let pokesByNode = $state(new Map<string, PokeResponse[]>());
 	let periodsByNode = $state(new Map<string, ActivePeriodResponse[]>());
 	$effect(() => {
 		void graph.version;
@@ -50,7 +50,7 @@
 				// variables above - not mutated in place, so reactivity doesn't
 				// need SvelteMap here.
 				// eslint-disable-next-line svelte/prefer-svelte-reactivity
-				const pokes = new Map<string, TimelinePokeResponse[]>();
+				const pokes = new Map<string, PokeResponse[]>();
 				for (const poke of timeline.pokes) {
 					pokes.set(poke.node_id, [...(pokes.get(poke.node_id) ?? []), poke]);
 				}

@@ -2,9 +2,10 @@ use sqlx::PgPool;
 use uuid::Uuid;
 
 use crate::models::active_period::ActivePeriodResponse;
-use crate::models::board::{CanvasResponse, TimelinePokeResponse, TimelineResponse};
+use crate::models::board::{CanvasResponse, TimelineResponse};
 use crate::models::edge::EdgeListQuery;
 use crate::models::node::{NodeFocus, NodeListQuery};
+use crate::models::poke::PokeResponse;
 use crate::repo::{canvas, edges, nodes};
 
 /// The caller's entire graph in one payload - reuses the two existing
@@ -28,7 +29,7 @@ pub async fn get_canvas(user_id: Uuid, pool: &PgPool) -> Result<CanvasResponse, 
 /// payload - the Timeline view's data source.
 pub async fn get_timeline(user_id: Uuid, pool: &PgPool) -> Result<TimelineResponse, sqlx::Error> {
     let pokes = sqlx::query_as!(
-        TimelinePokeResponse,
+        PokeResponse,
         r#"
         SELECT p.id, p.node_id, p.poked_at
         FROM pokes p

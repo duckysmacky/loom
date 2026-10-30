@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        INSERT INTO pokes (node_id, poked_at)\n        SELECT $2, COALESCE($3, now()) WHERE EXISTS (SELECT 1 FROM nodes WHERE id = $2 AND user_id = $1)\n        RETURNING id, poked_at\n        ",
+  "query": "\n        INSERT INTO pokes (node_id, poked_at)\n        SELECT $2, COALESCE($3, now()) WHERE EXISTS (SELECT 1 FROM nodes WHERE id = $2 AND user_id = $1)\n        RETURNING id, node_id, poked_at\n        ",
   "describe": {
     "columns": [
       {
@@ -16,6 +16,17 @@
       },
       {
         "ordinal": 1,
+        "name": "node_id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "pokes",
+            "name": "node_id"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
         "name": "poked_at",
         "type_info": "Timestamptz",
         "origin": {
@@ -35,8 +46,9 @@
     },
     "nullable": [
       false,
+      false,
       false
     ]
   },
-  "hash": "178e1a25be12529745b2669fc2561ebb0ead3e98c88ea0cc39d733eeb7b03225"
+  "hash": "fd40d594cb57fdc47c08d3bf4941e08f71673495ad44ea9e9fca6fc30638dd92"
 }

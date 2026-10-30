@@ -19,6 +19,7 @@
 	import Badge from '$lib/components/ui/Badge.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import PokeAt from '$lib/components/PokeAt.svelte';
+	import PokeHistory from '$lib/components/PokeHistory.svelte';
 	import DateInput from '$lib/components/ui/DateInput.svelte';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import PromoteDialog from '$lib/components/PromoteDialog.svelte';
@@ -366,6 +367,13 @@
 							<div class="poke-row">
 								<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
 								<PokeAt {node} />
+								<PokeHistory {node} />
+							</div>
+						{/if}
+						<!-- Paths can't be poked, but show every poke inside them. -->
+						{#if node.kind === 'path' || (blocked && node.kind !== 'idea')}
+							<div class="poke-row">
+								<PokeHistory {node} />
 							</div>
 						{/if}
 						<Button
