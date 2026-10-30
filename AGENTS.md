@@ -23,6 +23,7 @@ connected graph. One graph per account; no collaboration.
 - `frontend/src/lib/{api,graph,stores,components,types}/` - HTTP client (single-flight refresh), board logic (each with a spec), stores, components (`detail/`, `ui/`), generated types (gitignored, never hand-edited).
 - `claude-plugin/` - MCP config + `loom` skill. Keep skill in sync when tools or domain rules change.
 - `.github/workflows/` - `test.yml` (PRs, called by release), `release.yml` (GHCR on `master` pushes and `v*` tags; drafts release on tags).
+- `.context/` - gitignored agent/working notes (`API.md` REST reference, `PROJECT_OVERVIEW.md`, `PROMPT.md`, `IDEAS.md`, `plans/`). Local only, never committed.
 
 ## Domain model
 
