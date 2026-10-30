@@ -97,6 +97,7 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 		<span class="kind">{kind}</span>
 		<Badge
 			status={node.status}
+			kind={node.kind}
 			blocked={node.blocked}
 			archived={node.archived}
 			staleSince={node.stale_since}

@@ -6,8 +6,8 @@ use super::extract::ApiJson;
 use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
 use crate::models::node::NodeKind;
-use crate::models::settings::{MAX_RECENT_COLORS, Settings};
-use crate::repo::{settings, staleness};
+use crate::models::settings::{MAX_RECENT_COLORS, PathStatusMode, Settings};
+use crate::repo::{nodes, settings, staleness};
 use crate::state::AppState;
 
 pub async fn get(
@@ -24,14 +24,23 @@ pub async fn patch(
     AuthUser { user_id }: AuthUser,
     ApiJson(changes): ApiJson<Map<String, Value>>,
 ) -> Result<Json<Settings>, ApiError> {
-    validate_changes(&changes)?;
+    let parsed = validate_changes(&changes)?;
+    // Switching to manual path statuses starts each path from the status it
+    // had derived - read before the mode flips.
+    if changes.contains_key("path_status_mode")
+        && parsed.path_status_mode == PathStatusMode::Manual
+        && settings::get(user_id, &state.pool).await?.path_status_mode != PathStatusMode::Manual
+    {
+        nodes::store_derived_path_statuses(user_id, &state.pool).await?;
+    }
     let settings = settings::patch(user_id, &state.pool, changes).await?;
     // Thresholds, kinds and modes decide what's stale right now.
     staleness::sweep(user_id, &state.pool, &settings).await?;
     Ok(Json(settings))
 }
 
-fn validate_changes(changes: &Map<String, Value>) -> Result<(), ApiError> {
+/// Returns the changes typed (over the defaults, not the stored settings).
+fn validate_changes(changes: &Map<String, Value>) -> Result<Settings, ApiError> {
     let Value::Object(known) = serde_json::to_value(Settings::default()).expect("serializable")
     else {
         unreachable!("settings serialize to an object");
@@ -65,5 +74,6 @@ fn validate_changes(changes: &Map<String, Value>) -> Result<(), ApiError> {
     parsed
         .recent_colors
         .iter()
-        .try_for_each(|color| validate_color(color))
+        .try_for_each(|color| validate_color(color))?;
+    Ok(parsed)
 }

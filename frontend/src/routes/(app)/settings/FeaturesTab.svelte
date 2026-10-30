@@ -71,6 +71,28 @@
 			]}
 		/>
 	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Path status</span>
+			<span class="row-help"
+				>Auto: derived from the nodes inside. Manual: you set it, like any other node. Off: not
+				shown.</span
+			>
+		</span>
+		<SegmentedControl
+			label="Path status"
+			value={prefs.pathStatusMode}
+			onchange={(mode) => {
+				prefs.pathStatusMode = mode;
+				savePrefs();
+			}}
+			options={[
+				{ value: 'auto', label: 'Auto' },
+				{ value: 'manual', label: 'Manual' },
+				{ value: 'off', label: 'Off' }
+			]}
+		/>
+	</div>
 </section>
 
 <section class="settings-section">

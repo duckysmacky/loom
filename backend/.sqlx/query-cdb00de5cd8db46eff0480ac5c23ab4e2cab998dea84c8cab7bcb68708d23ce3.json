@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE nodes SET status = path_status(id) WHERE user_id = $1 AND kind = 'path'",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "cdb00de5cd8db46eff0480ac5c23ab4e2cab998dea84c8cab7bcb68708d23ce3"
+}

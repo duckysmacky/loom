@@ -9,6 +9,7 @@ use crate::models::node::{
     AttachTopicRequest, CreateNodeRequest, NodeKind, NodeListQuery, NodeResponse, NodeStatus,
     ReorderNodesRequest, UpdateNodeRequest,
 };
+use crate::models::settings::PathStatusMode;
 use crate::repo::node_topics::{AttachOutcome, DetachOutcome};
 use crate::repo::{node_topics, nodes, settings, staleness};
 use crate::state::AppState;
@@ -44,7 +45,10 @@ pub async fn create(
     if request.kind == NodeKind::Idea && (request.status.is_some() || request.focus.is_some()) {
         return Err(IDEAS_HAVE_NO_STATUS);
     }
-    if request.kind == NodeKind::Path && request.status.is_some() {
+    if request.kind == NodeKind::Path
+        && request.status.is_some()
+        && settings::get(user_id, &state.pool).await?.path_status_mode != PathStatusMode::Manual
+    {
         return Err(PATH_STATE_DERIVED);
     }
 
@@ -88,9 +92,12 @@ pub async fn update(
         || matches!(request.progress_unit, Some(Some(_)));
     let settings = settings::get(user_id, &state.pool).await?;
     let sets_status = request.status.is_some() || request.focus.is_some();
-    // Focus stays editable on a path; status and dates are derived.
-    let sets_path_state =
-        request.status.is_some() || request.started_at.is_some() || request.completed_at.is_some();
+    // Focus stays editable on a path; its dates are derived, and so is its
+    // status unless the account sets path statuses by hand.
+    let sets_path_state = (request.status.is_some()
+        && settings.path_status_mode != PathStatusMode::Manual)
+        || request.started_at.is_some()
+        || request.completed_at.is_some();
     if sets_progress || sets_status || sets_path_state {
         let resulting_kind = match request.kind {
             Some(kind) => kind,

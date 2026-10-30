@@ -72,6 +72,7 @@
 						</button>
 						<Badge
 							status={node.status}
+							kind={node.kind}
 							blocked={node.blocked}
 							archived={node.archived}
 							staleSince={node.stale_since}

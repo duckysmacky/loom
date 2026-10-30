@@ -3,6 +3,7 @@ import type { Grouping } from '$lib/graph/grouping';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeKind } from '$lib/types/NodeKind';
 import type { PathStaleMode } from '$lib/types/PathStaleMode';
+import type { PathStatusMode } from '$lib/types/PathStatusMode';
 import type { StaleMode } from '$lib/types/StaleMode';
 import type { StalePeriodEnd } from '$lib/types/StalePeriodEnd';
 
@@ -60,6 +61,8 @@ export type Prefs = {
 	stalePausePeriodEnd: StalePeriodEnd;
 	/** How paths inherit staleness from the nodes inside. */
 	pathStaleMode: PathStaleMode;
+	/** Path status: hidden, set by hand, or derived from inside. */
+	pathStatusMode: PathStatusMode;
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
@@ -100,7 +103,8 @@ const DEFAULTS: Prefs = {
 	staleIdeaStatus: 'never',
 	staleAutoPause: false,
 	stalePausePeriodEnd: 'last_poke',
-	pathStaleMode: 'any'
+	pathStaleMode: 'any',
+	pathStatusMode: 'auto'
 };
 
 function loadPrefs(): Prefs {

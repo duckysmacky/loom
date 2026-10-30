@@ -65,7 +65,9 @@ criteria.
 - a path's `status`: anything active inside makes it `active`, else anything paused makes it
   `paused`, else anything still to do (or nothing at all) makes it `queued`; once everything is
   finished it's `done` (archived flags don't count). Ideas are skipped, nested paths
-  walked through. Never send a status or start/completion date for a path.
+  walked through. Never send a start/completion date for a path, and never send a status
+  unless the user set path statuses to manual (then it's set by hand and the request is
+  accepted).
 - `checklist_progress`
 - `last_poked_at`
 - `stale_since`

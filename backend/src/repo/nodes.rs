@@ -434,6 +434,18 @@ pub async fn update_node(
     get_node(user_id, pool, node_id).await
 }
 
+/// Stores every path's derived status as its own - the starting point when
+/// the account switches to setting path statuses by hand.
+pub async fn store_derived_path_statuses(user_id: Uuid, pool: &PgPool) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        "UPDATE nodes SET status = path_status(id) WHERE user_id = $1 AND kind = 'path'",
+        user_id,
+    )
+    .execute(pool)
+    .await?;
+    Ok(())
+}
+
 /// Ranks the given nodes 1..N in list order; anything left out keeps its
 /// existing `sort_order`. Fails (rolled back) if any id isn't the caller's -
 /// same ownership guarantee as every other write here.

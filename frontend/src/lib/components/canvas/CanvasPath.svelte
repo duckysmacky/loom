@@ -54,6 +54,7 @@ move with it. The fill is translucent so nested paths read as depth. -->
 		<span class="kind"><KindMark kind="path" /> path</span>
 		<Badge
 			status={node.status}
+			kind={node.kind}
 			blocked={node.blocked}
 			archived={node.archived}
 			staleSince={node.stale_since}

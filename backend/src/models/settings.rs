@@ -91,6 +91,19 @@ pub enum PathStaleMode {
     Any,
 }
 
+/// How a path's status is decided.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum PathStatusMode {
+    /// Not shown; still derived underneath (blocking, staleness).
+    Off,
+    /// Set by hand, like any other node.
+    Manual,
+    /// Derived from the nodes inside it.
+    Auto,
+}
+
 pub const MAX_RECENT_COLORS: usize = 8;
 
 /// Per-account settings, stored as one jsonb column on `users`. Missing keys
@@ -141,6 +154,7 @@ pub struct Settings {
     pub stale_auto_pause: bool,
     pub stale_pause_period_end: StalePeriodEnd,
     pub path_stale_mode: PathStaleMode,
+    pub path_status_mode: PathStatusMode,
 }
 
 impl Default for Settings {
@@ -171,6 +185,7 @@ impl Default for Settings {
             stale_auto_pause: false,
             stale_pause_period_end: StalePeriodEnd::LastPoke,
             path_stale_mode: PathStaleMode::Any,
+            path_status_mode: PathStatusMode::Auto,
         }
     }
 }

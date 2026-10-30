@@ -58,8 +58,10 @@ focus secondary unless given; turning a node into an idea clears both and ends \
 its open active period. A path's status is derived from the nodes inside it \
 (nested paths walked through, ideas skipped): anything active -> active, else \
 anything paused -> paused, else anything still to do (or nothing inside) -> \
-queued, otherwise done (archived flags don't count). Sending a \
-status or start/completion date for a path is an error; its focus is editable.
+queued, otherwise done (archived flags don't count). If the user set path \
+statuses to manual, a path's status is set by hand instead. Otherwise sending a \
+status for a path is an error; start/completion dates for a path always are; \
+its focus is editable.
 
 Edges always point from the node being described: `requires` (from depends on \
 to - `from` is blocked until `to` is done, and an idea is never done; cycles \

@@ -644,3 +644,41 @@ async fn path_poke_history_rolls_up_the_nodes_inside(pool: PgPool) {
     .await;
     assert_eq!(status, StatusCode::NOT_FOUND);
 }
+
+#[sqlx::test]
+async fn path_status_is_writable_only_in_manual_mode(pool: PgPool) {
+    let app = app(pool.clone());
+    let token = signup(&app, "pathstatus@example.com").await;
+    let path = create_node(&app, &token, json!({"kind": "path", "title": "path"})).await;
+    let inside = create_node(
+        &app,
+        &token,
+        json!({"kind": "project", "title": "inside", "status": "active"}),
+    )
+    .await;
+    add_edge(&app, &token, &inside, &path, "part_of").await;
+
+    assert_eq!(
+        patch_node(&app, &token, &path, json!({"status": "paused"})).await,
+        StatusCode::BAD_REQUEST
+    );
+
+    // Switching to manual keeps the status it had derived...
+    set_settings(&app, &token, json!({"path_status_mode": "manual"})).await;
+    assert_eq!(get_node(&app, &token, &path).await["status"], "active");
+    // ...and from then on it's set by hand, whatever is inside.
+    assert_eq!(
+        patch_node(&app, &token, &path, json!({"status": "paused"})).await,
+        StatusCode::OK
+    );
+    patch_node(&app, &token, &inside, json!({"status": "done"})).await;
+    assert_eq!(get_node(&app, &token, &path).await["status"], "paused");
+    // Its dates stay derived.
+    assert_eq!(
+        patch_node(&app, &token, &path, json!({"started_at": null})).await,
+        StatusCode::BAD_REQUEST
+    );
+
+    set_settings(&app, &token, json!({"path_status_mode": "off"})).await;
+    assert_eq!(get_node(&app, &token, &path).await["status"], "done");
+}

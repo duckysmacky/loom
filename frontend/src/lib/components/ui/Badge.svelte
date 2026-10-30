@@ -2,25 +2,30 @@
 	import { Hourglass } from '@lucide/svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { shortDate } from '$lib/graph/display';
+	import { prefs } from '$lib/stores/prefs.svelte';
+	import type { NodeKind } from '$lib/types/NodeKind';
 	import type { NodeStatus } from '$lib/types/NodeStatus';
 
 	/** `blocked` is derived (never stored) and overrides the stored status.
 	 * Ideas have no status: nothing to show unless blocked. `archived` is a
 	 * separate flag, shown next to the status, and a stale node gets a mark
-	 * right of it. */
+	 * right of it. A path's status hides when path statuses are off. */
 	let {
 		status,
+		kind,
 		blocked = false,
 		archived = false,
 		staleSince = null
 	}: {
 		status: NodeStatus | null;
+		kind?: NodeKind;
 		blocked?: boolean;
 		archived?: boolean;
 		staleSince?: string | null;
 	} = $props();
 
-	const shown = $derived(blocked && status !== 'done' ? 'blocked' : status);
+	const visibleStatus = $derived(kind === 'path' && prefs.pathStatusMode === 'off' ? null : status);
+	const shown = $derived(blocked && status !== 'done' ? 'blocked' : visibleStatus);
 	const staleLabel = $derived(staleSince ? `Stale since ${shortDate(staleSince)}` : '');
 </script>
 

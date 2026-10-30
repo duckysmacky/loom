@@ -89,6 +89,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 				<span class="kind"><KindMark kind="path" /> path</span>
 				<Badge
 					status={path.status}
+					kind={path.kind}
 					blocked={path.blocked}
 					archived={path.archived}
 					staleSince={path.stale_since}

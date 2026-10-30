@@ -237,7 +237,12 @@
 			<button type="button" class="path" onclick={() => openNode(node.id)}>
 				<span class="row-title">{node.title}</span>
 				<span class="path-tags">
-					<Badge status={node.status} blocked={node.blocked} staleSince={node.stale_since} />
+					<Badge
+						status={node.status}
+						kind={node.kind}
+						blocked={node.blocked}
+						staleSince={node.stale_since}
+					/>
 					{#if node.focus}
 						<span class="focus">
 							<span class="tier-bar" style:background={TIER_COLOR[node.focus]}></span>

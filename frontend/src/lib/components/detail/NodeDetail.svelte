@@ -37,6 +37,7 @@
 	} from '$lib/graph/display';
 	import { closeNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { prefs } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
 	import type { UpdateNodeRequest } from '$lib/types/UpdateNodeRequest';
@@ -165,6 +166,7 @@
 					<span class="label"><KindMark kind={node.kind} /> {node.kind}</span>
 					<Badge
 						status={node.status}
+						kind={node.kind}
 						blocked={node.blocked}
 						archived={node.archived}
 						staleSince={node.stale_since}
@@ -252,13 +254,14 @@
 				</div>
 
 				<aside class="side">
-					<!-- Ideas have no status or focus until promoted. -->
-					{#if node.kind === 'path'}
+					<!-- Ideas have no status or focus until promoted. A path's status is
+					     derived, set by hand or hidden, per the path status setting. -->
+					{#if node.kind === 'path' && prefs.pathStatusMode === 'auto'}
 						<div class="control">
 							<span class="label">Status</span>
 							<span class="computed">{node.status} · derived from what's inside</span>
 						</div>
-					{:else if node.status}
+					{:else if node.status && !(node.kind === 'path' && prefs.pathStatusMode === 'off')}
 						<label class="control">
 							<span class="label">Status</span>
 							<select
