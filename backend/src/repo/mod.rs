@@ -11,5 +11,6 @@ pub mod oauth;
 pub mod pokes;
 pub mod refresh_tokens;
 pub mod settings;
+pub mod staleness;
 pub mod topics;
 pub mod users;

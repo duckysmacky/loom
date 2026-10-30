@@ -28,7 +28,8 @@ the repository layer is the only place that touches `sqlx` directly.
   `sqlx::migrate!`.
 - `blocked` status and `part_of` container progress are computed in
   queries, never written to a column — don't add a `blocked` or
-  container `progress` column to the schema.
+  container `progress` column to the schema. `nodes.stale_since` is the one
+  stored exception: written only by `repo::staleness::sweep`.
 - Node reads go through the `node_rows` view (every derived column, incl.
   a path's derived status via `path_status()`); never read `nodes.status`
   of a path directly. Change the view with `CREATE OR REPLACE VIEW` in a

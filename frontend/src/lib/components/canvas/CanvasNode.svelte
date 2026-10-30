@@ -50,7 +50,12 @@
 			><KindMark {kind} /></span
 		>
 		<span class="kind">{kind}</span>
-		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
+		<Badge
+			status={node.status}
+			blocked={node.blocked}
+			archived={node.archived}
+			staleSince={node.stale_since}
+		/>
 	</div>
 	<div class="title">{node.title}</div>
 	{#if kind === 'path'}

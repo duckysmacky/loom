@@ -232,6 +232,29 @@ async fn close_period_now(
     Ok(())
 }
 
+/// Closes the node's open period, if any, at `ended_at` - clamped to its
+/// start, and `None` (never poked) ends it where it began.
+pub async fn close_open_period_at(
+    user_id: Uuid,
+    tx: &mut PgConnection,
+    node_id: Uuid,
+    ended_at: Option<DateTime<Utc>>,
+) -> Result<(), sqlx::Error> {
+    sqlx::query!(
+        r#"
+        UPDATE active_periods a SET ended_at = GREATEST($3, a.started_at)
+        FROM nodes n
+        WHERE a.node_id = $2 AND a.ended_at IS NULL AND n.id = a.node_id AND n.user_id = $1
+        "#,
+        user_id,
+        node_id,
+        ended_at,
+    )
+    .execute(&mut *tx)
+    .await?;
+    Ok(())
+}
+
 /// Keeps the periods in step with a status change, inside the caller's
 /// transaction. A node's started date is its first period's start and its
 /// completed date is the last period's end while done, so this is what

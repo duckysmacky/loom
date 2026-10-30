@@ -62,7 +62,8 @@ class GraphStore {
 	 * Logs a poke and, when "Poke sets active" is on, also switches the
 	 * node's status to `active` - one `mutate` call, one refetch, instead of
 	 * every poke call site running its own two-step sequence. A backdated poke
-	 * (`pokedAt`) is old work being logged, so it never activates the node.
+	 * (`pokedAt`) is old work being logged, so it doesn't activate the node
+	 * here - though the server resumes a paused node it un-stales.
 	 */
 	async poke(node: NodeResponse, pokedAt?: string) {
 		return this.mutate(async () => {

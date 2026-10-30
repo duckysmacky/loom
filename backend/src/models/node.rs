@@ -102,6 +102,9 @@ pub struct NodeResponse {
     /// Hidden from the board and dashboard; independent of status, so any
     /// node (any kind, ideas and paths included) can be archived.
     pub archived: bool,
+    /// When the node went stale (untouched past the account's threshold);
+    /// `null` while it isn't. Recorded by a sweep, cleared by a fresh poke.
+    pub stale_since: Option<DateTime<Utc>>,
 }
 
 #[derive(Debug, Deserialize, TS, JsonSchema)]

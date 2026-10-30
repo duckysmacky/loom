@@ -10,7 +10,7 @@ use crate::models::node::{
     ReorderNodesRequest, UpdateNodeRequest,
 };
 use crate::repo::node_topics::{AttachOutcome, DetachOutcome};
-use crate::repo::{node_topics, nodes, settings};
+use crate::repo::{node_topics, nodes, settings, staleness};
 use crate::state::AppState;
 
 pub async fn list(
@@ -86,6 +86,7 @@ pub async fn update(
     let sets_progress = matches!(request.progress_current, Some(Some(_)))
         || matches!(request.progress_total, Some(Some(_)))
         || matches!(request.progress_unit, Some(Some(_)));
+    let settings = settings::get(user_id, &state.pool).await?;
     let sets_status = request.status.is_some() || request.focus.is_some();
     // Focus stays editable on a path; status and dates are derived.
     let sets_path_state =
@@ -138,10 +139,15 @@ pub async fn update(
         }
     }
 
-    let settings = settings::get(user_id, &state.pool).await?;
-    let node = nodes::update_node(user_id, &state.pool, node_id, &request, &settings)
+    nodes::update_node(user_id, &state.pool, node_id, &request, &settings)
         .await
         .map_err(map_node_error)?
+        .ok_or(ApiError::NotFound)?;
+    // Done, archived or a kind change can end staleness (and archiving a
+    // path reaches everything inside it).
+    staleness::sweep(user_id, &state.pool, &settings).await?;
+    let node = nodes::get_node(user_id, &state.pool, node_id)
+        .await?
         .ok_or(ApiError::NotFound)?;
     Ok(Json(node))
 }

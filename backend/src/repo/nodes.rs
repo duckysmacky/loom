@@ -46,6 +46,7 @@ pub(crate) struct NodeRow {
     pub(crate) path_progress_done: i64,
     pub(crate) path_progress_total: i64,
     pub(crate) archived: bool,
+    pub(crate) stale_since: Option<DateTime<Utc>>,
 }
 
 impl From<NodeRow> for NodeResponse {
@@ -89,6 +90,7 @@ impl From<NodeRow> for NodeResponse {
             path_progress,
             last_poked_at: row.last_poked_at,
             archived: row.archived,
+            stale_since: row.stale_since,
         }
     }
 }
@@ -172,7 +174,7 @@ pub async fn list_nodes(
             last_poked_at,
             path_progress_done AS "path_progress_done!",
             path_progress_total AS "path_progress_total!",
-            archived AS "archived!"
+            archived AS "archived!", stale_since
         FROM node_rows
         WHERE user_id = $1
           AND ($2::node_status IS NULL OR status = $2)
@@ -227,7 +229,7 @@ pub async fn get_node(
             last_poked_at,
             path_progress_done AS "path_progress_done!",
             path_progress_total AS "path_progress_total!",
-            archived AS "archived!"
+            archived AS "archived!", stale_since
         FROM node_rows
         WHERE user_id = $1 AND id = $2
         "#,

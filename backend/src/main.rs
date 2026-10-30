@@ -1,10 +1,12 @@
 use std::net::SocketAddr;
 
 use anyhow::{Context, Result};
-use loom::{app, config::Config, state::AppState};
+use loom::{app, config::Config, repo::staleness, state::AppState};
 use sqlx::postgres::{PgConnectOptions, PgPoolOptions};
 use tokio::signal;
 use tracing_subscriber::EnvFilter;
+
+const STALE_SWEEP_INTERVAL: std::time::Duration = std::time::Duration::from_secs(10 * 60);
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -30,6 +32,19 @@ async fn main() -> Result<()> {
         .run(&pool)
         .await
         .context("failed to run database migrations")?;
+
+    // Nodes go stale with nobody touching anything: sweep on boot, then
+    // periodically (pokes, node edits and settings saves also sweep).
+    let sweep_pool = pool.clone();
+    tokio::spawn(async move {
+        let mut interval = tokio::time::interval(STALE_SWEEP_INTERVAL);
+        loop {
+            interval.tick().await;
+            if let Err(error) = staleness::sweep_all(&sweep_pool).await {
+                tracing::warn!(%error, "stale sweep failed");
+            }
+        }
+    });
 
     let mut state = AppState::with_signup_policy(pool, &config.jwt_secret, config.allow_signup)
         .with_cors_origins(&config.cors_origins);

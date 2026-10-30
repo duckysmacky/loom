@@ -31,6 +31,7 @@ export function makeNode(overrides: Partial<NodeResponse> = {}): NodeResponse {
 		path_progress: null,
 		last_poked_at: null,
 		archived: false,
+		stale_since: null,
 		...overrides
 	};
 }

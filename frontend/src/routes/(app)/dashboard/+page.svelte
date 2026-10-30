@@ -18,7 +18,7 @@
 	} from '$lib/graph/display';
 	import { parentPathOf } from '$lib/graph/paths';
 	import { graph } from '$lib/stores/graph.svelte';
-	import { isPathCollapsed, prefs, syncState, togglePathCollapsed } from '$lib/stores/prefs.svelte';
+	import { isPathCollapsed, prefs, togglePathCollapsed } from '$lib/stores/prefs.svelte';
 	import { notify, notifyError } from '$lib/stores/toasts.svelte';
 	import { openNode } from '$lib/navigation';
 	import type { DashboardResponse } from '$lib/types/DashboardResponse';
@@ -37,11 +37,10 @@
 	let loadFailed = $state(false);
 	let ideaTitle = $state('');
 
-	// Refetch whenever the graph cache reloads (after any mutation) or the
-	// stale-list settings were saved.
+	// Refetch whenever the graph cache reloads - after any mutation, and after
+	// a settings save (which re-sweeps staleness).
 	$effect(() => {
 		void graph.version;
-		void syncState.saves;
 		dashboardApi
 			.get()
 			.then((response) => {
@@ -58,8 +57,16 @@
 		const statuses = ['active'];
 		if (prefs.staleQueued !== 'never') statuses.push('queued');
 		if (prefs.stalePaused !== 'never') statuses.push('paused');
-		return `${statuses.join(', ')} - no poke for ${prefs.staleDays}+ days. Poke to keep it.`;
+		if (prefs.staleIdeaStatus !== 'never') statuses.push('idea-status');
+		const warning = prefs.staleWarnDays ? `, warned ${prefs.staleWarnDays} days ahead` : '';
+		return `${statuses.join(', ')} - stale after ${prefs.staleDays} days without a poke${warning}. Poke to keep it.`;
 	});
+	/** Whole days until a node goes stale (at least 0). */
+	const daysUntilStale = (node: NodeResponse) => {
+		const touched = new Date(node.last_poked_at ?? node.created_at).getTime();
+		const staleAt = touched + prefs.staleDays * 86_400_000;
+		return Math.max(0, Math.ceil((staleAt - Date.now()) / 86_400_000));
+	};
 	const actionableCount = $derived(dashboard?.active.filter((node) => !node.blocked).length ?? 0);
 	// The active list arrives ordered by tier; split it into one group per tier.
 	const activeTiers = $derived(
@@ -146,15 +153,17 @@
 				<div class="panel">
 					<h2 class="panel-title">Haven't touched in a while</h2>
 					<p class="panel-sub">{staleSummary}</p>
-					{#if dashboard.stale.length}
+					{#if dashboard.stale.length || dashboard.going_stale.length}
 						<ul class="rows">
-							{#each dashboard.stale as node (node.id)}
+							{#each [...dashboard.stale, ...dashboard.going_stale] as node (node.id)}
 								<li class="row">
 									<span class="dot" style:background={accentColor(node)}></span>
 									<button type="button" class="row-main" onclick={() => openNode(node.id)}>
 										<span class="row-title">{node.title}</span>
-										<span class="row-meta">
-											{node.last_poked_at
+										<span class="row-meta" class:soon={!node.stale_since}>
+											{node.stale_since
+												? ''
+												: `stale in ${daysUntilStale(node)}d · `}{node.last_poked_at
 												? `touched ${relativeDays(node.last_poked_at)}`
 												: `never touched · ${shortDate(node.created_at)}`}
 										</span>
@@ -228,7 +237,7 @@
 			<button type="button" class="path" onclick={() => openNode(node.id)}>
 				<span class="row-title">{node.title}</span>
 				<span class="path-tags">
-					<Badge status={node.status} blocked={node.blocked} />
+					<Badge status={node.status} blocked={node.blocked} staleSince={node.stale_since} />
 					{#if node.focus}
 						<span class="focus">
 							<span class="tier-bar" style:background={TIER_COLOR[node.focus]}></span>
@@ -436,6 +445,10 @@
 	.row-meta {
 		font: 500 12px/1.3 var(--font-mono);
 		color: var(--ink-2);
+	}
+
+	.row-meta.soon {
+		color: var(--warn);
 	}
 
 	.path {

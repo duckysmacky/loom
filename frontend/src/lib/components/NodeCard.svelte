@@ -95,7 +95,12 @@ borderStyle(): line = kind (dotted when paused), colour = status. -->
 			><KindMark {kind} /></span
 		>
 		<span class="kind">{kind}</span>
-		<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
+		<Badge
+			status={node.status}
+			blocked={node.blocked}
+			archived={node.archived}
+			staleSince={node.stale_since}
+		/>
 		{#if feature}
 			<span class="touched">
 				{node.last_poked_at ? `touched ${relativeDays(node.last_poked_at)}` : 'never touched'}

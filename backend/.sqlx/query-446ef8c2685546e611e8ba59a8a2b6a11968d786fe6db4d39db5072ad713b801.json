@@ -1,6 +1,6 @@
 {
   "db_name": "PostgreSQL",
-  "query": "\n        SELECT\n            id AS \"id!\", kind AS \"kind!: NodeKind\", status AS \"status?: NodeStatus\",\n            focus AS \"focus?: NodeFocus\", title AS \"title!\",\n            progress_current, progress_total, progress_unit, color, notes,\n            created_at AS \"created_at!\", updated_at AS \"updated_at!\", started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,\n            topic_ids AS \"topic_ids!: Vec<Uuid>\", blocked AS \"blocked!\",\n            container_total AS \"container_total!\", container_done AS \"container_done!\",\n            checklist_total AS \"checklist_total!\", checklist_done AS \"checklist_done!\",\n            last_poked_at,\n            path_progress_done AS \"path_progress_done!\",\n            path_progress_total AS \"path_progress_total!\",\n            archived AS \"archived!\"\n        FROM node_rows\n        WHERE user_id = $1 AND id = $2\n        ",
+  "query": "\n        SELECT\n            id AS \"id!\", kind AS \"kind!: NodeKind\", status AS \"status?: NodeStatus\",\n            focus AS \"focus?: NodeFocus\", title AS \"title!\",\n            progress_current, progress_total, progress_unit, color, notes,\n            created_at AS \"created_at!\", updated_at AS \"updated_at!\", started_at, completed_at,\n            canvas_x, canvas_y, canvas_width, canvas_height, sort_order,\n            topic_ids AS \"topic_ids!: Vec<Uuid>\", blocked AS \"blocked!\",\n            container_total AS \"container_total!\", container_done AS \"container_done!\",\n            checklist_total AS \"checklist_total!\", checklist_done AS \"checklist_done!\",\n            last_poked_at,\n            path_progress_done AS \"path_progress_done!\",\n            path_progress_total AS \"path_progress_total!\",\n            archived AS \"archived!\", stale_since\n        FROM node_rows\n        WHERE user_id = $1 AND id = $2\n        ",
   "describe": {
     "columns": [
       {
@@ -357,6 +357,17 @@
             "name": "archived"
           }
         }
+      },
+      {
+        "ordinal": 29,
+        "name": "stale_since",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "node_rows",
+            "name": "stale_since"
+          }
+        }
       }
     ],
     "parameters": {
@@ -394,8 +405,9 @@
       true,
       true,
       true,
+      true,
       true
     ]
   },
-  "hash": "c6058b9ab612dab78ab74686e4e01876048940ea0e0bfca5d78a8dbec65a358c"
+  "hash": "446ef8c2685546e611e8ba59a8a2b6a11968d786fe6db4d39db5072ad713b801"
 }

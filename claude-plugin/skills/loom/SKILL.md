@@ -68,10 +68,15 @@ criteria.
   walked through. Never send a status or start/completion date for a path.
 - `checklist_progress`
 - `last_poked_at`
+- `stale_since`
 
-**Pokes and staleness.** A **poke** is an "I worked on this" log entry. An `active` node
-(or a previously poked `queued` one) with no poke for 14 days is **stale**. Paths can't be poked: a path's last touch is the
-latest poke on anything inside it.
+**Pokes and staleness.** A **poke** is an "I worked on this" log entry. A node untouched (no
+poke, else since creation) past the user's threshold (14 days by default) is **stale**, and
+`stale_since` records when it crossed it. Which kinds and statuses can go stale, whether stale
+active nodes are paused automatically and how paths inherit staleness are the user's settings.
+Done, archived and idea-kind nodes never go stale. A poke (live or backdated with `poked_at`)
+that brings the last touch back within the threshold clears it. Paths can't be poked: a path's
+last touch is the latest poke on anything inside it.
 
 **Promoting** means changing a node's `kind` in place, keeping the same id and edges. The node
 loses whatever the new kind can't hold:
@@ -91,7 +96,7 @@ the user what will be lost, and confirm before promoting.
 
 | Tool | Use it to |
 | --- | --- |
-| `loom_get_overview` | Get dashboard counts plus the active (non-path, primary focus first), stale and recent-idea nodes and paths. Good for "what am I working on?" |
+| `loom_get_overview` | Get dashboard counts plus the active (non-path, primary focus first), stale, soon-stale (`going_stale`) and recent-idea nodes and paths. Good for "what am I working on?" |
 | `loom_get_graph` | Get every node, edge and topic, plus the canvas's sticky notes and arrows. **Start here before any bulk change.** |
 | `loom_list_nodes` | Filter nodes by `kind` / `status` / `focus` / `view` (`ideas`, `archived` = flag set), or by a title `search`. |
 | `loom_get_node` | Get one node with its edges both ways, its checklist and recent pokes. |

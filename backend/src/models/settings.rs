@@ -1,7 +1,6 @@
 use serde::{Deserialize, Serialize};
 use ts_rs::TS;
 
-use super::dashboard::StaleMode;
 use super::node::{NodeFocus, NodeKind};
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
@@ -56,6 +55,42 @@ pub enum PathDetailView {
     Canvas,
 }
 
+/// Whether nodes at a given status (other than active) can go stale.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum StaleMode {
+    /// Once untouched for the threshold (never-poked ones count from creation).
+    Always,
+    /// Only if it was poked at some point.
+    Poked,
+    Never,
+}
+
+/// Where auto-pause ends the open active period.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum StalePeriodEnd {
+    /// At the last poke (or the period's start, if later): only real work counts.
+    LastPoke,
+    /// When the node went stale: the idle stretch stays in the period.
+    StaleMoment,
+}
+
+/// How a path picks up staleness from the nodes inside it.
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum PathStaleMode {
+    Off,
+    /// Every node in play inside it is stale (done ones, and idea/queued/
+    /// paused ones that aren't stale, are ignored).
+    All,
+    /// Its last touch (the latest poke inside it) is past the threshold.
+    Any,
+}
+
 pub const MAX_RECENT_COLORS: usize = 8;
 
 /// Per-account settings, stored as one jsonb column on `users`. Missing keys
@@ -90,11 +125,22 @@ pub struct Settings {
     pub path_auto_expand: bool,
     /// Canvas connections carry a small text label.
     pub show_edge_labels: bool,
-    /// Dashboard stale list: days without a poke before a node counts.
+    /// Days without a poke (else since creation) before a node goes stale.
     #[ts(type = "number")]
     pub stale_days: i64,
+    /// The dashboard warns this many days before a node goes stale; 0 = off.
+    #[ts(type = "number")]
+    pub stale_warn_days: i64,
+    /// Which kinds can go stale (projects and/or studies; ideas never).
+    pub stale_kinds: Vec<NodeKind>,
+    /// Active nodes always can go stale; these cover the other statuses.
     pub stale_queued: StaleMode,
     pub stale_paused: StaleMode,
+    pub stale_idea_status: StaleMode,
+    /// An active node that goes stale is paused.
+    pub stale_auto_pause: bool,
+    pub stale_pause_period_end: StalePeriodEnd,
+    pub path_stale_mode: PathStaleMode,
 }
 
 impl Default for Settings {
@@ -117,8 +163,14 @@ impl Default for Settings {
             path_auto_expand: true,
             show_edge_labels: false,
             stale_days: 14,
-            stale_queued: StaleMode::Poked,
+            stale_warn_days: 3,
+            stale_kinds: vec![NodeKind::Project, NodeKind::Study],
+            stale_queued: StaleMode::Never,
             stale_paused: StaleMode::Never,
+            stale_idea_status: StaleMode::Never,
+            stale_auto_pause: false,
+            stale_pause_period_end: StalePeriodEnd::LastPoke,
+            path_stale_mode: PathStaleMode::Any,
         }
     }
 }

@@ -87,7 +87,12 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 			<CollapseToggle collapsed={false} ontoggle={toggle} />
 			<button type="button" class="head" onclick={() => openNode(path.id)}>
 				<span class="kind"><KindMark kind="path" /> path</span>
-				<Badge status={path.status} blocked={path.blocked} archived={path.archived} />
+				<Badge
+					status={path.status}
+					blocked={path.blocked}
+					archived={path.archived}
+					staleSince={path.stale_since}
+				/>
 				<span class="title">{path.title}</span>
 				{#if progress}
 					<span class="progress">

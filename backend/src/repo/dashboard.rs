@@ -2,12 +2,10 @@ use chrono::{Duration, Utc};
 use sqlx::PgPool;
 use uuid::Uuid;
 
-use crate::models::dashboard::{
-    DashboardCounts, DashboardQuery, DashboardResponse, KindCounts, StaleMode, StatusCounts,
-};
+use crate::models::dashboard::{DashboardCounts, DashboardResponse, KindCounts, StatusCounts};
 use crate::models::node::{NodeFocus, NodeKind, NodeListQuery, NodeResponse, NodeStatus};
 use crate::models::settings::Settings;
-use crate::repo::nodes;
+use crate::repo::{nodes, staleness};
 
 const RECENT_IDEAS_LIMIT: usize = 5;
 
@@ -17,12 +15,11 @@ const RECENT_IDEAS_LIMIT: usize = 5;
 pub async fn get_dashboard(
     user_id: Uuid,
     pool: &PgPool,
-    query: &DashboardQuery,
     settings: &Settings,
 ) -> Result<DashboardResponse, sqlx::Error> {
     let all_nodes = nodes::list_nodes(user_id, pool, &NodeListQuery::default()).await?;
     let mut counts = count_nodes(&all_nodes);
-    let stale = stale_nodes(&all_nodes, query, settings);
+    let (stale, going_stale) = stale_nodes(&all_nodes, settings);
 
     // Ideas (no status) aren't in play: they're off the board until promoted.
     // Archived nodes are hidden, whatever their status.
@@ -73,6 +70,7 @@ pub async fn get_dashboard(
     Ok(DashboardResponse {
         counts,
         stale,
+        going_stale,
         active,
         recent_ideas,
         paths,
@@ -128,44 +126,31 @@ fn count_nodes(all_nodes: &[NodeResponse]) -> DashboardCounts {
     }
 }
 
-/// Nodes untouched (no poke, else created) for the threshold days. Active
-/// ones always qualify; queued/paused per `StaleMode`; done/archived/ideas
-/// never. Oldest-touched first (most urgently stale first).
+/// Recorded-stale nodes, oldest-touched first (most urgently stale first),
+/// and the ones going stale within `stale_warn_days`, soonest first.
 fn stale_nodes(
     all_nodes: &[NodeResponse],
-    query: &DashboardQuery,
     settings: &Settings,
-) -> Vec<NodeResponse> {
-    let days = query
-        .stale_days
-        .unwrap_or(settings.stale_days)
-        .clamp(1, 365);
-    let queued_mode = query.stale_queued.unwrap_or(settings.stale_queued);
-    let paused_mode = query.stale_paused.unwrap_or(settings.stale_paused);
-    let cutoff = Utc::now() - Duration::days(days);
+) -> (Vec<NodeResponse>, Vec<NodeResponse>) {
     let last_touched = |node: &NodeResponse| node.last_poked_at.unwrap_or(node.created_at);
-    let eligible = |node: &NodeResponse| {
-        if node.archived {
-            return false;
-        }
-        let mode = match node.status {
-            Some(NodeStatus::Active) => return true,
-            Some(NodeStatus::Queued) => queued_mode,
-            Some(NodeStatus::Paused) => paused_mode,
-            _ => return false,
-        };
-        match mode {
-            StaleMode::Always => true,
-            StaleMode::Poked => node.last_poked_at.is_some(),
-            StaleMode::Never => false,
-        }
-    };
     let mut stale: Vec<NodeResponse> = all_nodes
         .iter()
-        .filter(|node| eligible(node))
-        .filter(|node| last_touched(node) < cutoff)
+        .filter(|node| node.stale_since.is_some() && !node.archived)
         .cloned()
         .collect();
     stale.sort_by_key(last_touched);
-    stale
+
+    let mut going_stale: Vec<NodeResponse> = Vec::new();
+    if settings.stale_warn_days > 0 {
+        let warn_from = Utc::now() + Duration::days(settings.stale_warn_days);
+        going_stale = all_nodes
+            .iter()
+            .filter(|node| node.stale_since.is_none())
+            .filter(|node| staleness::can_go_stale(node, settings))
+            .filter(|node| staleness::stale_at(node, settings) < warn_from)
+            .cloned()
+            .collect();
+        going_stale.sort_by_key(last_touched);
+    }
+    (stale, going_stale)
 }

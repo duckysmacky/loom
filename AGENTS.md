@@ -37,14 +37,14 @@ connected graph. One graph per account; no collaboration.
 - **Path rollups:** status (active > paused > queued/empty > done), last touched, started/completed derived recursively from inner nodes, skipping ideas. Paths have no pokes, periods or writable status.
 - **Poke:** append-only "worked on this" log, decoupled from `updated_at`. Last touched = `MAX(poked_at)`.
 - **Active period:** `started_at -> ended_at` (null = ongoing). First opens on first activation; with "Track active periods", pause closes and reactivation opens a new one. Records node focus at open; editable by hand, or (opt-in pref) focus change starts a new period. Started/Completed derived from first/last period; editing them moves period edges.
-- **Stale:** last poke (or creation) older than threshold (default 14d). Active always; queued (default only if poked before) and paused (default never) follow per-browser prefs sent as `GET /api/dashboard` query params.
+- **Stale:** recorded in `nodes.stale_since` by a sweep (`repo/staleness.rs`: every 10 min, plus after pokes, node PATCHes and settings saves) when the last poke (or creation) passes `stale_days` (default 14). Account settings pick kinds (project/study) and queued/paused/idea-status modes (active always; done, archived, idea kind never). Only a poke bringing the last touch back within the threshold (backdated ones too) clears it - status changes don't. Optional auto-pause fires once on entry; paths inherit per `path_stale_mode`. Dashboard also warns `stale_warn_days` ahead.
 - **Accent:** user-assigned node color. **Unplaced:** `canvas_x/y` NULL - side panel, unless "Auto-place on canvas".
 - **Edges** (directed forward from edited node): `requires` (blocking, no cycles), `part_of` (child -> path, no cycles, one path per node), `precedes` (soft order, never blocks, no cycles), `related` (soft, cycles ok).
 
 ## Core rules
 
 - All queries scoped by `user_id` from the verified JWT via middleware; repo fns take `user_id` first. This is the security model (no roles).
-- Derived state is computed at query time, never stored; node reads go through the `node_rows` view.
+- Derived state is computed at query time, never stored; node reads go through the `node_rows` view. One deliberate exception: `stale_since` (needs history for once-only auto-pause).
 - Kind capabilities enforced in handlers (400s) and DB constraints - never relax one alone.
 - Account routes (login, password, tokens, OAuth clients) must stay session-JWT-only: only data routes get the `api_token` layer in `app.rs`. A new data route goes inside `data_routes`; a new write MCP tool needs the `read_only_denied` guard (a test enforces it).
 - Never edit an applied migration; add a new one.

@@ -1,4 +1,4 @@
-use serde::{Deserialize, Serialize};
+use serde::Serialize;
 use ts_rs::TS;
 
 use super::node::NodeResponse;
@@ -56,7 +56,10 @@ pub struct DashboardCounts {
 #[ts(export)]
 pub struct DashboardResponse {
     pub counts: DashboardCounts,
+    /// Stale nodes (`stale_since` set, not archived), oldest first.
     pub stale: Vec<NodeResponse>,
+    /// Nodes that go stale within `stale_warn_days`, soonest first.
+    pub going_stale: Vec<NodeResponse>,
     /// Every active node (paths by derived status), blocked included - by
     /// focus tier, unblocked before blocked within a tier.
     pub active: Vec<NodeResponse>,
@@ -64,32 +67,4 @@ pub struct DashboardResponse {
     pub recent_ideas: Vec<NodeResponse>,
     /// `kind=path` nodes not done and not archived, newest first.
     pub paths: Vec<NodeResponse>,
-}
-
-/// Whether a queued/paused node can show up as stale.
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
-#[ts(export)]
-#[serde(rename_all = "snake_case")]
-pub enum StaleMode {
-    /// Once untouched for the threshold (never-poked ones count from creation).
-    Always,
-    /// Only if it was poked at some point.
-    Poked,
-    Never,
-}
-
-/// Query params for `GET /api/dashboard` tuning the stale list. Active nodes
-/// are always eligible; omitted params fall back to the defaults.
-#[derive(Debug, Default, Deserialize, TS)]
-#[ts(export)]
-pub struct DashboardQuery {
-    #[serde(default)]
-    #[ts(optional = nullable, type = "number")]
-    pub stale_days: Option<i64>,
-    #[serde(default)]
-    #[ts(optional = nullable)]
-    pub stale_queued: Option<StaleMode>,
-    #[serde(default)]
-    #[ts(optional = nullable)]
-    pub stale_paused: Option<StaleMode>,
 }

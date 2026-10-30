@@ -1,0 +1,16 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        UPDATE active_periods a SET ended_at = GREATEST($3, a.started_at)\n        FROM nodes n\n        WHERE a.node_id = $2 AND a.ended_at IS NULL AND n.id = a.node_id AND n.user_id = $1\n        ",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Uuid",
+        "Timestamptz"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "10f808e73075733f1aaf402239877e2723b67ca1db8f67b1cd5a4a102b5d61d4"
+}

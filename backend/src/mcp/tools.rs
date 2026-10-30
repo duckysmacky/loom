@@ -28,7 +28,6 @@ use crate::models::canvas::{
     CreateCanvasArrowRequest, CreateCanvasNoteRequest, UpdateCanvasNoteRequest,
 };
 use crate::models::checklist::{CreateChecklistItemRequest, UpdateChecklistItemRequest};
-use crate::models::dashboard::DashboardQuery;
 use crate::models::deserialize_some;
 use crate::models::edge::{CreateEdgeRequest, EdgeKind, EdgeListQuery};
 use crate::models::node::{
@@ -72,9 +71,13 @@ cycles rejected), `related` (soft link).
 Derived, read-only fields: blocked, container_progress (done/total of a path's \
 children, ideas skipped), path_progress (every study counter and project \
 checklist inside a path summed, e.g. 12/15 + 3/5 = 15/20), checklist_progress, \
-last_poked_at. A poke is an \"I worked on this\" log entry; active nodes (and \
-previously poked queued ones) with no poke for 14 days are stale. Pass poked_at to loom_poke_node to backdate a \
-poke for earlier work. Paths can't be poked: a path's \
+last_poked_at, stale_since. A poke is an \"I worked on this\" log entry. A \
+node untouched (no poke, else since creation) past the user's threshold (14 days \
+by default) is stale: stale_since records when it crossed it. Which kinds and \
+statuses can go stale, whether stale active nodes get paused automatically and \
+how paths inherit staleness are the user's settings; done, archived and idea-kind \
+nodes never go stale. A poke that brings the last touch back within the threshold \
+clears it. Pass poked_at to loom_poke_node to backdate a poke for earlier work. Paths can't be poked: a path's \
 last_poked_at, started_at and completed_at come from the nodes inside it.
 
 Read before you write: call loom_get_graph or loom_list_nodes to find existing \
@@ -291,8 +294,8 @@ impl LoomServer {
     }
 
     /// Dashboard summary: counts by status/kind, blocked count, every active
-    /// non-path node (primary focus first, unblocked before blocked), stale nodes,
-    /// recent ideas and paths.
+    /// non-path node (primary focus first, unblocked before blocked), stale and
+    /// soon-stale nodes, recent ideas and paths.
     #[tool(annotations(title = "Get overview", read_only_hint = true))]
     async fn loom_get_overview(
         &self,
@@ -300,7 +303,7 @@ impl LoomServer {
     ) -> Result<CallToolResult, ErrorData> {
         let user = auth(&parts)?;
         respond(
-            dashboard::get(self.app(), user, ApiQuery(DashboardQuery::default()))
+            dashboard::get(self.app(), user)
                 .await
                 .map(|Json(body)| body),
         )

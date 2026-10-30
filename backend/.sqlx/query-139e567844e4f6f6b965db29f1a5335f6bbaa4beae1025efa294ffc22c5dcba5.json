@@ -1,0 +1,14 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "UPDATE active_periods SET started_at = now() - interval '30 days' WHERE node_id = $1",
+  "describe": {
+    "columns": [],
+    "parameters": {
+      "Left": [
+        "Uuid"
+      ]
+    },
+    "nullable": []
+  },
+  "hash": "139e567844e4f6f6b965db29f1a5335f6bbaa4beae1025efa294ffc22c5dcba5"
+}

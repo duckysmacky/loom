@@ -5,8 +5,9 @@ use super::error::ApiError;
 use super::extract::ApiJson;
 use super::validate_color;
 use crate::middleware::auth_user::AuthUser;
+use crate::models::node::NodeKind;
 use crate::models::settings::{MAX_RECENT_COLORS, Settings};
-use crate::repo::settings;
+use crate::repo::{settings, staleness};
 use crate::state::AppState;
 
 pub async fn get(
@@ -24,7 +25,10 @@ pub async fn patch(
     ApiJson(changes): ApiJson<Map<String, Value>>,
 ) -> Result<Json<Settings>, ApiError> {
     validate_changes(&changes)?;
-    Ok(Json(settings::patch(user_id, &state.pool, changes).await?))
+    let settings = settings::patch(user_id, &state.pool, changes).await?;
+    // Thresholds, kinds and modes decide what's stale right now.
+    staleness::sweep(user_id, &state.pool, &settings).await?;
+    Ok(Json(settings))
 }
 
 fn validate_changes(changes: &Map<String, Value>) -> Result<(), ApiError> {
@@ -42,6 +46,18 @@ fn validate_changes(changes: &Map<String, Value>) -> Result<(), ApiError> {
         .map_err(|_| ApiError::InvalidInput("invalid setting value"))?;
     if !(1..=365).contains(&parsed.stale_days) {
         return Err(ApiError::InvalidInput("stale_days must be 1-365"));
+    }
+    if !(0..=365).contains(&parsed.stale_warn_days) {
+        return Err(ApiError::InvalidInput("stale_warn_days must be 0-365"));
+    }
+    if parsed
+        .stale_kinds
+        .iter()
+        .any(|kind| !matches!(kind, NodeKind::Project | NodeKind::Study))
+    {
+        return Err(ApiError::InvalidInput(
+            "stale_kinds may only hold project and study",
+        ));
     }
     if parsed.recent_colors.len() > MAX_RECENT_COLORS {
         return Err(ApiError::InvalidInput("too many recent colors"));

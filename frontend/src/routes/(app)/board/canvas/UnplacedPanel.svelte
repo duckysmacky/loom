@@ -70,7 +70,12 @@
 							<span class="title">{node.title}</span>
 							{#if path}<span class="in">in {path.title}</span>{/if}
 						</button>
-						<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
+						<Badge
+							status={node.status}
+							blocked={node.blocked}
+							archived={node.archived}
+							staleSince={node.stale_since}
+						/>
 						<button type="button" class="place" onclick={() => onplace(node.id)}>Place</button>
 					</li>
 				{:else}

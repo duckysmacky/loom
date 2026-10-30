@@ -2,7 +2,9 @@ import { settingsApi } from '$lib/api/endpoints';
 import type { Grouping } from '$lib/graph/grouping';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeKind } from '$lib/types/NodeKind';
+import type { PathStaleMode } from '$lib/types/PathStaleMode';
 import type { StaleMode } from '$lib/types/StaleMode';
+import type { StalePeriodEnd } from '$lib/types/StalePeriodEnd';
 
 /**
  * Preferences (Settings page). Everything except `LOCAL_ONLY` is saved to the
@@ -42,11 +44,22 @@ export type Prefs = {
 	pathAutoExpand: boolean;
 	/** Canvas connections carry a small text label (requires / next / related). */
 	showEdgeLabels: boolean;
-	/** Dashboard "Haven't touched in a while": days without a poke before a node counts. */
+	/** Days without a poke (else since creation) before a node goes stale. */
 	staleDays: number;
-	/** Whether queued / paused nodes can appear there (active ones always can). */
+	/** The dashboard warns this many days ahead; 0 = off. */
+	staleWarnDays: number;
+	/** Kinds that can go stale (project / study). */
+	staleKinds: NodeKind[];
+	/** Whether queued / paused / idea-status nodes can go stale (active ones always can). */
 	staleQueued: StaleMode;
 	stalePaused: StaleMode;
+	staleIdeaStatus: StaleMode;
+	/** An active node that goes stale is paused. */
+	staleAutoPause: boolean;
+	/** Where auto-pause ends the active period. */
+	stalePausePeriodEnd: StalePeriodEnd;
+	/** How paths inherit staleness from the nodes inside. */
+	pathStaleMode: PathStaleMode;
 };
 
 /** Views where paths expand and collapse, each remembering its own state. */
@@ -80,8 +93,14 @@ const DEFAULTS: Prefs = {
 	pathAutoExpand: true,
 	showEdgeLabels: false,
 	staleDays: 14,
-	staleQueued: 'poked',
-	stalePaused: 'never'
+	staleWarnDays: 3,
+	staleKinds: ['project', 'study'],
+	staleQueued: 'never',
+	stalePaused: 'never',
+	staleIdeaStatus: 'never',
+	staleAutoPause: false,
+	stalePausePeriodEnd: 'last_poke',
+	pathStaleMode: 'any'
 };
 
 function loadPrefs(): Prefs {

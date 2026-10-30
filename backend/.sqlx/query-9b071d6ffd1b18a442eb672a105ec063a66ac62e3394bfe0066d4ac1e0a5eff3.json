@@ -1,0 +1,85 @@
+{
+  "db_name": "PostgreSQL",
+  "query": "\n        WITH leaf AS (\n            SELECT n.id, n.kind, n.status, n.archived, n.stale_since,\n                   MAX(p.poked_at) AS last_poked_at,\n                   COALESCE(MAX(p.poked_at), n.created_at) + make_interval(days => $2) AS stale_at\n            FROM nodes n LEFT JOIN pokes p ON p.node_id = n.id\n            WHERE n.user_id = $1 AND n.kind <> 'path'\n            GROUP BY n.id\n        ),\n        target AS (\n            SELECT id, stale_since AS old_since, last_poked_at,\n                CASE WHEN NOT archived AND status <> 'done' AND stale_at < now()\n                    AND ((kind = 'project' AND $3) OR (kind = 'study' AND $4))\n                    AND (stale_since IS NOT NULL\n                         OR status = 'active'\n                         OR (status = 'queued' AND stale_mode_allows($5, last_poked_at IS NOT NULL))\n                         OR (status = 'paused' AND stale_mode_allows($6, last_poked_at IS NOT NULL))\n                         OR (status = 'idea' AND stale_mode_allows($7, last_poked_at IS NOT NULL)))\n                THEN COALESCE(stale_since, stale_at) END AS new_since\n            FROM leaf\n        )\n        UPDATE nodes n SET stale_since = t.new_since\n        FROM target t\n        WHERE n.id = t.id AND n.stale_since IS DISTINCT FROM t.new_since\n        RETURNING n.id, n.status AS \"status?: NodeStatus\", t.old_since, t.new_since,\n                  t.last_poked_at\n        ",
+  "describe": {
+    "columns": [
+      {
+        "ordinal": 0,
+        "name": "id",
+        "type_info": "Uuid",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "id"
+          }
+        }
+      },
+      {
+        "ordinal": 1,
+        "name": "status?: NodeStatus",
+        "type_info": {
+          "Custom": {
+            "name": "node_status",
+            "kind": {
+              "Enum": [
+                "idea",
+                "queued",
+                "active",
+                "paused",
+                "done"
+              ]
+            }
+          }
+        },
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "status"
+          }
+        }
+      },
+      {
+        "ordinal": 2,
+        "name": "old_since",
+        "type_info": "Timestamptz",
+        "origin": {
+          "Table": {
+            "table": "nodes",
+            "name": "stale_since"
+          }
+        }
+      },
+      {
+        "ordinal": 3,
+        "name": "new_since",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      },
+      {
+        "ordinal": 4,
+        "name": "last_poked_at",
+        "type_info": "Timestamptz",
+        "origin": "Expression"
+      }
+    ],
+    "parameters": {
+      "Left": [
+        "Uuid",
+        "Int4",
+        "Bool",
+        "Bool",
+        "Text",
+        "Text",
+        "Text"
+      ]
+    },
+    "nullable": [
+      false,
+      true,
+      true,
+      null,
+      null
+    ]
+  },
+  "hash": "9b071d6ffd1b18a442eb672a105ec063a66ac62e3394bfe0066d4ac1e0a5eff3"
+}

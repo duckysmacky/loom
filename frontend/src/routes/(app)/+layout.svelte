@@ -10,7 +10,7 @@
 	import { fade } from 'svelte/transition';
 	import { ms } from '$lib/motion';
 	import { graph } from '$lib/stores/graph.svelte';
-	import { loadSettings } from '$lib/stores/prefs.svelte';
+	import { loadSettings, syncState } from '$lib/stores/prefs.svelte';
 	import { session } from '$lib/stores/session.svelte';
 	import Sidebar from './Sidebar.svelte';
 	import TopBar from './TopBar.svelte';
@@ -26,6 +26,12 @@
 	// focus so a change made on another device shows up.
 	$effect(() => {
 		if (session.user) loadSettings();
+	});
+
+	// Saving settings re-sweeps staleness server-side (it can pause nodes or
+	// clear stale marks), so the graph reloads after each save.
+	$effect(() => {
+		if (syncState.saves) graph.load();
 	});
 
 	function onvisibilitychange() {

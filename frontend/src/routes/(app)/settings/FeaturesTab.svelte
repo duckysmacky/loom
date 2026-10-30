@@ -1,9 +1,52 @@
 <script lang="ts">
-	import { KIND_ICON } from '$lib/components/KindMark.svelte';
+	import KindMark, { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import './settings.css';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
 	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
+	import type { NodeKind } from '$lib/types/NodeKind';
 	import type { StaleMode } from '$lib/types/StaleMode';
+
+	const STALE_KINDS: { kind: NodeKind; label: string }[] = [
+		{ kind: 'project', label: 'Projects' },
+		{ kind: 'study', label: 'Studies' }
+	];
+	const STALE_MODE_ROWS: {
+		key: 'staleQueued' | 'stalePaused' | 'staleIdeaStatus';
+		label: string;
+		help: string;
+	}[] = [
+		{
+			key: 'staleQueued',
+			label: 'Queued nodes',
+			help: 'Never-poked ones count from their creation date.'
+		},
+		{ key: 'stalePaused', label: 'Paused nodes', help: 'Nodes you paused yourself.' },
+		{ key: 'staleIdeaStatus', label: 'Idea-status nodes', help: 'Projects and studies at Idea.' }
+	];
+
+	/** Saves a day count typed into a number field, clamped to its range; junk snaps back. */
+	function saveDays(
+		key: 'staleDays' | 'staleWarnDays',
+		input: HTMLInputElement,
+		min: number,
+		max: number
+	) {
+		const days = Math.round(Number(input.value));
+		if (input.value.trim() === '' || !Number.isFinite(days)) {
+			input.value = String(prefs[key]);
+			return;
+		}
+		prefs[key] = Math.min(max, Math.max(min, days));
+		input.value = String(prefs[key]);
+		savePrefs();
+	}
+
+	function toggleStaleKind(kind: NodeKind) {
+		prefs.staleKinds = prefs.staleKinds.includes(kind)
+			? prefs.staleKinds.filter((existing) => existing !== kind)
+			: [...prefs.staleKinds, kind];
+		savePrefs();
+	}
 </script>
 
 <section class="settings-section">
@@ -136,8 +179,10 @@
 </section>
 
 <section class="settings-section">
-	<h2>Pokes</h2>
-	<p class="explain">The "worked on this" log.</p>
+	<h2>Pokes &amp; staleness</h2>
+	<p class="explain">
+		The "worked on this" log, and what happens to nodes it hasn't seen in a while.
+	</p>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
@@ -158,7 +203,10 @@
 		<label class="toggle">
 			<span>
 				<span class="row-label">Poke sets active</span>
-				<span class="row-help">A poke also switches the node's status to Active.</span>
+				<span class="row-help"
+					>A poke also switches the node's status to Active, and a poke that un-stales a paused node
+					resumes it.</span
+				>
 			</span>
 			<input
 				type="checkbox"
@@ -169,6 +217,153 @@
 				}}
 			/>
 		</label>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Stale after</span>
+			<span class="row-help"
+				>Days without a poke (or since creation) before a node goes stale. Only a poke within this
+				window - live or backdated - un-stales it.</span
+			>
+		</span>
+		<label class="days">
+			<input
+				class="field"
+				type="number"
+				min="1"
+				max="365"
+				aria-label="Stale after (days)"
+				value={prefs.staleDays}
+				onchange={(event) => saveDays('staleDays', event.currentTarget, 1, 365)}
+			/>
+			<span>days</span>
+		</label>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Warn before stale</span>
+			<span class="row-help"
+				>The dashboard lists nodes this many days before they go stale. 0 turns the warning off.</span
+			>
+		</span>
+		<label class="days">
+			<input
+				class="field"
+				type="number"
+				min="0"
+				max="365"
+				aria-label="Warn before stale (days)"
+				value={prefs.staleWarnDays}
+				onchange={(event) => saveDays('staleWarnDays', event.currentTarget, 0, 365)}
+			/>
+			<span>days</span>
+		</label>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Kinds that can go stale</span>
+			<span class="row-help"
+				>Ideas never do - they're just ideas. Done and archived nodes never do.</span
+			>
+		</span>
+		<div class="kinds" role="group" aria-label="Kinds that can go stale">
+			{#each STALE_KINDS as { kind, label } (kind)}
+				<button
+					type="button"
+					class="kind"
+					class:selected={prefs.staleKinds.includes(kind)}
+					aria-pressed={prefs.staleKinds.includes(kind)}
+					onclick={() => toggleStaleKind(kind)}
+				>
+					<KindMark {kind} size={12} />
+					{label}
+				</button>
+			{/each}
+		</div>
+	</div>
+	{#each STALE_MODE_ROWS as row (row.key)}
+		<div class="settings-row">
+			<span>
+				<span class="row-label">Stale {row.label.toLowerCase()}</span>
+				<span class="row-help">{row.help} Active nodes always can go stale.</span>
+			</span>
+			<select
+				aria-label="Stale {row.label.toLowerCase()}"
+				value={prefs[row.key]}
+				onchange={(event) => {
+					prefs[row.key] = event.currentTarget.value as StaleMode;
+					savePrefs();
+				}}
+			>
+				<option value="always">Always</option>
+				<option value="poked">Only if poked before</option>
+				<option value="never">Never</option>
+			</select>
+		</div>
+	{/each}
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
+				<span class="row-label">Pause stale nodes</span>
+				<span class="row-help"
+					>An active node that goes stale is paused (once - resuming it by hand doesn't re-pause
+					it). It stays marked stale until poked.</span
+				>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.staleAutoPause}
+				onchange={(event) => {
+					prefs.staleAutoPause = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+	{#if prefs.staleAutoPause}
+		<div class="settings-row">
+			<span>
+				<span class="row-label">End the active period</span>
+				<span class="row-help"
+					>With active periods tracked: at the last poke (only real work counts), or when the node
+					went stale (the idle stretch stays in).</span
+				>
+			</span>
+			<SegmentedControl
+				label="End the active period"
+				value={prefs.stalePausePeriodEnd}
+				onchange={(end) => {
+					prefs.stalePausePeriodEnd = end;
+					savePrefs();
+				}}
+				options={[
+					{ value: 'last_poke', label: 'At last poke' },
+					{ value: 'stale_moment', label: 'When stale' }
+				]}
+			/>
+		</div>
+	{/if}
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Stale paths</span>
+			<span class="row-help"
+				>Any: the latest poke inside is past the threshold. All: every node in play inside is stale
+				(done ones, and unstale idea/queued/paused ones, don't count). Off: paths never go stale.</span
+			>
+		</span>
+		<SegmentedControl
+			label="Stale paths"
+			value={prefs.pathStaleMode}
+			onchange={(mode) => {
+				prefs.pathStaleMode = mode;
+				savePrefs();
+			}}
+			options={[
+				{ value: 'any', label: 'Any' },
+				{ value: 'all', label: 'All' },
+				{ value: 'off', label: 'Off' }
+			]}
+		/>
 	</div>
 </section>
 
@@ -216,68 +411,38 @@
 	</div>
 </section>
 
-<section class="settings-section">
-	<h2>Dashboard</h2>
-	<p class="explain">What counts as stale on the dashboard.</p>
-	<div class="settings-row">
-		<span>
-			<span class="row-label">Stale after</span>
-			<span class="row-help"
-				>Days without a poke before a node shows under "Haven't touched in a while" on the
-				dashboard. Active nodes always can.</span
-			>
-		</span>
-		<select
-			aria-label="Stale after"
-			value={prefs.staleDays}
-			onchange={(event) => {
-				prefs.staleDays = Number(event.currentTarget.value);
-				savePrefs();
-			}}
-		>
-			<option value="7">7 days</option>
-			<option value="14">14 days</option>
-			<option value="21">21 days</option>
-			<option value="30">30 days</option>
-			<option value="60">60 days</option>
-		</select>
-	</div>
-	<div class="settings-row">
-		<span>
-			<span class="row-label">Stale queued nodes</span>
-			<span class="row-help"
-				>Whether queued nodes appear there. Never-poked ones count from their creation date.</span
-			>
-		</span>
-		<select
-			aria-label="Stale queued nodes"
-			value={prefs.staleQueued}
-			onchange={(event) => {
-				prefs.staleQueued = event.currentTarget.value as StaleMode;
-				savePrefs();
-			}}
-		>
-			<option value="always">Always</option>
-			<option value="poked">Only if poked before</option>
-			<option value="never">Never</option>
-		</select>
-	</div>
-	<div class="settings-row">
-		<span>
-			<span class="row-label">Stale paused nodes</span>
-			<span class="row-help">Whether paused nodes appear there.</span>
-		</span>
-		<select
-			aria-label="Stale paused nodes"
-			value={prefs.stalePaused}
-			onchange={(event) => {
-				prefs.stalePaused = event.currentTarget.value as StaleMode;
-				savePrefs();
-			}}
-		>
-			<option value="always">Always</option>
-			<option value="poked">Only if poked before</option>
-			<option value="never">Never</option>
-		</select>
-	</div>
-</section>
+<style>
+	.days {
+		display: inline-flex;
+		align-items: center;
+		gap: 8px;
+		font: 500 12px/1 var(--font-display);
+		color: var(--ink-2);
+	}
+
+	.days input {
+		width: 72px;
+	}
+
+	.kinds {
+		display: flex;
+		gap: 6px;
+	}
+
+	.kind {
+		display: inline-flex;
+		align-items: center;
+		gap: 6px;
+		padding: 7px 10px;
+		border: var(--border-width-hair) solid var(--line);
+		background: var(--surface);
+		font: 600 11px/1 var(--font-mono);
+		color: var(--ink-2);
+	}
+
+	.kind.selected {
+		border-color: var(--ink);
+		background: var(--ink);
+		color: var(--on-ink);
+	}
+</style>

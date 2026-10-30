@@ -1,20 +1,36 @@
 <script lang="ts">
+	import { Hourglass } from '@lucide/svelte';
+	import Icon from '$lib/components/ui/Icon.svelte';
+	import { shortDate } from '$lib/graph/display';
 	import type { NodeStatus } from '$lib/types/NodeStatus';
 
 	/** `blocked` is derived (never stored) and overrides the stored status.
 	 * Ideas have no status: nothing to show unless blocked. `archived` is a
-	 * separate flag, shown next to the status. */
+	 * separate flag, shown next to the status, and a stale node gets a mark
+	 * right of it. */
 	let {
 		status,
 		blocked = false,
-		archived = false
-	}: { status: NodeStatus | null; blocked?: boolean; archived?: boolean } = $props();
+		archived = false,
+		staleSince = null
+	}: {
+		status: NodeStatus | null;
+		blocked?: boolean;
+		archived?: boolean;
+		staleSince?: string | null;
+	} = $props();
 
 	const shown = $derived(blocked && status !== 'done' ? 'blocked' : status);
+	const staleLabel = $derived(staleSince ? `Stale since ${shortDate(staleSince)}` : '');
 </script>
 
 {#if shown}<span class="badge {shown}">{shown}</span>{/if}
 {#if archived}<span class="badge archived">archived</span>{/if}
+{#if staleSince}
+	<span class="stale" title={staleLabel} aria-label={staleLabel} role="img">
+		<Icon icon={Hourglass} glyph="⧗" size={12} />
+	</span>
+{/if}
 
 <style>
 	.badge {
@@ -56,5 +72,12 @@
 	.archived {
 		color: var(--ink-2);
 		background: var(--surface-2);
+	}
+
+	.stale {
+		display: inline-flex;
+		align-items: center;
+		color: var(--warn);
+		font: 700 11px/1 var(--font-mono);
 	}
 </style>

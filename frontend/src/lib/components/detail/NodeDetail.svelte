@@ -78,10 +78,8 @@
 			.catch(() => (pokeCount = null));
 	});
 
-	const update = (
-		current: NodeResponse,
-		patch: UpdateNodeRequest
-	) => graph.mutate(() => nodesApi.update(current.id, patch));
+	const update = (current: NodeResponse, patch: UpdateNodeRequest) =>
+		graph.mutate(() => nodesApi.update(current.id, patch));
 
 	function saveTitle(current: NodeResponse) {
 		const title = titleDraft.trim();
@@ -164,7 +162,12 @@
 			<header>
 				<div class="meta-row">
 					<span class="label"><KindMark kind={node.kind} /> {node.kind}</span>
-					<Badge status={node.status} blocked={node.blocked} archived={node.archived} />
+					<Badge
+						status={node.status}
+						blocked={node.blocked}
+						archived={node.archived}
+						staleSince={node.stale_since}
+					/>
 					{#if blocked}<span class="computed">blocked is computed · not editable</span>{/if}
 					<button type="button" class="close" aria-label="Close" onclick={closeNode}>✕</button>
 				</div>
@@ -317,6 +320,10 @@
 						{/if}
 						<dt class="label">Created</dt>
 						<dd>{shortDate(node.created_at)}</dd>
+						{#if node.stale_since}
+							<dt class="label">Stale since</dt>
+							<dd>{shortDate(node.stale_since)}</dd>
+						{/if}
 					</dl>
 
 					<!-- Stamped automatically on status changes; editable when the
