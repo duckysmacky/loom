@@ -1,10 +1,11 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Check, X } from '@lucide/svelte';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { ApiError } from '$lib/api/client';
 	import { oauthApi } from '$lib/api/endpoints';
+	import { around, errorMessage } from '$lib/i18n';
 	import { session } from '$lib/stores/session.svelte';
 	import type { AuthorizeDecision } from '$lib/types/AuthorizeDecision';
 	import type { AuthorizePreview } from '$lib/types/AuthorizePreview';
@@ -12,10 +13,6 @@
 	let preview = $state<AuthorizePreview | null>(null);
 	let error = $state('');
 	let deciding = $state(false);
-
-	function describe(caught: unknown): string {
-		return caught instanceof ApiError ? caught.message : 'Could not reach the server';
-	}
 
 	$effect(() => {
 		if (!session.user) {
@@ -25,7 +22,7 @@
 		}
 		oauthApi.preview(page.url.search).then(
 			(result) => (preview = result),
-			(caught) => (error = describe(caught))
+			(caught) => (error = errorMessage(caught))
 		);
 	});
 
@@ -41,38 +38,46 @@
 			// checked it (https or loopback) before minting this.
 			window.location.href = redirect_to;
 		} catch (caught) {
-			error = describe(caught);
+			error = errorMessage(caught);
 			deciding = false;
 		}
 	}
 </script>
 
-<svelte:head><title>Connect an app · Loom</title></svelte:head>
+<svelte:head><title>{m.oauth_title()} · Loom</title></svelte:head>
 
 <div class="consent">
-	<div class="label">Connect an app</div>
+	<div class="label">{m.oauth_title()}</div>
 
 	{#if error}
 		<div class="error" role="alert">
-			{error}. Start the connection again from the app you were connecting.
+			{m.oauth_error_retry({ error })}
 		</div>
 	{:else if preview}
-		<p class="lead"><strong>{preview.client_name}</strong> wants to access your Loom.</p>
+		{@const [hostBefore, hostAfter] = around(
+			m.oauth_redirect({ host: preview.redirect_host }),
+			preview.redirect_host
+		)}
+		{@const [before, after] = around(
+			m.oauth_wants_access({ client: preview.client_name }),
+			preview.client_name
+		)}
+		<p class="lead">{before}<strong>{preview.client_name}</strong>{after}</p>
 		<p class="detail">
-			It will be able to read, create, change and delete your nodes, edges, checklists and topics.
-			After approving you'll be sent back to <strong>{preview.redirect_host}</strong>.
+			{m.oauth_scope()}
+			{hostBefore}<strong>{preview.redirect_host}</strong>{hostAfter}
 		</p>
-		<p class="detail">You can disconnect it any time in Settings → Connections.</p>
+		<p class="detail">{m.oauth_disconnect_hint()}</p>
 		<div class="actions">
 			<Button variant="quiet" disabled={deciding} onclick={() => decide(false)} icon={X}
-				>Deny</Button
+				>{m.oauth_deny()}</Button
 			>
 			<Button variant="primary" disabled={deciding} onclick={() => decide(true)} icon={Check}
-				>Approve</Button
+				>{m.oauth_approve()}</Button
 			>
 		</div>
 	{:else}
-		<p class="detail">Checking the request…</p>
+		<p class="detail">{m.oauth_checking()}</p>
 	{/if}
 </div>
 

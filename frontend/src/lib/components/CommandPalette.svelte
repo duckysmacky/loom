@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { goto } from '$app/navigation';
 	import Modal from '$lib/components/ui/Modal.svelte';
 	import { accentColor } from '$lib/graph/display';
+	import { kindLabel, statusLabel } from '$lib/i18n';
 	import { fuzzyScore } from '$lib/fuzzy';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -26,47 +28,67 @@
 	});
 
 	const commands: Item[] = [
-		{ id: 'go-dashboard', label: 'Go to Dashboard', hint: 'page', run: () => goto('/dashboard') },
+		{
+			id: 'go-dashboard',
+			label: m.palette_go_to({ page: m.nav_dashboard() }),
+			hint: m.palette_hint_page(),
+			run: () => goto('/dashboard')
+		},
 		{
 			id: 'go-organized',
-			label: 'Go to Board · Organized',
-			hint: 'page',
+			label: m.palette_go_to({ page: `${m.nav_board()} · ${m.nav_organized()}` }),
+			hint: m.palette_hint_page(),
 			run: () => goto('/board/organized')
 		},
 		{
 			id: 'go-canvas',
-			label: 'Go to Board · Canvas',
-			hint: 'page',
+			label: m.palette_go_to({ page: `${m.nav_board()} · ${m.nav_canvas()}` }),
+			hint: m.palette_hint_page(),
 			run: () => goto('/board/canvas')
 		},
 		{
 			id: 'go-timeline',
-			label: 'Go to Board · Timeline',
-			hint: 'page',
+			label: m.palette_go_to({ page: `${m.nav_board()} · ${m.nav_timeline()}` }),
+			hint: m.palette_hint_page(),
 			run: () => goto('/board/timeline')
 		},
-		{ id: 'go-nodes', label: 'Go to Nodes · Ideas', hint: 'page', run: () => goto('/nodes') },
-		{ id: 'go-settings', label: 'Go to Settings', hint: 'page', run: () => goto('/settings') },
+		{
+			id: 'go-nodes',
+			label: m.palette_go_to({ page: m.palette_nodes_ideas() }),
+			hint: m.palette_hint_page(),
+			run: () => goto('/nodes')
+		},
+		{
+			id: 'go-settings',
+			label: m.palette_go_to({ page: m.nav_settings() }),
+			hint: m.palette_hint_page(),
+			run: () => goto('/settings')
+		},
 		{
 			id: 'capture',
-			label: 'Quick capture',
+			label: m.quick_capture(),
 			hint: 'N',
 			run: () => (overlays.captureOpen = true)
 		},
 		{
 			id: 'new',
-			label: 'New node',
+			label: m.palette_new_node(),
 			hint: 'Shift N',
 			run: () => (overlays.newOpen = true)
 		},
-		{ id: 'sign-out', label: 'Sign out', hint: 'account', run: logout }
+		{ id: 'sign-out', label: m.sign_out(), hint: m.palette_hint_account(), run: logout }
 	];
 
 	const results = $derived.by(() => {
 		const nodeItems: Item[] = graph.nodes.map((node) => ({
 			id: node.id,
 			label: node.title,
-			hint: [node.kind, node.blocked && node.status !== 'done' ? 'blocked' : node.status]
+			hint: [
+				kindLabel(node.kind),
+				node.blocked && node.status !== 'done'
+					? m.status_blocked()
+					: node.status && statusLabel(node.status)
+			]
 				.filter(Boolean)
 				.join(' · '),
 			color: accentColor(node),
@@ -110,7 +132,7 @@
 <Modal
 	open={overlays.paletteOpen}
 	onclose={() => (overlays.paletteOpen = false)}
-	label="Command palette"
+	label={m.palette_label()}
 	width={560}
 >
 	<div class="palette">
@@ -118,8 +140,8 @@
 			<span class="lens"></span>
 			<!-- svelte-ignore a11y_autofocus -->
 			<input
-				placeholder="Jump to a node or run a command…"
-				aria-label="Search nodes and commands"
+				placeholder={m.palette_placeholder()}
+				aria-label={m.palette_search_label()}
 				role="combobox"
 				aria-expanded="true"
 				aria-controls="palette-results"
@@ -150,7 +172,7 @@
 					<span class="hint">{item.hint}</span>
 				</li>
 			{:else}
-				<li class="empty">No matches</li>
+				<li class="empty">{m.palette_no_matches()}</li>
 			{/each}
 		</ul>
 	</div>

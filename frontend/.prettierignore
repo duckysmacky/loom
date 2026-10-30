@@ -8,3 +8,6 @@ bun.lockb
 # Miscellaneous
 /static/
 CLAUDE.md
+
+# inlang project internals (managed by inlang)
+/project.inlang/

@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Zap } from '@lucide/svelte';
 	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -54,8 +55,8 @@
 		saving = false;
 		if (created) {
 			overlays.captureOpen = false;
-			notify(`Captured “${created.title}”`, 'info', {
-				label: 'Open',
+			notify(m.capture_done({ title: created.title }), 'info', {
+				label: m.action_open(),
 				run: () => openNode(created.id)
 			});
 		}
@@ -65,60 +66,60 @@
 <Modal
 	open={overlays.captureOpen}
 	onclose={() => (overlays.captureOpen = false)}
-	label="Quick capture"
+	label={m.quick_capture()}
 	width={500}
 >
 	<form class="capture" onsubmit={capture}>
-		<div class="label">Quick capture</div>
+		<div class="label">{m.quick_capture()}</div>
 		<!-- svelte-ignore a11y_autofocus -->
 		<input
 			class="title"
-			placeholder="What's on your mind?"
-			aria-label="Title"
+			placeholder={m.capture_placeholder()}
+			aria-label={m.field_title()}
 			autofocus
 			bind:value={title}
 		/>
 
 		<div class="row">
 			<div class="group">
-				<span class="label">Kind</span>
+				<span class="label">{m.field_kind()}</span>
 				<SegmentedControl
-					label="Kind"
+					label={m.field_kind()}
 					value={kind}
 					onchange={(value) => (kind = value)}
 					options={[
-						{ value: 'idea', label: 'Idea', icon: KIND_ICON.idea },
-						{ value: 'project', label: 'Project', icon: KIND_ICON.project },
-						{ value: 'study', label: 'Study', icon: KIND_ICON.study },
-						{ value: 'path', label: 'Path', icon: KIND_ICON.path }
+						{ value: 'idea', label: m.kind_idea(), icon: KIND_ICON.idea },
+						{ value: 'project', label: m.kind_project(), icon: KIND_ICON.project },
+						{ value: 'study', label: m.kind_study(), icon: KIND_ICON.study },
+						{ value: 'path', label: m.kind_path(), icon: KIND_ICON.path }
 					]}
 				/>
 			</div>
 			{#if kind !== 'idea'}
 				<div class="group">
-					<span class="label">Focus</span>
+					<span class="label">{m.field_focus()}</span>
 					<SegmentedControl
-						label="Focus"
+						label={m.field_focus()}
 						value={focus}
 						onchange={(value) => (focus = value)}
 						options={[
-							{ value: 'primary', label: 'Primary' },
-							{ value: 'secondary', label: 'Secondary' },
-							{ value: 'background', label: 'Background' }
+							{ value: 'primary', label: m.focus_primary() },
+							{ value: 'secondary', label: m.focus_secondary() },
+							{ value: 'background', label: m.focus_background() }
 						]}
 					/>
 				</div>
 				{#if kind !== 'path'}
 					<div class="group">
-						<span class="label">Status</span>
+						<span class="label">{m.field_status()}</span>
 						<SegmentedControl
-							label="Status"
+							label={m.field_status()}
 							value={status}
 							onchange={(value) => (status = value)}
 							options={[
-								{ value: 'idea', label: 'Idea' },
-								{ value: 'queued', label: 'Queued' },
-								{ value: 'active', label: 'Active' }
+								{ value: 'idea', label: m.status_idea() },
+								{ value: 'queued', label: m.status_queued() },
+								{ value: 'active', label: m.status_active() }
 							]}
 						/>
 					</div>
@@ -129,9 +130,9 @@
 		<TopicToggles bind:selected={topicIds} />
 
 		<div class="actions">
-			<span class="hint">↵ to capture · esc to close</span>
+			<span class="hint">{m.capture_hint()}</span>
 			<Button type="submit" variant="primary" disabled={!title.trim() || saving} icon={Zap}
-				>Capture</Button
+				>{m.capture_submit()}</Button
 			>
 		</div>
 	</form>

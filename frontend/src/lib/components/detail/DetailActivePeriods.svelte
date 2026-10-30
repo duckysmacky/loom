@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { slide } from 'svelte/transition';
 	import { periodsApi } from '$lib/api/endpoints';
 	import DateInput from '$lib/components/ui/DateInput.svelte';
@@ -6,6 +7,7 @@
 	import { ms } from '$lib/motion';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
+	import { focusLabel } from '$lib/i18n';
 	import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -49,12 +51,11 @@
 
 <section>
 	<div class="head">
-		<span class="label">Active periods</span>
-		<button type="button" class="link" onclick={addPeriod}>+ Add period</button>
+		<span class="label">{m.periods_title()}</span>
+		<button type="button" class="link" onclick={addPeriod}>{m.periods_add()}</button>
 	</div>
 	<p class="explain">
-		The first period's start is the Started date, the last one's end the Completed date. Each period
-		records the node's focus.
+		{m.periods_explain()}
 	</p>
 
 	{#if periods.length}
@@ -66,32 +67,32 @@
 					{/if}
 					<DateInput
 						compact
-						label="Started"
+						label={m.field_started()}
 						value={toDateInput(period.started_at)}
 						onchange={(value) => setStarted(period, value)}
 					/>
 					<span class="arrow">→</span>
 					<DateInput
 						compact
-						label="Ended (blank = ongoing)"
+						label={m.periods_ended()}
 						min={toDateInput(period.started_at)}
 						value={toDateInput(period.ended_at)}
 						onchange={(value) => setEnded(period, value)}
 					/>
 					<select
 						class="field focus"
-						aria-label="Focus during this period"
+						aria-label={m.periods_focus()}
 						value={period.focus}
 						onchange={(event) => setFocus(period, event.currentTarget.value as NodeFocus)}
 					>
-						<option value="primary">primary</option>
-						<option value="secondary">secondary</option>
-						<option value="background">background</option>
+						{#each ['primary', 'secondary', 'background'] as const as focus (focus)}
+							<option value={focus}>{focusLabel(focus)}</option>
+						{/each}
 					</select>
 					<button
 						type="button"
 						class="remove"
-						aria-label="Delete this period"
+						aria-label={m.periods_delete()}
 						onclick={() => graph.mutate(() => periodsApi.remove(period.id))}>✕</button
 					>
 				</li>

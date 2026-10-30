@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { flip } from 'svelte/animate';
 	import { fade, fly } from 'svelte/transition';
 	import { ms } from '$lib/motion';
@@ -25,7 +26,9 @@
 					}}>{toast.action.label}</button
 				>
 			{/if}
-			<button type="button" aria-label="Dismiss" onclick={() => dismiss(toast.id)}>✕</button>
+			<button type="button" aria-label={m.action_dismiss()} onclick={() => dismiss(toast.id)}
+				>✕</button
+			>
 		</div>
 	{/each}
 </div>

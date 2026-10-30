@@ -1,6 +1,8 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { edgesApi } from '$lib/api/endpoints';
 	import { accentColor, progressText } from '$lib/graph/display';
+	import { kindLabel, statusLabel } from '$lib/i18n';
 	import { ancestorPaths, parentPathOf } from '$lib/graph/paths';
 	import { openNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
@@ -49,11 +51,16 @@
 			<button type="button" class="title" onclick={() => openNode(child.id)}>
 				{child.title}
 			</button>
-			<span class="kind">{child.kind}{child.status ? ` · ${child.status}` : ''}</span>
+			<span class="kind"
+				>{[kindLabel(child.kind), child.status && statusLabel(child.status)]
+					.filter(Boolean)
+					.join(' · ')
+					.toLocaleLowerCase()}</span
+			>
 			<button
 				type="button"
 				class="remove"
-				aria-label="Take “{child.title}” out of its path"
+				aria-label={m.contains_remove({ title: child.title })}
 				onclick={() => graph.mutate(() => edgesApi.remove(edge.id))}>✕</button
 			>
 		</li>
@@ -61,18 +68,18 @@
 			{@render rows(child.id, depth + 1)}
 		{/if}
 	{:else}
-		{#if depth === 0}<li class="none">Nothing inside yet.</li>{/if}
+		{#if depth === 0}<li class="none">{m.contains_nothing()}</li>{/if}
 	{/each}
 {/snippet}
 
 <section>
 	<div class="head">
-		<span class="label">Contains</span>
+		<span class="label">{m.relation_contains()}</span>
 		<SegmentedControl
-			label="How to show what's inside"
+			label={m.contains_view()}
 			options={[
-				{ value: 'list', label: 'List' },
-				{ value: 'canvas', label: 'Canvas' }
+				{ value: 'list', label: m.contains_list() },
+				{ value: 'canvas', label: m.nav_canvas() }
 			]}
 			value={prefs.pathDetailView}
 			onchange={(view) => {
@@ -94,16 +101,18 @@
 	{#if candidates.length}
 		<select
 			class="field add"
-			aria-label="Add a node to this path"
+			aria-label={m.contains_add_label()}
 			value=""
 			onchange={(event) => {
 				add(event.currentTarget.value);
 				event.currentTarget.value = '';
 			}}
 		>
-			<option value="">+ Add a node to this path…</option>
+			<option value="">{m.contains_add_option()}</option>
 			{#each candidates as candidate (candidate.id)}
-				<option value={candidate.id}>{candidate.title} ({candidate.kind})</option>
+				<option value={candidate.id}
+					>{candidate.title} ({kindLabel(candidate.kind).toLocaleLowerCase()})</option
+				>
 			{/each}
 		</select>
 	{/if}

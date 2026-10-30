@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import '@xyflow/svelte/dist/base.css';
 	import {
 		Background,
@@ -373,15 +374,15 @@
 				const movedTitle = moved.data.node.title;
 				moves.push(
 					target
-						? `Moved “${movedTitle}” into “${target.data.node.title}”`
-						: `Moved “${movedTitle}” out of its path`
+						? m.canvas_moved_into({ title: movedTitle, path: target.data.node.title })
+						: m.canvas_moved_out({ title: movedTitle })
 				);
 			}
 		}
 		await savePositions(stayed);
 		await growPaths(growth);
 		if (moves.length) {
-			notify(moves.length === 1 ? moves[0] : `Moved ${moves.length} nodes between paths`);
+			notify(moves.length === 1 ? moves[0] : m.canvas_moved_many({ count: moves.length }));
 			await graph.load();
 		}
 	}
@@ -508,23 +509,23 @@
 		const { source, target } = pendingConnection;
 		const options: { label: string; request: CreateEdgeRequest }[] = [
 			{
-				label: 'Required by',
+				label: m.edge_required_by(),
 				request: { from_node_id: target, to_node_id: source, kind: 'requires' }
 			},
 			{
-				label: 'Precedes',
+				label: m.edge_precedes(),
 				request: { from_node_id: source, to_node_id: target, kind: 'precedes' }
 			},
 			...(graph.nodeById.get(target)?.kind === 'path'
 				? [
 						{
-							label: 'Part of',
+							label: m.edge_part_of(),
 							request: { from_node_id: source, to_node_id: target, kind: 'part_of' as const }
 						}
 					]
 				: []),
 			{
-				label: 'Related',
+				label: m.edge_related(),
 				request: { from_node_id: source, to_node_id: target, kind: 'related' }
 			}
 		];
@@ -534,7 +535,7 @@
 	async function createEdge(request: CreateEdgeRequest) {
 		pendingConnection = null;
 		const created = await graph.mutate(() => edgesApi.create(request));
-		if (created) notify('Connection added');
+		if (created) notify(m.canvas_connection_added());
 	}
 
 	const isNote = (id: string) => graph.notes.some((note) => note.id === id);
@@ -553,7 +554,7 @@
 		if (isNote(target)) request.to_note_id = target;
 		else request.to_node_id = target;
 		const created = await graph.mutate(() => canvasApi.createArrow(request));
-		if (created) notify('Arrow added');
+		if (created) notify(m.canvas_arrow_added());
 	}
 
 	async function deleteEdges({ edges: removed }: { edges: LoomFlowEdge[] }) {
@@ -562,16 +563,16 @@
 				edge.type === 'loomArrow' ? canvasApi.removeArrow(edge.id) : edgesApi.remove(edge.id)
 			);
 		}
-		if (removed.length) notify(removed.length === 1 ? 'Connection removed' : 'Connections removed');
+		if (removed.length) notify(m.canvas_connection_removed({ count: removed.length }));
 	}
 </script>
 
 <div class="canvas-row">
 	<div class="canvas" bind:this={canvasElement}>
 		{#if graph.loaded && !graph.nodes.length}
-			<div class="empty">No nodes yet. Press N to capture one.</div>
+			<div class="empty">{m.board_no_nodes()}</div>
 		{:else if graph.loaded && !nodes.length && unplaced.length}
-			<div class="empty">Drag nodes from Unplaced onto the canvas.</div>
+			<div class="empty">{m.canvas_drag_from_unplaced()}</div>
 		{/if}
 		<SvelteFlow
 			bind:nodes
@@ -642,7 +643,7 @@
 <Modal
 	open={pendingConnection !== null}
 	onclose={() => (pendingConnection = null)}
-	label="Add connection"
+	label={m.canvas_add_connection()}
 	width={440}
 >
 	<div class="picker">
@@ -661,10 +662,11 @@
 			class="option annotation"
 			onclick={() => pendingConnection && createArrow(pendingConnection)}
 		>
-			Arrow <span>· annotation only, no meaning in the graph</span>
+			{m.canvas_arrow()} <span>{m.canvas_arrow_hint()}</span>
 		</button>
 		<div class="actions">
-			<Button variant="quiet" onclick={() => (pendingConnection = null)}>Cancel</Button>
+			<Button variant="quiet" onclick={() => (pendingConnection = null)}>{m.action_cancel()}</Button
+			>
 		</div>
 	</div>
 </Modal>

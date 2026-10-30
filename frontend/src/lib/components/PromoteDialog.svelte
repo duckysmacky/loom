@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { ArrowUpRight } from '@lucide/svelte';
 	import { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import Button from '$lib/components/ui/Button.svelte';
@@ -8,6 +9,7 @@
 	import { graph } from '$lib/stores/graph.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
 	import { kindChangeLosses } from '$lib/graph/display';
+	import { kindLabel } from '$lib/i18n';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeKind } from '$lib/types/NodeKind';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -42,66 +44,66 @@
 		);
 		saving = false;
 		if (updated) {
-			notify(`Promoted “${updated.title}” to ${kind}`);
+			notify(m.promoted({ title: updated.title, kind: kindLabel(kind).toLocaleLowerCase() }));
 			onclose();
 		}
 	}
 </script>
 
-<Modal open={node !== null} {onclose} label="Promote idea" width={460}>
+<Modal open={node !== null} {onclose} label={m.promote_idea()} width={460}>
 	<div class="dialog">
-		<div class="label">Promote idea</div>
+		<div class="label">{m.promote_idea()}</div>
 		<div class="title">{node?.title}</div>
 
 		<div class="field-group">
-			<span class="label">Kind</span>
+			<span class="label">{m.field_kind()}</span>
 			<SegmentedControl
-				label="Kind"
+				label={m.field_kind()}
 				value={kind}
 				onchange={(value) => (kind = value)}
 				options={[
-					{ value: 'project', label: 'Project', icon: KIND_ICON.project },
-					{ value: 'study', label: 'Study', icon: KIND_ICON.study },
-					{ value: 'path', label: 'Path', icon: KIND_ICON.path }
+					{ value: 'project', label: m.kind_project(), icon: KIND_ICON.project },
+					{ value: 'study', label: m.kind_study(), icon: KIND_ICON.study },
+					{ value: 'path', label: m.kind_path(), icon: KIND_ICON.path }
 				]}
 			/>
 		</div>
 		{#if losses.length}
-			<p class="losses">Switching kind removes {losses.join(' and ')}.</p>
+			<p class="losses">{m.promote_losses({ losses: losses.join(m.list_and()) })}</p>
 		{/if}
 		<!-- A path's status is derived from what's inside it. -->
 		{#if kind !== 'path'}
 			<div class="field-group">
-				<span class="label">Status</span>
+				<span class="label">{m.field_status()}</span>
 				<SegmentedControl
-					label="Status"
+					label={m.field_status()}
 					value={status}
 					onchange={(value) => (status = value)}
 					options={[
-						{ value: 'queued', label: 'Queued' },
-						{ value: 'active', label: 'Active' }
+						{ value: 'queued', label: m.status_queued() },
+						{ value: 'active', label: m.status_active() }
 					]}
 				/>
 			</div>
 		{/if}
 		<div class="field-group">
-			<span class="label">Focus tier</span>
+			<span class="label">{m.field_focus_tier()}</span>
 			<SegmentedControl
-				label="Focus tier"
+				label={m.field_focus_tier()}
 				value={focus}
 				onchange={(value) => (focus = value)}
 				options={[
-					{ value: 'primary', label: 'Primary' },
-					{ value: 'secondary', label: 'Secondary' },
-					{ value: 'background', label: 'Background' }
+					{ value: 'primary', label: m.focus_primary() },
+					{ value: 'secondary', label: m.focus_secondary() },
+					{ value: 'background', label: m.focus_background() }
 				]}
 			/>
 		</div>
 
 		<div class="actions">
-			<Button variant="quiet" onclick={onclose}>Cancel</Button>
+			<Button variant="quiet" onclick={onclose}>{m.action_cancel()}</Button>
 			<Button variant="primary" onclick={promote} disabled={saving} icon={ArrowUpRight}
-				>Move to board</Button
+				>{m.promote_submit()}</Button
 			>
 		</div>
 	</div>

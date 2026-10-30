@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import { flip } from 'svelte/animate';
 	import Badge from '$lib/components/ui/Badge.svelte';
@@ -66,7 +67,9 @@
 			{#snippet lead()}
 				<CollapseToggle collapsed ontoggle={toggle} />
 			{/snippet}
-			<div class="inside-count">{inside.length ? `${inside.length} inside` : 'empty'}</div>
+			<div class="inside-count">
+				{inside.length ? m.path_inside_count({ count: inside.length }) : m.path_empty()}
+			</div>
 		</NodeCard>
 	</div>
 {:else}
@@ -86,7 +89,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 		<div class="head-row">
 			<CollapseToggle collapsed={false} ontoggle={toggle} />
 			<button type="button" class="head" onclick={() => openNode(path.id)}>
-				<span class="kind"><KindMark kind="path" /> path</span>
+				<span class="kind"><KindMark kind="path" /> {m.kind_path_lower()}</span>
 				<Badge
 					status={path.status}
 					kind={path.kind}
@@ -137,7 +140,7 @@ The translucent fill stacks, so deeper nesting reads darker. -->
 				{/each}
 			</div>
 		{:else}
-			<p class="empty">Empty path. Add nodes from its detail view, or drag them into this box.</p>
+			<p class="empty">{m.path_box_empty()}</p>
 		{/if}
 	</section>
 {/if}

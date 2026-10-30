@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { ApiError } from '$lib/api/client';
+	import { errorMessage } from '$lib/i18n';
 	import { nextPath } from '$lib/navigation';
 
 	let {
@@ -32,7 +33,7 @@
 			await onsubmit(email, password);
 			await goto(nextPath(page.url.search));
 		} catch (caught) {
-			error = caught instanceof ApiError ? caught.message : 'Could not reach the server';
+			error = errorMessage(caught);
 		} finally {
 			submitting = false;
 		}
@@ -45,11 +46,11 @@
 	{#if error}<div class="error" role="alert">{error}</div>{/if}
 
 	<label>
-		<span class="label">Email</span>
+		<span class="label">{m.auth_email()}</span>
 		<input class="field" type="email" autocomplete="email" required bind:value={email} />
 	</label>
 	<label>
-		<span class="label">Password</span>
+		<span class="label">{m.auth_password()}</span>
 		<input
 			class="field"
 			type="password"

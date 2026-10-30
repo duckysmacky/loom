@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Panel, useNodesInitialized, useSvelteFlow } from '@xyflow/svelte';
 	import { page } from '$app/state';
 	import { CANVAS_NODE_HEIGHT, CANVAS_NODE_WIDTH } from '$lib/graph/layout';
@@ -51,37 +52,39 @@
 </script>
 
 <Panel position="bottom-left">
-	<button type="button" class="add-note" title="Add a sticky note" onclick={onaddnote}
-		>+ Note</button
+	<button type="button" class="add-note" title={m.controls_add_note()} onclick={onaddnote}
+		>{m.controls_note()}</button
 	>
 	<div class="controls">
-		<button type="button" aria-label="Zoom out" onclick={() => flow.zoomOut()}>−</button>
+		<button type="button" aria-label={m.zoom_out()} onclick={() => flow.zoomOut()}>−</button>
 		<label class="zoom">
 			<input
 				type="text"
 				inputmode="numeric"
-				aria-label="Zoom percent"
+				aria-label={m.controls_zoom_percent()}
 				bind:value={zoomDraft}
 				onkeydown={(event) => event.key === 'Enter' && event.currentTarget.blur()}
 				onblur={applyZoom}
 			/>%
 		</label>
-		<button type="button" aria-label="Zoom in" onclick={() => flow.zoomIn()}>+</button>
-		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}>Fit</button>
+		<button type="button" aria-label={m.zoom_in()} onclick={() => flow.zoomIn()}>+</button>
+		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}
+			>{m.action_fit()}</button
+		>
 		<button
 			type="button"
 			class="snap"
 			aria-pressed={prefs.canvasSnapToGrid}
-			title="Snap to grid"
+			title={m.controls_snap_to_grid()}
 			onclick={() => {
 				prefs.canvasSnapToGrid = !prefs.canvasSnapToGrid;
 				savePrefs();
-			}}>Snap to grid</button
+			}}>{m.controls_snap_to_grid()}</button
 		>
 		<label class="snap-step">
-			Step
+			{m.controls_snap_step()}
 			<select
-				aria-label="Grid snap step"
+				aria-label={m.controls_snap_step_label()}
 				value={prefs.canvasSnapStep}
 				disabled={!prefs.canvasSnapToGrid}
 				onchange={(event) => {
@@ -89,27 +92,26 @@
 					savePrefs();
 				}}
 			>
-				<option value={2}>2 cells</option>
-				<option value={1}>1 cell</option>
-				<option value={0.5}>1/2 cell</option>
-				<option value={0.25}>1/4 cell</option>
-				<option value={0.125}>1/8 cell</option>
+				<option value={2}>{m.snap_step_2()}</option>
+				<option value={1}>{m.snap_step_1()}</option>
+				<option value={0.5}>{m.snap_step_half()}</option>
+				<option value={0.25}>{m.snap_step_quarter()}</option>
+				<option value={0.125}>{m.snap_step_eighth()}</option>
 			</select>
 		</label>
-		<span class="hint">drag to pan · shift-drag to select · scroll to zoom · handle to connect</span
-		>
+		<span class="hint">{m.controls_hint()}</span>
 	</div>
 </Panel>
 
 <Panel position="bottom-right">
 	<div class="legend">
-		<div class="label">Edges</div>
-		<div class="entry"><span class="swatch requires-unmet"></span>requires · unmet</div>
-		<div class="entry"><span class="swatch requires-met"></span>requires · met</div>
-		<div class="entry"><span class="swatch path-box"></span>path · drop nodes inside</div>
-		<div class="entry"><span class="swatch precedes"></span>precedes · do first</div>
-		<div class="entry"><span class="swatch related"></span>related</div>
-		<div class="entry"><span class="swatch annotation"></span>arrow · annotation only</div>
+		<div class="label">{m.controls_edges()}</div>
+		<div class="entry"><span class="swatch requires-unmet"></span>{m.legend_requires_unmet()}</div>
+		<div class="entry"><span class="swatch requires-met"></span>{m.legend_requires_met()}</div>
+		<div class="entry"><span class="swatch path-box"></span>{m.legend_path_box()}</div>
+		<div class="entry"><span class="swatch precedes"></span>{m.legend_precedes()}</div>
+		<div class="entry"><span class="swatch related"></span>{m.legend_related()}</div>
+		<div class="entry"><span class="swatch annotation"></span>{m.legend_arrow()}</div>
 	</div>
 </Panel>
 

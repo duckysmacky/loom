@@ -1,8 +1,9 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { LogOut } from '@lucide/svelte';
 	import './settings.css';
 	import Button from '$lib/components/ui/Button.svelte';
-	import { ApiError } from '$lib/api/client';
+	import { errorMessage } from '$lib/i18n';
 	import { changePassword, logout, session } from '$lib/stores/session.svelte';
 	import { notify } from '$lib/stores/toasts.svelte';
 
@@ -16,16 +17,16 @@
 		event.preventDefault();
 		error = '';
 		if (newPassword !== confirmPassword) {
-			error = 'The new passwords do not match';
+			error = m.account_passwords_mismatch();
 			return;
 		}
 		saving = true;
 		try {
 			await changePassword(currentPassword, newPassword);
 			currentPassword = newPassword = confirmPassword = '';
-			notify('Password changed · other sessions signed out');
+			notify(m.account_password_changed());
 		} catch (caught) {
-			error = caught instanceof ApiError ? caught.message : 'Could not reach the server';
+			error = errorMessage(caught);
 		} finally {
 			saving = false;
 		}
@@ -33,30 +34,30 @@
 </script>
 
 <section class="settings-section">
-	<h2>Account</h2>
+	<h2>{m.settings_account()}</h2>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Email</span>
-			<span class="row-help">Single-user instance - this is the only account.</span>
+			<span class="row-label">{m.auth_email()}</span>
+			<span class="row-help">{m.account_email_help()}</span>
 		</span>
 		<span class="value">{session.user?.email}</span>
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Sign out</span>
-			<span class="row-help">Ends this browser's session.</span>
+			<span class="row-label">{m.sign_out()}</span>
+			<span class="row-help">{m.account_sign_out_help()}</span>
 		</span>
-		<Button onclick={logout} icon={LogOut}>Sign out</Button>
+		<Button onclick={logout} icon={LogOut}>{m.sign_out()}</Button>
 	</div>
 </section>
 
 <section class="settings-section">
-	<h2>Change password</h2>
-	<p class="explain">Every other signed-in browser is signed out; this one stays signed in.</p>
+	<h2>{m.account_change_password()}</h2>
+	<p class="explain">{m.account_change_password_help()}</p>
 	<form onsubmit={submit}>
 		{#if error}<div class="error" role="alert">{error}</div>{/if}
 		<label>
-			<span class="label">Current password</span>
+			<span class="label">{m.account_current_password()}</span>
 			<input
 				class="field"
 				type="password"
@@ -66,7 +67,7 @@
 			/>
 		</label>
 		<label>
-			<span class="label">New password</span>
+			<span class="label">{m.account_new_password()}</span>
 			<input
 				class="field"
 				type="password"
@@ -78,7 +79,7 @@
 			/>
 		</label>
 		<label>
-			<span class="label">Repeat new password</span>
+			<span class="label">{m.account_repeat_password()}</span>
 			<input
 				class="field"
 				type="password"
@@ -88,7 +89,9 @@
 			/>
 		</label>
 		<div>
-			<Button variant="primary" type="submit" disabled={saving}>Change password</Button>
+			<Button variant="primary" type="submit" disabled={saving}
+				>{m.account_change_password()}</Button
+			>
 		</div>
 	</form>
 </section>

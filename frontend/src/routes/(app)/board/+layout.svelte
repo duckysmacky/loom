@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { goto } from '$app/navigation';
 	import { page } from '$app/state';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
@@ -12,13 +13,13 @@
 
 <div class="toolbar">
 	<SegmentedControl
-		label="Board view"
+		label={m.board_view()}
 		value={current}
 		onchange={(view) => goto(`/board/${view}`)}
 		options={[
-			{ value: 'organized', label: 'Organized' },
-			{ value: 'canvas', label: 'Canvas' },
-			{ value: 'timeline', label: 'Timeline' }
+			{ value: 'organized', label: m.nav_organized() },
+			{ value: 'canvas', label: m.nav_canvas() },
+			{ value: 'timeline', label: m.nav_timeline() }
 		]}
 	/>
 	<FilterBar />
