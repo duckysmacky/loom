@@ -2,6 +2,7 @@
 	import { Panel, useNodesInitialized, useSvelteFlow } from '@xyflow/svelte';
 	import { page } from '$app/state';
 	import { CANVAS_NODE_HEIGHT, CANVAS_NODE_WIDTH } from '$lib/graph/layout';
+	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
 
 	let { zoom, onaddnote }: { zoom: number; onaddnote: () => void } = $props();
 
@@ -67,6 +68,16 @@
 		</label>
 		<button type="button" aria-label="Zoom in" onclick={() => flow.zoomIn()}>+</button>
 		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}>Fit</button>
+		<button
+			type="button"
+			class="snap"
+			aria-pressed={prefs.canvasSnapToGrid}
+			title="Snap to grid"
+			onclick={() => {
+				prefs.canvasSnapToGrid = !prefs.canvasSnapToGrid;
+				savePrefs();
+			}}>Snap to grid</button
+		>
 		<span class="hint">drag to pan · shift-drag to select · scroll to zoom · handle to connect</span
 		>
 	</div>
@@ -108,8 +119,15 @@
 		height: 24px;
 	}
 
-	.fit {
+	.fit,
+	.snap {
 		padding: 0 8px;
+	}
+
+	.snap[aria-pressed='true'] {
+		background: var(--accent);
+		color: var(--surface);
+		border-color: var(--accent);
 	}
 
 	.add-note {

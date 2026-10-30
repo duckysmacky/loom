@@ -40,6 +40,8 @@ export type Prefs = {
 	pathDetailView: 'list' | 'canvas';
 	/** The canvas lays out and pins unplaced nodes itself; off: they wait in its Unplaced panel. */
 	autoPlace: boolean;
+	/** Snap canvas dragging to the visible grid; remembered per browser. */
+	canvasSnapToGrid: boolean;
 	unplacedPanelOpen: boolean;
 	/** Dropping a node into a path box too small for it grows the box. */
 	pathAutoExpand: boolean;
@@ -72,7 +74,7 @@ export const PREFS_STORAGE_KEY = 'loom.prefs';
 /** Set once this browser's old local prefs were uploaded to the account. */
 const MIGRATED_KEY = 'loom.prefs.synced';
 /** Per-browser UI state that stays out of the account settings. */
-const LOCAL_ONLY: (keyof Prefs)[] = ['collapsedPaths', 'unplacedPanelOpen'];
+const LOCAL_ONLY: (keyof Prefs)[] = ['collapsedPaths', 'unplacedPanelOpen', 'canvasSnapToGrid'];
 const SAVE_DELAY_MS = 400;
 const MAX_RECENT_COLORS = 8;
 
@@ -92,6 +94,7 @@ const DEFAULTS: Prefs = {
 	collapsedPaths: {},
 	pathDetailView: 'list',
 	autoPlace: false,
+	canvasSnapToGrid: false,
 	unplacedPanelOpen: true,
 	pathAutoExpand: true,
 	showEdgeLabels: false,

@@ -580,6 +580,7 @@
 			fitView
 			minZoom={0.01}
 			maxZoom={2}
+			snapGrid={prefs.canvasSnapToGrid ? [13, 13] : undefined}
 			deleteKey={['Delete', 'Backspace']}
 			proOptions={{ hideAttribution: true }}
 			onnodeclick={({ node, event }) => {
