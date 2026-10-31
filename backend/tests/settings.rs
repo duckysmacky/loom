@@ -144,7 +144,10 @@ async fn settings_are_scoped_to_the_account(pool: PgPool) {
     .await;
     assert_eq!(settings(&app, &alice).await["stale_days"], 30);
     assert_eq!(settings(&app, &bob).await["stale_days"], 14);
-    assert_eq!(settings(&app, &alice).await["canvas_snap_step"], 2);
+    assert_eq!(
+        settings(&app, &alice).await["canvas_snap_step"].as_f64(),
+        Some(2.0)
+    );
     assert_eq!(settings(&app, &bob).await["canvas_snap_to_grid"], false);
 }
 
