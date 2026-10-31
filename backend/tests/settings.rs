@@ -102,13 +102,19 @@ async fn get_returns_defaults_for_a_new_account(pool: PgPool) {
     assert_eq!(body["theme"], "system");
     assert_eq!(body["stale_days"], 14);
     assert_eq!(body["track_active_periods"], true);
+    assert_eq!(body["canvas_snap_to_grid"], false);
+    assert_eq!(body["canvas_snap_step"], 0.5);
 }
 
 #[sqlx::test]
 async fn patch_merges_only_the_sent_keys(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "merge@example.com").await;
-    for changes in [json!({"theme": "dark"}), json!({"density": "compact"})] {
+    for changes in [
+        json!({"theme": "dark"}),
+        json!({"density": "compact"}),
+        json!({"canvas_snap_to_grid": true, "canvas_snap_step": 0.125}),
+    ] {
         let (status, _) = send(&app, req("PATCH", "/api/settings", changes, Some(&token))).await;
         assert_eq!(status, StatusCode::OK);
     }
@@ -116,6 +122,8 @@ async fn patch_merges_only_the_sent_keys(pool: PgPool) {
     assert_eq!(body["theme"], "dark");
     assert_eq!(body["density"], "compact");
     assert_eq!(body["stale_days"], 14);
+    assert_eq!(body["canvas_snap_to_grid"], true);
+    assert_eq!(body["canvas_snap_step"], 0.125);
 }
 
 #[sqlx::test]
@@ -130,6 +138,11 @@ async fn patch_rejects_bad_input_without_storing_anything(pool: PgPool) {
         json!({"stale_days": "14"}),
         json!({"recent_colors": ["red"]}),
         json!({"recent_colors": vec!["#fff"; 9]}),
+        json!({"canvas_snap_to_grid": "true"}),
+        json!({"canvas_snap_step": 4}),
+        json!({"canvas_snap_step": 0}),
+        json!({"canvas_snap_step": 0.3}),
+        json!({"canvas_snap_step": "0.5"}),
         // A valid key does not rescue an invalid sibling.
         json!({"theme": "dark", "density": "huge"}),
     ] {
@@ -141,6 +154,7 @@ async fn patch_rejects_bad_input_without_storing_anything(pool: PgPool) {
         assert_eq!(status, StatusCode::BAD_REQUEST, "{changes}");
     }
     assert_eq!(settings(&app, &token).await["theme"], "system");
+    assert_eq!(settings(&app, &token).await["canvas_snap_step"], 0.5);
 }
 
 #[sqlx::test]
@@ -153,13 +167,18 @@ async fn settings_are_scoped_to_the_account(pool: PgPool) {
         req(
             "PATCH",
             "/api/settings",
-            json!({"stale_days": 30}),
+            json!({"stale_days": 30, "canvas_snap_to_grid": true, "canvas_snap_step": 2}),
             Some(&alice),
         ),
     )
     .await;
     assert_eq!(settings(&app, &alice).await["stale_days"], 30);
     assert_eq!(settings(&app, &bob).await["stale_days"], 14);
+    assert_eq!(
+        settings(&app, &alice).await["canvas_snap_step"].as_f64(),
+        Some(2.0)
+    );
+    assert_eq!(settings(&app, &bob).await["canvas_snap_to_grid"], false);
 }
 
 #[sqlx::test]
