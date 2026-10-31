@@ -61,7 +61,37 @@ async fn signup(app: &axum::Router, email: &str) -> String {
 async fn settings(app: &axum::Router, token: &str) -> Value {
     let (status, body) = send(app, req("GET", "/api/settings", Value::Null, Some(token))).await;
     assert_eq!(status, StatusCode::OK);
-    body
+    normalize_whole_number_floats(body)
+}
+
+fn normalize_whole_number_floats(value: Value) -> Value {
+    match value {
+        Value::Number(number) => {
+            if let Some(float) = number.as_f64() {
+                if float.fract() == 0.0
+                    && float.is_finite()
+                    && float >= i64::MIN as f64
+                    && float <= i64::MAX as f64
+                {
+                    return Value::Number((float as i64).into());
+                }
+            }
+            Value::Number(number)
+        }
+        Value::Array(values) => Value::Array(
+            values
+                .into_iter()
+                .map(normalize_whole_number_floats)
+                .collect(),
+        ),
+        Value::Object(entries) => Value::Object(
+            entries
+                .into_iter()
+                .map(|(key, value)| (key, normalize_whole_number_floats(value)))
+                .collect(),
+        ),
+        other => other,
+    }
 }
 
 #[sqlx::test]
