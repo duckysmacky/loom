@@ -134,6 +134,10 @@ pub struct Settings {
     pub path_detail_view: PathDetailView,
     /// The canvas lays out and pins unplaced nodes itself.
     pub auto_place: bool,
+    /// Snap canvas dragging to the grid.
+    pub canvas_snap_to_grid: bool,
+    /// Snap step in visible canvas cells: 2, 1, 1/2, 1/4 or 1/8.
+    pub canvas_snap_step: f64,
     /// Dropping a node into a path box too small for it grows the box.
     pub path_auto_expand: bool,
     /// Canvas connections carry a small text label.
@@ -174,6 +178,8 @@ impl Default for Settings {
             split_period_on_focus_change: false,
             path_detail_view: PathDetailView::List,
             auto_place: false,
+            canvas_snap_to_grid: false,
+            canvas_snap_step: 0.5,
             path_auto_expand: true,
             show_edge_labels: false,
             stale_days: 14,

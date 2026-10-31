@@ -40,10 +40,10 @@ export type Prefs = {
 	pathDetailView: 'list' | 'canvas';
 	/** The canvas lays out and pins unplaced nodes itself; off: they wait in its Unplaced panel. */
 	autoPlace: boolean;
-	/** Snap canvas dragging to the visible grid; remembered per browser. */
+	/** Snap canvas dragging to the visible grid. */
 	canvasSnapToGrid: boolean;
-	/** Snap step in visible canvas cells; remembered per browser. */
-	canvasSnapStep: 2 | 1 | 0.5 | 0.25 | 0.125;
+	/** Snap step in visible canvas cells: 2, 1, 1/2, 1/4 or 1/8. */
+	canvasSnapStep: number;
 	unplacedPanelOpen: boolean;
 	/** Dropping a node into a path box too small for it grows the box. */
 	pathAutoExpand: boolean;
@@ -75,13 +75,10 @@ export type PathView = 'organized' | 'dashboard' | 'canvas' | 'detail';
 export const PREFS_STORAGE_KEY = 'loom.prefs';
 /** Set once this browser's old local prefs were uploaded to the account. */
 const MIGRATED_KEY = 'loom.prefs.synced';
+/** Set once this browser's old canvas snap preferences have reached the account. */
+const SNAP_SYNCED_KEY = 'loom.prefs.canvasSnap.synced';
 /** Per-browser UI state that stays out of the account settings. */
-const LOCAL_ONLY: (keyof Prefs)[] = [
-	'collapsedPaths',
-	'unplacedPanelOpen',
-	'canvasSnapToGrid',
-	'canvasSnapStep'
-];
+const LOCAL_ONLY: (keyof Prefs)[] = ['collapsedPaths', 'unplacedPanelOpen'];
 const SAVE_DELAY_MS = 400;
 const MAX_RECENT_COLORS = 8;
 
@@ -121,6 +118,9 @@ const DEFAULTS: Prefs = {
 function loadPrefs(): Prefs {
 	try {
 		const stored = JSON.parse(localStorage.getItem(PREFS_STORAGE_KEY) ?? '{}');
+		if (![2, 1, 0.5, 0.25, 0.125].includes(stored.canvasSnapStep)) {
+			delete stored.canvasSnapStep;
+		}
 		return { ...DEFAULTS, ...stored };
 	} catch {
 		return { ...DEFAULTS };
@@ -198,6 +198,13 @@ async function flushPrefs() {
 	try {
 		await settingsApi.patch(mapKeys(sent, toSnake));
 		serverValues = { ...serverValues, ...sent };
+		if (keys.includes('canvasSnapToGrid') || keys.includes('canvasSnapStep')) {
+			try {
+				localStorage.setItem(SNAP_SYNCED_KEY, '1');
+			} catch {
+				// The account save succeeded; local storage may be unavailable.
+			}
+		}
 		syncState.status = 'saved';
 		syncState.saves++;
 	} catch {
@@ -218,14 +225,34 @@ export async function loadSettings() {
 		const remote = mapKeys(await settingsApi.get(), toCamel) as Partial<Prefs>;
 		const remoteKeys = Object.keys(remote) as (keyof Prefs)[];
 		const same = (left: unknown, right: unknown) => JSON.stringify(left) === JSON.stringify(right);
-		const migrate =
-			localStorage.getItem(PREFS_STORAGE_KEY) !== null && !localStorage.getItem(MIGRATED_KEY);
-		const keepLocal = new Set<keyof Prefs>(
-			migrate ? remoteKeys.filter((key) => same(remote[key], DEFAULTS[key])) : dirtyKeys()
-		);
+		const hasCache = localStorage.getItem(PREFS_STORAGE_KEY) !== null;
+		const migrate = hasCache && !localStorage.getItem(MIGRATED_KEY);
+		const migrateSnap = hasCache && !localStorage.getItem(SNAP_SYNCED_KEY);
+		// The cache is only for first paint. Preserve edits made while GET was in flight,
+		// then let the account values replace any older cached values.
+		const localChanges = dirtyKeys();
+		const keepLocal = new Set<keyof Prefs>(localChanges);
+		if (migrate) {
+			for (const key of remoteKeys) {
+				if (same(remote[key], DEFAULTS[key])) keepLocal.add(key);
+			}
+		}
+		if (migrateSnap) {
+			for (const key of ['canvasSnapToGrid', 'canvasSnapStep'] as const) {
+				if (same(remote[key], DEFAULTS[key]) && !same(prefs[key], DEFAULTS[key])) {
+					keepLocal.add(key);
+				}
+			}
+		}
+		const needsSnapUpload =
+			migrateSnap &&
+			(['canvasSnapToGrid', 'canvasSnapStep'] as const).some(
+				(key) => keepLocal.has(key) && !same(prefs[key], remote[key])
+			);
 		serverValues = remote;
 		try {
 			localStorage.setItem(MIGRATED_KEY, '1');
+			if (!needsSnapUpload) localStorage.setItem(SNAP_SYNCED_KEY, '1');
 		} catch {
 			// Storage unavailable: the upload just repeats next load.
 		}

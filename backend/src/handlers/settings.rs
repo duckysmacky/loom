@@ -59,6 +59,9 @@ fn validate_changes(changes: &Map<String, Value>) -> Result<Settings, ApiError> 
     if !(0..=365).contains(&parsed.stale_warn_days) {
         return Err(ApiError::InvalidInput("stale_warn_days must be 0-365"));
     }
+    if ![2.0, 1.0, 0.5, 0.25, 0.125].contains(&parsed.canvas_snap_step) {
+        return Err(ApiError::InvalidInput("invalid canvas_snap_step"));
+    }
     if parsed
         .stale_kinds
         .iter()

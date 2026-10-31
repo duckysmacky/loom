@@ -164,6 +164,43 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
+				<span class="row-label">Snap to grid</span>
+				<span class="row-help">Align dragged canvas items to the grid.</span>
+			</span>
+			<input
+				type="checkbox"
+				checked={prefs.canvasSnapToGrid}
+				onchange={(event) => {
+					prefs.canvasSnapToGrid = event.currentTarget.checked;
+					savePrefs();
+				}}
+			/>
+		</label>
+	</div>
+	<div class="settings-row">
+		<span>
+			<span class="row-label">Grid snap step</span>
+			<span class="row-help">Choose the step as a fraction of a visible grid cell.</span>
+		</span>
+		<select
+			aria-label="Grid snap step"
+			value={prefs.canvasSnapStep}
+			disabled={!prefs.canvasSnapToGrid}
+			onchange={(event) => {
+				prefs.canvasSnapStep = Number(event.currentTarget.value);
+				savePrefs();
+			}}
+		>
+			<option value={2}>2 cells</option>
+			<option value={1}>1 cell</option>
+			<option value={0.5}>1/2 cell</option>
+			<option value={0.25}>1/4 cell</option>
+			<option value={0.125}>1/8 cell</option>
+		</select>
+	</div>
+	<div class="settings-row">
+		<label class="toggle">
+			<span>
 				<span class="row-label">Grow paths to fit</span>
 				<span class="row-help"
 					>Dropping a node into a path box that's too small for it makes the box bigger.</span
