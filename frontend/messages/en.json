@@ -534,5 +534,17 @@
 	"card_never_touched": "never touched",
 	"path_canvas_nothing_placed": "Nothing placed yet.",
 	"connections_unmet": "unmet",
-	"connections_met": "met ✓"
+	"connections_met": "met ✓",
+	"controls_snap_to_grid": "Snap to grid",
+	"controls_snap_step": "Step",
+	"controls_snap_step_aria": "Grid snap step",
+	"snap_step_2_cells": "2 cells",
+	"snap_step_1_cell": "1 cell",
+	"snap_step_half_cell": "1/2 cell",
+	"snap_step_quarter_cell": "1/4 cell",
+	"snap_step_eighth_cell": "1/8 cell",
+	"features_snap_to_grid": "Snap to grid",
+	"features_snap_to_grid_help": "Align dragged canvas items to the grid.",
+	"features_grid_snap_step": "Grid snap step",
+	"features_grid_snap_step_help": "Choose the step as a fraction of a visible grid cell."
 }

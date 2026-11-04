@@ -626,5 +626,17 @@
 	"card_never_touched": "без толчков",
 	"path_canvas_nothing_placed": "Пока ничего не размещено.",
 	"connections_unmet": "не выполнено",
-	"connections_met": "выполнено ✓"
+	"connections_met": "выполнено ✓",
+	"controls_snap_to_grid": "Привязка к сетке",
+	"controls_snap_step": "Шаг",
+	"controls_snap_step_aria": "Шаг привязки к сетке",
+	"snap_step_2_cells": "2 клетки",
+	"snap_step_1_cell": "1 клетка",
+	"snap_step_half_cell": "1/2 клетки",
+	"snap_step_quarter_cell": "1/4 клетки",
+	"snap_step_eighth_cell": "1/8 клетки",
+	"features_snap_to_grid": "Привязка к сетке",
+	"features_snap_to_grid_help": "Выравнивать перетаскиваемые элементы холста по сетке.",
+	"features_grid_snap_step": "Шаг привязки к сетке",
+	"features_grid_snap_step_help": "Шаг задаётся долей видимой клетки сетки."
 }

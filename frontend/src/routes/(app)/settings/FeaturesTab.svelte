@@ -167,9 +167,8 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-<<<<<<< HEAD
-				<span class="row-label">Snap to grid</span>
-				<span class="row-help">Align dragged canvas items to the grid.</span>
+				<span class="row-label">{m.features_snap_to_grid()}</span>
+				<span class="row-help">{m.features_snap_to_grid_help()}</span>
 			</span>
 			<input
 				type="checkbox"
@@ -183,11 +182,11 @@
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Grid snap step</span>
-			<span class="row-help">Choose the step as a fraction of a visible grid cell.</span>
+			<span class="row-label">{m.features_grid_snap_step()}</span>
+			<span class="row-help">{m.features_grid_snap_step_help()}</span>
 		</span>
 		<select
-			aria-label="Grid snap step"
+			aria-label={m.controls_snap_step_aria()}
 			value={prefs.canvasSnapStep}
 			disabled={!prefs.canvasSnapToGrid}
 			onchange={(event) => {
@@ -195,24 +194,18 @@
 				savePrefs();
 			}}
 		>
-			<option value={2}>2 cells</option>
-			<option value={1}>1 cell</option>
-			<option value={0.5}>1/2 cell</option>
-			<option value={0.25}>1/4 cell</option>
-			<option value={0.125}>1/8 cell</option>
+			<option value={2}>{m.snap_step_2_cells()}</option>
+			<option value={1}>{m.snap_step_1_cell()}</option>
+			<option value={0.5}>{m.snap_step_half_cell()}</option>
+			<option value={0.25}>{m.snap_step_quarter_cell()}</option>
+			<option value={0.125}>{m.snap_step_eighth_cell()}</option>
 		</select>
 	</div>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Grow paths to fit</span>
-				<span class="row-help"
-					>Dropping a node into a path box that's too small for it makes the box bigger.</span
-				>
-=======
 				<span class="row-label">{m.features_grow_paths_fit()}</span>
 				<span class="row-help">{m.features_dropping_node_into_path()}</span>
->>>>>>> dev
 			</span>
 			<input
 				type="checkbox"
