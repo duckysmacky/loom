@@ -1,3 +1,5 @@
+import { m } from '$lib/paraglide/messages';
+import { getLocale } from '$lib/paraglide/runtime';
 import type { EdgeResponse } from '$lib/types/EdgeResponse';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeResponse } from '$lib/types/NodeResponse';
@@ -133,19 +135,21 @@ export function daysSince(iso: string, now = Date.now()): number {
 	return Math.max(0, Math.floor((now - Date.parse(iso)) / DAY_MS));
 }
 
-/** "today", "1d ago", "34d ago". */
+/** "today", "1d ago", "34d ago" (in the UI language). */
 export function relativeDays(iso: string, now = Date.now()): string {
 	const days = daysSince(iso, now);
-	return days === 0 ? 'today' : `${days}d ago`;
+	return days === 0
+		? m.today()
+		: new Intl.RelativeTimeFormat(getLocale(), { style: 'narrow' }).format(-days, 'day');
 }
 
-const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-
-/** "2 Sep", or "2 Jul 2025" outside the current year. */
+/** "Sep 2", or "Jul 2, 2025" outside the current year (in the UI language). */
 export function shortDate(iso: string, now = new Date()): string {
 	const date = new Date(iso);
-	const dayMonth = `${date.getDate()} ${MONTHS[date.getMonth()]}`;
-	return date.getFullYear() === now.getFullYear() ? dayMonth : `${dayMonth} ${date.getFullYear()}`;
+	const year = date.getFullYear() === now.getFullYear() ? undefined : 'numeric';
+	return new Intl.DateTimeFormat(getLocale(), { day: 'numeric', month: 'short', year }).format(
+		date
+	);
 }
 
 /** ISO timestamp → `yyyy-mm-dd` in local time, for `<input type="date">`. */
@@ -233,15 +237,17 @@ export function progressOf(
 export function kindChangeLosses(node: NodeResponse, kind: NodeResponse['kind']): string[] {
 	const losses: string[] = [];
 	if (kind !== 'study' && node.progress_total !== null) {
-		losses.push(`the progress counter (${node.progress_current ?? 0} / ${node.progress_total})`);
+		losses.push(
+			m.lose_progress({ current: node.progress_current ?? 0, total: node.progress_total })
+		);
 	}
 	if (kind !== 'project' && node.checklist_progress) {
-		losses.push(`${node.checklist_progress.total} checklist item(s)`);
+		losses.push(m.lose_checklist({ count: node.checklist_progress.total }));
 	}
 	if (kind !== 'path' && node.container_progress) {
-		losses.push(`${node.container_progress.total} contained node(s), which leave the path`);
+		losses.push(m.lose_children({ count: node.container_progress.total }));
 	}
-	if (kind === 'idea' && node.kind !== 'idea') losses.push('its status and focus tier');
+	if (kind === 'idea' && node.kind !== 'idea') losses.push(m.lose_status_focus());
 	return losses;
 }
 
@@ -254,16 +260,13 @@ export function progressText(node: NodeResponse): string | null {
 	if (!progress) return null;
 	if (progress.unit === 'overall') {
 		const count = node.container_progress;
-		const done = count ? ` · ${count.done} / ${count.total} done` : '';
+		const done = count ? ` · ${m.progress_done_suffix(count)}` : '';
 		return `${progress.done} / ${progress.total}${done}`;
 	}
-	const suffix = {
-		tracked: node.progress_unit ? ` ${node.progress_unit}` : '',
-		tasks: ' tasks',
-		overall: '',
-		children: ' done'
-	}[progress.unit];
-	return `${progress.done} / ${progress.total}${suffix}`;
+	if (progress.unit === 'tasks') return m.progress_tasks(progress);
+	if (progress.unit === 'children') return m.progress_done_suffix(progress);
+	const unit = node.progress_unit ? ` ${node.progress_unit}` : '';
+	return `${progress.done} / ${progress.total}${unit}`;
 }
 
 /** The tracked counter after a quick "+1", or null when there's nothing to bump. */

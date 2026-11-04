@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/svelte';
 	import { prefs } from '$lib/stores/prefs.svelte';
 	import type { LoomGraphEdge } from './types';
@@ -28,7 +29,12 @@
 	// shows in the line's colour, so the label only names the connection.
 	const label = $derived(
 		prefs.showEdgeLabels
-			? { requires: 'requires', part_of: 'part of', related: 'related', precedes: 'next' }[kind]
+			? {
+					requires: m.edge_label_requires,
+					part_of: m.edge_label_part_of,
+					related: m.edge_label_related,
+					precedes: m.edge_label_next
+				}[kind]()
 			: null
 	);
 </script>

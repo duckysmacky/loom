@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Check } from '@lucide/svelte';
 	import Button from '$lib/components/ui/Button.svelte';
 	import { nodesApi } from '$lib/api/endpoints';
@@ -25,9 +26,9 @@
 
 <section>
 	<div class="head">
-		<span class="label">Description</span>
+		<span class="label">{m.notes_description()}</span>
 		{#if !editing}
-			<button type="button" class="link" onclick={startEditing}>Edit markdown</button>
+			<button type="button" class="link" onclick={startEditing}>{m.notes_edit()}</button>
 		{/if}
 	</div>
 
@@ -35,7 +36,7 @@
 		<textarea
 			class="field editor"
 			rows="8"
-			aria-label="Notes (markdown)"
+			aria-label={m.notes_label()}
 			bind:value={draft}
 			onkeydown={(event) => {
 				if (event.key === 'Enter' && event.ctrlKey) save();
@@ -45,9 +46,9 @@
 				}
 			}}></textarea>
 		<div class="actions">
-			<span class="hint">Ctrl ↵ to save</span>
-			<Button variant="quiet" onclick={() => (editing = false)}>Cancel</Button>
-			<Button variant="primary" onclick={save} icon={Check}>Save</Button>
+			<span class="hint">{m.notes_save_hint()}</span>
+			<Button variant="quiet" onclick={() => (editing = false)}>{m.action_cancel()}</Button>
+			<Button variant="primary" onclick={save} icon={Check}>{m.action_save()}</Button>
 		</div>
 	{:else if node.notes}
 		<!-- Sanitized by DOMPurify in renderMarkdown. -->
@@ -55,7 +56,7 @@
 		<div class="markdown">{@html renderMarkdown(node.notes)}</div>
 	{:else}
 		<button type="button" class="placeholder" onclick={startEditing}>
-			No description yet. Add notes, links, a plan…
+			{m.notes_empty()}
 		</button>
 	{/if}
 </section>

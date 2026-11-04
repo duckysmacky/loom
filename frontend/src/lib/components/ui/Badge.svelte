@@ -1,7 +1,9 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { Hourglass } from '@lucide/svelte';
 	import Icon from '$lib/components/ui/Icon.svelte';
 	import { shortDate } from '$lib/graph/display';
+	import { statusLabel } from '$lib/i18n';
 	import { prefs } from '$lib/stores/prefs.svelte';
 	import type { NodeKind } from '$lib/types/NodeKind';
 	import type { NodeStatus } from '$lib/types/NodeStatus';
@@ -26,11 +28,15 @@
 
 	const visibleStatus = $derived(kind === 'path' && prefs.pathStatusMode === 'off' ? null : status);
 	const shown = $derived(blocked && status !== 'done' ? 'blocked' : visibleStatus);
-	const staleLabel = $derived(staleSince ? `Stale since ${shortDate(staleSince)}` : '');
+	const staleLabel = $derived(
+		staleSince ? m.badge_stale_since({ date: shortDate(staleSince) }) : ''
+	);
 </script>
 
-{#if shown}<span class="badge {shown}">{shown}</span>{/if}
-{#if archived}<span class="badge archived">archived</span>{/if}
+{#if shown}<span class="badge {shown}"
+		>{shown === 'blocked' ? m.status_blocked() : statusLabel(shown)}</span
+	>{/if}
+{#if archived}<span class="badge archived">{m.badge_archived()}</span>{/if}
 {#if staleSince}
 	<span class="stale" title={staleLabel} aria-label={staleLabel} role="img">
 		<Icon icon={Hourglass} glyph="⧗" size={12} />

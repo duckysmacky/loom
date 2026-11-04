@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import '@xyflow/svelte/dist/base.css';
 	import { Background, ConnectionMode, SvelteFlow } from '@xyflow/svelte';
 	import { nodesApi } from '$lib/api/endpoints';
@@ -115,7 +116,7 @@
 <div class="path-canvas">
 	{#if !nodes.length}
 		<div class="empty">
-			{unplacedCount ? 'Nothing placed yet.' : 'Nothing inside yet.'}
+			{unplacedCount ? m.path_canvas_nothing_placed() : m.contains_nothing()}
 		</div>
 	{/if}
 	<SvelteFlow
@@ -143,7 +144,7 @@
 </div>
 {#if unplacedCount}
 	<p class="note">
-		{unplacedCount} unplaced - place {unplacedCount === 1 ? 'it' : 'them'} on the board canvas.
+		{m.path_canvas_unplaced({ count: unplacedCount })}
 	</p>
 {/if}
 

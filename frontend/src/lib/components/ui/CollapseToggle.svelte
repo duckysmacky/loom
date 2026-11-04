@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	/**
 	 * Expand/collapse switch for a path. Stops the click from reaching the
 	 * card, header or canvas node it sits in (those open the node).
@@ -10,7 +11,7 @@
 	type="button"
 	class="collapse-toggle nodrag"
 	aria-expanded={!collapsed}
-	aria-label={collapsed ? 'Expand path' : 'Collapse path'}
+	aria-label={collapsed ? m.path_expand() : m.path_collapse()}
 	onclick={(event) => {
 		event.stopPropagation();
 		ontoggle();

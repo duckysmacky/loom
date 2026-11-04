@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import { page } from '$app/state';
 	import {
 		ChartGantt,
@@ -13,25 +14,25 @@
 	import { prefs } from '$lib/stores/prefs.svelte';
 
 	const destinations = [
-		{ href: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+		{ href: '/dashboard', label: m.nav_dashboard(), icon: LayoutDashboard },
 		{
 			href: '/board',
-			label: 'Board',
+			label: m.nav_board(),
 			icon: Network,
 			children: [
-				{ href: '/board/organized', label: 'Organized', icon: Rows3 },
-				{ href: '/board/canvas', label: 'Canvas', icon: Spline },
-				{ href: '/board/timeline', label: 'Timeline', icon: ChartGantt }
+				{ href: '/board/organized', label: m.nav_organized(), icon: Rows3 },
+				{ href: '/board/canvas', label: m.nav_canvas(), icon: Spline },
+				{ href: '/board/timeline', label: m.nav_timeline(), icon: ChartGantt }
 			]
 		},
-		{ href: '/nodes', label: 'Nodes', icon: List },
-		{ href: '/settings', label: 'Settings', icon: Settings }
+		{ href: '/nodes', label: m.nav_nodes(), icon: List },
+		{ href: '/settings', label: m.nav_settings(), icon: Settings }
 	];
 
 	const isActive = (href: string) => page.url.pathname.startsWith(href);
 </script>
 
-<nav class="sidebar" aria-label="Main">
+<nav class="sidebar" aria-label={m.nav_main()}>
 	<a class="brand" href="/dashboard">
 		{#if prefs.iconStyle === 'icons'}
 			<!-- The favicon's mark without its tile: two nodes feeding a third. -->
@@ -88,8 +89,10 @@
 	</ul>
 
 	<div class="hints">
-		<span class="key">Ctrl K</span> jump to node<br />
-		<span class="key">N</span> quick capture
+		<span class="key">Ctrl K</span>
+		{m.nav_hint_jump()}<br />
+		<span class="key">N</span>
+		{m.nav_hint_capture()}
 	</div>
 </nav>
 

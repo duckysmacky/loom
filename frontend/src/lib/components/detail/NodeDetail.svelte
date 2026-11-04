@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import {
 		Archive,
 		ArchiveRestore,
@@ -35,6 +36,7 @@
 		shortDate,
 		toDateInput
 	} from '$lib/graph/display';
+	import { kindLabel, statusLabel } from '$lib/i18n';
 	import { closeNode } from '$lib/navigation';
 	import { graph } from '$lib/stores/graph.svelte';
 	import { prefs } from '$lib/stores/prefs.svelte';
@@ -99,7 +101,7 @@
 	}
 
 	async function poke(current: NodeResponse) {
-		if (await graph.poke(current)) notify(`Poked “${current.title}”`);
+		if (await graph.poke(current)) notify(m.poked({ title: current.title }));
 	}
 
 	async function remove(current: NodeResponse) {
@@ -107,7 +109,7 @@
 			await nodesApi.remove(current.id);
 			closeNode();
 			await graph.load();
-			notify(`Deleted “${current.title}”`);
+			notify(m.deleted({ title: current.title }));
 		} catch (error) {
 			notifyError(error);
 		}
@@ -148,14 +150,14 @@
 		class="detail"
 		role="dialog"
 		aria-modal="true"
-		aria-label="Node detail"
+		aria-label={m.detail_label()}
 		in:fly={{ y: 14, duration: ms(220), easing: cubicOut }}
 		out:fade={{ duration: ms(120) }}
 	>
 		{#if !node}
 			<div class="missing">
-				<p>{graph.loaded ? 'This node no longer exists.' : 'Loading…'}</p>
-				<Button variant="quiet" onclick={closeNode} icon={X}>Close</Button>
+				<p>{graph.loaded ? m.detail_missing() : m.loading()}</p>
+				<Button variant="quiet" onclick={closeNode} icon={X}>{m.action_close()}</Button>
 			</div>
 		{:else}
 			{@const blocked = node.blocked && node.status !== 'done'}
@@ -163,7 +165,7 @@
 
 			<header>
 				<div class="meta-row">
-					<span class="label"><KindMark kind={node.kind} /> {node.kind}</span>
+					<span class="label"><KindMark kind={node.kind} /> {kindLabel(node.kind)}</span>
 					<Badge
 						status={node.status}
 						kind={node.kind}
@@ -171,12 +173,14 @@
 						archived={node.archived}
 						staleSince={node.stale_since}
 					/>
-					{#if blocked}<span class="computed">blocked is computed · not editable</span>{/if}
-					<button type="button" class="close" aria-label="Close" onclick={closeNode}>✕</button>
+					{#if blocked}<span class="computed">{m.detail_blocked_computed()}</span>{/if}
+					<button type="button" class="close" aria-label={m.action_close()} onclick={closeNode}
+						>✕</button
+					>
 				</div>
 				<input
 					class="title"
-					aria-label="Title"
+					aria-label={m.field_title()}
 					bind:value={titleDraft}
 					onblur={() => saveTitle(node)}
 					onkeydown={(event) => event.key === 'Enter' && event.currentTarget.blur()}
@@ -187,7 +191,7 @@
 				<div class="main">
 					{#if showProgress}
 						<section>
-							<div class="label">Progress</div>
+							<div class="label">{m.detail_progress()}</div>
 							<form
 								class="progress"
 								onsubmit={(event) => {
@@ -199,7 +203,7 @@
 									class="field"
 									type="number"
 									min="0"
-									aria-label="Done so far"
+									aria-label={m.detail_done_so_far()}
 									bind:value={progressCurrent}
 								/>
 								<span class="of">/</span>
@@ -207,17 +211,17 @@
 									class="field"
 									type="number"
 									min="1"
-									aria-label="Total"
+									aria-label={m.progress_total()}
 									bind:value={progressTotal}
 								/>
 								<input
 									class="field unit"
 									maxlength="40"
-									placeholder="videos, chapters…"
-									aria-label="What is being counted"
+									placeholder={m.detail_unit_placeholder()}
+									aria-label={m.detail_unit_label()}
 									bind:value={progressUnit}
 								/>
-								<Button type="submit" variant="poke" icon={Check}>Save</Button>
+								<Button type="submit" variant="poke" icon={Check}>{m.action_save()}</Button>
 								{#if node.progress_total !== null}
 									<Button
 										variant="poke"
@@ -232,7 +236,7 @@
 												progress_current: null,
 												progress_total: null,
 												progress_unit: null
-											})}>Clear</Button
+											})}>{m.action_clear()}</Button
 									>
 								{/if}
 							</form>
@@ -258,26 +262,30 @@
 					     derived, set by hand or hidden, per the path status setting. -->
 					{#if node.kind === 'path' && prefs.pathStatusMode === 'auto'}
 						<div class="control">
-							<span class="label">Status</span>
-							<span class="computed">{node.status} · derived from what's inside</span>
+							<span class="label">{m.field_status()}</span>
+							<span class="computed"
+								>{m.detail_status_derived({
+									status: node.status ? statusLabel(node.status) : ''
+								})}</span
+							>
 						</div>
 					{:else if node.status && !(node.kind === 'path' && prefs.pathStatusMode === 'off')}
 						<label class="control">
-							<span class="label">Status</span>
+							<span class="label">{m.field_status()}</span>
 							<select
 								class="field"
 								value={node.status}
 								onchange={(event) =>
 									update(node, { status: event.currentTarget.value as NodeResponse['status'] })}
 							>
-								{#each ['idea', 'queued', 'active', 'paused', 'done'] as status (status)}
-									<option value={status}>{status[0].toUpperCase() + status.slice(1)}</option>
+								{#each ['idea', 'queued', 'active', 'paused', 'done'] as const as status (status)}
+									<option value={status}>{statusLabel(status)}</option>
 								{/each}
 							</select>
 						</label>
 					{/if}
 					<label class="control">
-						<span class="label">Kind</span>
+						<span class="label">{m.field_kind()}</span>
 						<!-- The key re-renders the select, so a cancelled change snaps back. -->
 						{#key pendingKind}
 							<select
@@ -286,46 +294,45 @@
 								onchange={(event) =>
 									requestKindChange(node, event.currentTarget.value as NodeResponse['kind'])}
 							>
-								<option value="idea">Idea</option>
-								<option value="project">Project</option>
-								<option value="study">Study</option>
-								<option value="path">Path</option>
+								{#each ['idea', 'project', 'study', 'path'] as const as kind (kind)}
+									<option value={kind}>{kindLabel(kind)}</option>
+								{/each}
 							</select>
 						{/key}
 					</label>
 					{#if node.focus}
 						<div class="control">
-							<span class="label">Focus tier</span>
+							<span class="label">{m.field_focus_tier()}</span>
 							<SegmentedControl
-								label="Focus tier"
+								label={m.field_focus_tier()}
 								value={node.focus}
 								onchange={(focus) => update(node, { focus })}
 								options={[
-									{ value: 'primary', label: 'Primary' },
-									{ value: 'secondary', label: 'Secondary' },
-									{ value: 'background', label: 'Background' }
+									{ value: 'primary', label: m.focus_primary() },
+									{ value: 'secondary', label: m.focus_secondary() },
+									{ value: 'background', label: m.focus_background() }
 								]}
 							/>
 						</div>
 					{/if}
 					<div class="control">
-						<span class="label">Accent</span>
+						<span class="label">{m.field_accent()}</span>
 						<AccentPicker value={node.color} onchange={(color) => update(node, { color })} />
 					</div>
 
 					<DetailTopics {node} />
 
 					<dl class="stats">
-						<dt class="label">Last touched</dt>
-						<dd>{node.last_poked_at ? relativeDays(node.last_poked_at) : 'never'}</dd>
+						<dt class="label">{m.detail_last_touched()}</dt>
+						<dd>{node.last_poked_at ? relativeDays(node.last_poked_at) : m.detail_never()}</dd>
 						{#if node.kind !== 'path'}
-							<dt class="label">Pokes</dt>
+							<dt class="label">{m.detail_pokes()}</dt>
 							<dd>{pokeCount ?? '–'}</dd>
 						{/if}
-						<dt class="label">Created</dt>
+						<dt class="label">{m.detail_created()}</dt>
 						<dd>{shortDate(node.created_at)}</dd>
 						{#if node.stale_since}
-							<dt class="label">Stale since</dt>
+							<dt class="label">{m.detail_stale_since()}</dt>
 							<dd>{shortDate(node.stale_since)}</dd>
 						{/if}
 					</dl>
@@ -336,7 +343,7 @@
 					{#if node.kind !== 'idea'}
 						<div class="dates">
 							<label class="control">
-								<span class="label">Started</span>
+								<span class="label">{m.field_started()}</span>
 								<DateInput
 									value={toDateInput(node.started_at)}
 									disabled={node.kind === 'path'}
@@ -344,13 +351,11 @@
 								/>
 							</label>
 							<label class="control">
-								<span class="label">Completed</span>
+								<span class="label">{m.detail_completed()}</span>
 								<DateInput
 									value={toDateInput(node.completed_at)}
 									disabled={node.kind === 'path' || node.status !== 'done'}
-									title={node.status === 'done'
-										? undefined
-										: 'Only done nodes have a completion date'}
+									title={node.status === 'done' ? undefined : m.detail_completed_only_done()}
 									onchange={(value) => update(node, { completed_at: fromDateInput(value) })}
 								/>
 							</label>
@@ -358,17 +363,19 @@
 					{/if}
 
 					<div class="actions">
-						<span class="label">Actions</span>
+						<span class="label">{m.detail_actions()}</span>
 						<!-- For an idea, promoting it is the main action. -->
 						{#if node.kind === 'idea'}
 							<Button variant="accent" onclick={() => (promoting = node)} icon={ArrowUpRight}
-								>Move to board</Button
+								>{m.promote_submit()}</Button
 							>
 						{:else if blocked}
-							<span class="not-actionable">Not actionable yet</span>
+							<span class="not-actionable">{m.detail_not_actionable()}</span>
 						{:else if canPoke(node)}
 							<div class="poke-row">
-								<Button variant="poke" onclick={() => poke(node)} icon={Pointer}>Poke</Button>
+								<Button variant="poke" onclick={() => poke(node)} icon={Pointer}
+									>{m.action_poke()}</Button
+								>
 								<PokeAt {node} />
 								<PokeHistory {node} />
 							</div>
@@ -384,23 +391,25 @@
 							onclick={() => goto(`/board/canvas?focus=${node.id}&node=${node.id}`)}
 							icon={Spline}
 						>
-							Open in canvas
+							{m.detail_open_canvas()}
 						</Button>
 						<Button
 							variant="quiet"
 							onclick={() => update(node, { archived: !node.archived })}
 							icon={node.archived ? ArchiveRestore : Archive}
 						>
-							{node.archived ? 'Restore' : 'Archive'}
+							{node.archived ? m.action_restore() : m.action_archive()}
 						</Button>
 						{#if confirmingDelete}
 							<Button variant="primary" onclick={() => remove(node)} icon={Trash2}
-								>Delete for good</Button
+								>{m.action_delete_for_good()}</Button
 							>
-							<Button variant="quiet" onclick={() => (confirmingDelete = false)}>Keep</Button>
+							<Button variant="quiet" onclick={() => (confirmingDelete = false)}
+								>{m.action_keep()}</Button
+							>
 						{:else}
 							<Button variant="quiet" onclick={() => (confirmingDelete = true)} icon={Trash2}
-								>Delete</Button
+								>{m.action_delete()}</Button
 							>
 						{/if}
 					</div>
@@ -415,20 +424,24 @@
 <Modal
 	open={pendingKind !== null}
 	onclose={() => (pendingKind = null)}
-	label="Confirm kind change"
+	label={m.kind_change_title()}
 	width={440}
 >
 	<div class="confirm">
-		<div class="label">Change kind to {pendingKind}?</div>
-		<p>Each kind keeps different data. Switching will remove:</p>
+		<div class="label">
+			{pendingKind && m.kind_change_question({ kind: kindLabel(pendingKind).toLocaleLowerCase() })}
+		</div>
+		<p>{m.kind_change_switch_body()}</p>
 		<ul>
 			{#each pendingLosses as loss (loss)}
 				<li>{loss}</li>
 			{/each}
 		</ul>
 		<div class="confirm-actions">
-			<Button variant="quiet" onclick={() => (pendingKind = null)}>Cancel</Button>
-			<Button variant="primary" onclick={() => node && confirmKindChange(node)}>Change kind</Button>
+			<Button variant="quiet" onclick={() => (pendingKind = null)}>{m.action_cancel()}</Button>
+			<Button variant="primary" onclick={() => node && confirmKindChange(node)}
+				>{m.kind_change_confirm()}</Button
+			>
 		</div>
 	</div>
 </Modal>

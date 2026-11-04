@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import KindMark from '$lib/components/KindMark.svelte';
 	import { NodeResizer, type NodeProps } from '@xyflow/svelte';
 	import SideHandles from './SideHandles.svelte';
@@ -49,9 +50,9 @@ move with it. The fill is translucent so nested paths read as depth. -->
 	class:selected
 	style:border-top-color={TIER_COLOR[node.focus ?? 'background']}
 >
-	<div class="head path-head" title="Open path">
+	<div class="head path-head" title={m.canvas_open_path()}>
 		<CollapseToggle collapsed={false} ontoggle={() => togglePathCollapsed('canvas', node.id)} />
-		<span class="kind"><KindMark kind="path" /> path</span>
+		<span class="kind"><KindMark kind="path" /> {m.kind_path_lower()}</span>
 		<Badge
 			status={node.status}
 			kind={node.kind}

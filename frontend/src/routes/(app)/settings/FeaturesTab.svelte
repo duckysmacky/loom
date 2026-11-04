@@ -1,4 +1,5 @@
 <script lang="ts">
+	import { m } from '$lib/paraglide/messages';
 	import KindMark, { KIND_ICON } from '$lib/components/KindMark.svelte';
 	import './settings.css';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
@@ -7,8 +8,8 @@
 	import type { StaleMode } from '$lib/types/StaleMode';
 
 	const STALE_KINDS: { kind: NodeKind; label: string }[] = [
-		{ kind: 'project', label: 'Projects' },
-		{ kind: 'study', label: 'Studies' }
+		{ kind: 'project', label: m.features_stale_projects() },
+		{ kind: 'study', label: m.features_stale_studies() }
 	];
 	const STALE_MODE_ROWS: {
 		key: 'staleQueued' | 'stalePaused' | 'staleIdeaStatus';
@@ -17,11 +18,19 @@
 	}[] = [
 		{
 			key: 'staleQueued',
-			label: 'Queued nodes',
-			help: 'Never-poked ones count from their creation date.'
+			label: m.features_stale_queued(),
+			help: m.features_stale_queued_help()
 		},
-		{ key: 'stalePaused', label: 'Paused nodes', help: 'Nodes you paused yourself.' },
-		{ key: 'staleIdeaStatus', label: 'Idea-status nodes', help: 'Projects and studies at Idea.' }
+		{
+			key: 'stalePaused',
+			label: m.features_stale_paused(),
+			help: m.features_stale_paused_help()
+		},
+		{
+			key: 'staleIdeaStatus',
+			label: m.features_stale_idea_status(),
+			help: m.features_stale_idea_status_help()
+		}
 	];
 
 	/** Saves a day count typed into a number field, clamped to its range; junk snaps back. */
@@ -50,106 +59,100 @@
 </script>
 
 <section class="settings-section">
-	<h2>Board</h2>
-	<p class="explain">Where the board opens.</p>
+	<h2>{m.nav_board()}</h2>
+	<p class="explain">{m.features_where_board_opens()}</p>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Default board view</span>
-			<span class="row-help">Where the Board link in the sidebar lands.</span>
+			<span class="row-label">{m.features_default_board_view()}</span>
+			<span class="row-help">{m.features_where_board_link_sidebar()}</span>
 		</span>
 		<SegmentedControl
-			label="Default board view"
+			label={m.features_default_board_view()}
 			value={prefs.defaultBoardView}
 			onchange={(view) => {
 				prefs.defaultBoardView = view;
 				savePrefs();
 			}}
 			options={[
-				{ value: 'organized', label: 'Organized' },
-				{ value: 'canvas', label: 'Canvas' },
-				{ value: 'timeline', label: 'Timeline' }
+				{ value: 'organized', label: m.nav_organized() },
+				{ value: 'canvas', label: m.nav_canvas() },
+				{ value: 'timeline', label: m.nav_timeline() }
 			]}
 		/>
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Path status</span>
-			<span class="row-help"
-				>Auto: derived from the nodes inside. Manual: you set it, like any other node. Off: not
-				shown.</span
-			>
+			<span class="row-label">{m.features_path_status()}</span>
+			<span class="row-help">{m.features_auto_derived_from_nodes()}</span>
 		</span>
 		<SegmentedControl
-			label="Path status"
+			label={m.features_path_status()}
 			value={prefs.pathStatusMode}
 			onchange={(mode) => {
 				prefs.pathStatusMode = mode;
 				savePrefs();
 			}}
 			options={[
-				{ value: 'auto', label: 'Auto' },
-				{ value: 'manual', label: 'Manual' },
-				{ value: 'off', label: 'Off' }
+				{ value: 'auto', label: m.features_auto() },
+				{ value: 'manual', label: m.features_manual() },
+				{ value: 'off', label: m.features_off() }
 			]}
 		/>
 	</div>
 </section>
 
 <section class="settings-section">
-	<h2>Quick capture</h2>
-	<p class="explain">Defaults for new nodes when you press N.</p>
+	<h2>{m.quick_capture()}</h2>
+	<p class="explain">{m.features_defaults_new_nodes_when()}</p>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Quick capture kind</span>
-			<span class="row-help">Preselected kind when you press N.</span>
+			<span class="row-label">{m.features_quick_capture_kind()}</span>
+			<span class="row-help">{m.features_preselected_kind_when_you()}</span>
 		</span>
 		<SegmentedControl
-			label="Quick capture kind"
+			label={m.features_quick_capture_kind()}
 			value={prefs.captureKind}
 			onchange={(kind) => {
 				prefs.captureKind = kind;
 				savePrefs();
 			}}
 			options={[
-				{ value: 'idea', label: 'Idea', icon: KIND_ICON.idea },
-				{ value: 'project', label: 'Project', icon: KIND_ICON.project },
-				{ value: 'study', label: 'Study', icon: KIND_ICON.study },
-				{ value: 'path', label: 'Path', icon: KIND_ICON.path }
+				{ value: 'idea', label: m.kind_idea(), icon: KIND_ICON.idea },
+				{ value: 'project', label: m.kind_project(), icon: KIND_ICON.project },
+				{ value: 'study', label: m.kind_study(), icon: KIND_ICON.study },
+				{ value: 'path', label: m.kind_path(), icon: KIND_ICON.path }
 			]}
 		/>
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Quick capture focus</span>
-			<span class="row-help">Preselected focus tier for new nodes.</span>
+			<span class="row-label">{m.features_quick_capture_focus()}</span>
+			<span class="row-help">{m.features_preselected_focus_tier_new()}</span>
 		</span>
 		<SegmentedControl
-			label="Quick capture focus"
+			label={m.features_quick_capture_focus()}
 			value={prefs.captureFocus}
 			onchange={(focus) => {
 				prefs.captureFocus = focus;
 				savePrefs();
 			}}
 			options={[
-				{ value: 'primary', label: 'Primary' },
-				{ value: 'secondary', label: 'Secondary' },
-				{ value: 'background', label: 'Background' }
+				{ value: 'primary', label: m.focus_primary() },
+				{ value: 'secondary', label: m.focus_secondary() },
+				{ value: 'background', label: m.focus_background() }
 			]}
 		/>
 	</div>
 </section>
 
 <section class="settings-section">
-	<h2>Canvas</h2>
-	<p class="explain">How the canvas places and draws things.</p>
+	<h2>{m.nav_canvas()}</h2>
+	<p class="explain">{m.features_how_canvas_places_draws()}</p>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Auto-place on canvas</span>
-				<span class="row-help"
-					>Lay out new and unplaced nodes on the canvas automatically and pin them where they land.
-					Off: they wait in the canvas's Unplaced panel until you drag them in.</span
-				>
+				<span class="row-label">{m.features_auto_place_canvas()}</span>
+				<span class="row-help">{m.features_lay_out_new_unplaced()}</span>
 			</span>
 			<input
 				type="checkbox"
@@ -164,6 +167,7 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
+<<<<<<< HEAD
 				<span class="row-label">Snap to grid</span>
 				<span class="row-help">Align dragged canvas items to the grid.</span>
 			</span>
@@ -205,6 +209,10 @@
 				<span class="row-help"
 					>Dropping a node into a path box that's too small for it makes the box bigger.</span
 				>
+=======
+				<span class="row-label">{m.features_grow_paths_fit()}</span>
+				<span class="row-help">{m.features_dropping_node_into_path()}</span>
+>>>>>>> dev
 			</span>
 			<input
 				type="checkbox"
@@ -219,11 +227,8 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Connection labels</span>
-				<span class="row-help"
-					>Name each connection on the canvas (requires, next, related) in small text above its
-					line.</span
-				>
+				<span class="row-label">{m.features_connection_labels()}</span>
+				<span class="row-help">{m.features_name_each_connection_canvas()}</span>
 			</span>
 			<input
 				type="checkbox"
@@ -238,15 +243,15 @@
 </section>
 
 <section class="settings-section">
-	<h2>Pokes &amp; staleness</h2>
+	<h2>{m.features_pokes_staleness()}</h2>
 	<p class="explain">
-		The "worked on this" log, and what happens to nodes it hasn't seen in a while.
+		{m.features_worked_this_log_what()}
 	</p>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Poke from cards</span>
-				<span class="row-help">Show the Poke button on dashboard and board cards.</span>
+				<span class="row-label">{m.features_poke_from_cards()}</span>
+				<span class="row-help">{m.features_show_poke_button_dashboard()}</span>
 			</span>
 			<input
 				type="checkbox"
@@ -261,11 +266,8 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Poke sets active</span>
-				<span class="row-help"
-					>A poke also switches the node's status to Active, and a poke that un-stales a paused node
-					resumes it.</span
-				>
+				<span class="row-label">{m.features_poke_sets_active()}</span>
+				<span class="row-help">{m.features_poke_also_switches_node()}</span>
 			</span>
 			<input
 				type="checkbox"
@@ -279,11 +281,8 @@
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Stale after</span>
-			<span class="row-help"
-				>Days without a poke (or since creation) before a node goes stale. Only a poke within this
-				window - live or backdated - un-stales it.</span
-			>
+			<span class="row-label">{m.features_stale_after()}</span>
+			<span class="row-help">{m.features_days_without_poke_since()}</span>
 		</span>
 		<label class="days">
 			<input
@@ -291,19 +290,17 @@
 				type="number"
 				min="1"
 				max="365"
-				aria-label="Stale after (days)"
+				aria-label={m.features_stale_after_days()}
 				value={prefs.staleDays}
 				onchange={(event) => saveDays('staleDays', event.currentTarget, 1, 365)}
 			/>
-			<span>days</span>
+			<span>{m.features_days()}</span>
 		</label>
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Warn before stale</span>
-			<span class="row-help"
-				>The dashboard lists nodes this many days before they go stale. 0 turns the warning off.</span
-			>
+			<span class="row-label">{m.features_warn_before_stale()}</span>
+			<span class="row-help">{m.features_dashboard_lists_nodes_this()}</span>
 		</span>
 		<label class="days">
 			<input
@@ -311,21 +308,19 @@
 				type="number"
 				min="0"
 				max="365"
-				aria-label="Warn before stale (days)"
+				aria-label={m.features_warn_before_stale_days()}
 				value={prefs.staleWarnDays}
 				onchange={(event) => saveDays('staleWarnDays', event.currentTarget, 0, 365)}
 			/>
-			<span>days</span>
+			<span>{m.features_days()}</span>
 		</label>
 	</div>
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Kinds that can go stale</span>
-			<span class="row-help"
-				>Ideas never do - they're just ideas. Done and archived nodes never do.</span
-			>
+			<span class="row-label">{m.features_kinds_that_can_go()}</span>
+			<span class="row-help">{m.features_ideas_never_do_they()}</span>
 		</span>
-		<div class="kinds" role="group" aria-label="Kinds that can go stale">
+		<div class="kinds" role="group" aria-label={m.features_kinds_that_can_go()}>
 			{#each STALE_KINDS as { kind, label } (kind)}
 				<button
 					type="button"
@@ -343,31 +338,28 @@
 	{#each STALE_MODE_ROWS as row (row.key)}
 		<div class="settings-row">
 			<span>
-				<span class="row-label">Stale {row.label.toLowerCase()}</span>
-				<span class="row-help">{row.help} Active nodes always can go stale.</span>
+				<span class="row-label">{row.label}</span>
+				<span class="row-help">{row.help} {m.features_stale_active_always()}</span>
 			</span>
 			<select
-				aria-label="Stale {row.label.toLowerCase()}"
+				aria-label={row.label}
 				value={prefs[row.key]}
 				onchange={(event) => {
 					prefs[row.key] = event.currentTarget.value as StaleMode;
 					savePrefs();
 				}}
 			>
-				<option value="always">Always</option>
-				<option value="poked">Only if poked before</option>
-				<option value="never">Never</option>
+				<option value="always">{m.features_always()}</option>
+				<option value="poked">{m.features_only_if_poked_before()}</option>
+				<option value="never">{m.features_never()}</option>
 			</select>
 		</div>
 	{/each}
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Pause stale nodes</span>
-				<span class="row-help"
-					>An active node that goes stale is paused (once - resuming it by hand doesn't re-pause
-					it). It stays marked stale until poked.</span
-				>
+				<span class="row-label">{m.features_pause_stale_nodes()}</span>
+				<span class="row-help">{m.features_active_node_that_goes()}</span>
 			</span>
 			<input
 				type="checkbox"
@@ -382,60 +374,53 @@
 	{#if prefs.staleAutoPause}
 		<div class="settings-row">
 			<span>
-				<span class="row-label">End the active period</span>
-				<span class="row-help"
-					>With active periods tracked: at the last poke (only real work counts), or when the node
-					went stale (the idle stretch stays in).</span
-				>
+				<span class="row-label">{m.features_end_active_period()}</span>
+				<span class="row-help">{m.features_active_periods_tracked_at()}</span>
 			</span>
 			<SegmentedControl
-				label="End the active period"
+				label={m.features_end_active_period()}
 				value={prefs.stalePausePeriodEnd}
 				onchange={(end) => {
 					prefs.stalePausePeriodEnd = end;
 					savePrefs();
 				}}
 				options={[
-					{ value: 'last_poke', label: 'At last poke' },
-					{ value: 'stale_moment', label: 'When stale' }
+					{ value: 'last_poke', label: m.features_at_last_poke() },
+					{ value: 'stale_moment', label: m.features_when_stale() }
 				]}
 			/>
 		</div>
 	{/if}
 	<div class="settings-row">
 		<span>
-			<span class="row-label">Stale paths</span>
-			<span class="row-help"
-				>Any: the latest poke inside is past the threshold. All: every node in play inside is stale
-				(done ones, and unstale idea/queued/paused ones, don't count). Off: paths never go stale.</span
-			>
+			<span class="row-label">{m.features_stale_paths()}</span>
+			<span class="row-help">{m.features_any_latest_poke_inside()}</span>
 		</span>
 		<SegmentedControl
-			label="Stale paths"
+			label={m.features_stale_paths()}
 			value={prefs.pathStaleMode}
 			onchange={(mode) => {
 				prefs.pathStaleMode = mode;
 				savePrefs();
 			}}
 			options={[
-				{ value: 'any', label: 'Any' },
-				{ value: 'all', label: 'All' },
-				{ value: 'off', label: 'Off' }
+				{ value: 'any', label: m.features_any() },
+				{ value: 'all', label: m.features_all() },
+				{ value: 'off', label: m.features_off() }
 			]}
 		/>
 	</div>
 </section>
 
 <section class="settings-section">
-	<h2>Active periods</h2>
-	<p class="explain">How status and focus changes are recorded on the timeline.</p>
+	<h2>{m.periods_title()}</h2>
+	<p class="explain">{m.features_how_status_focus_changes()}</p>
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">Track active periods</span>
+				<span class="row-label">{m.features_track_active_periods()}</span>
 				<span class="row-help">
-					Pausing closes the current active period; reactivating starts a new one. Off: reactivating
-					continues the last period.
+					{m.features_pausing_closes_current_active()}
 				</span>
 			</span>
 			<input
@@ -451,11 +436,9 @@
 	<div class="settings-row">
 		<label class="toggle">
 			<span>
-				<span class="row-label">New period on focus change</span>
+				<span class="row-label">{m.features_new_period_focus_change()}</span>
 				<span class="row-help">
-					Changing the focus of a node with an open active period ends it and starts a new one under
-					the new focus, so the timeline shows focus over time. Off: periods keep their focus until
-					you edit it.
+					{m.features_changing_focus_node_open()}
 				</span>
 			</span>
 			<input
