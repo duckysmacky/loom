@@ -67,23 +67,24 @@
 				onblur={applyZoom}
 			/>%
 		</label>
-<<<<<<< HEAD
-		<button type="button" aria-label="Zoom in" onclick={() => flow.zoomIn()}>+</button>
-		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}>Fit</button>
+		<button type="button" aria-label={m.zoom_in()} onclick={() => flow.zoomIn()}>+</button>
+		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}
+			>{m.action_fit()}</button
+		>
 		<button
 			type="button"
 			class="snap"
 			aria-pressed={prefs.canvasSnapToGrid}
-			title="Snap to grid"
+			title={m.controls_snap_to_grid()}
 			onclick={() => {
 				prefs.canvasSnapToGrid = !prefs.canvasSnapToGrid;
 				savePrefs();
-			}}>Snap to grid</button
+			}}>{m.controls_snap_to_grid()}</button
 		>
 		<label class="snap-step">
-			Step
+			{m.controls_snap_step()}
 			<select
-				aria-label="Grid snap step"
+				aria-label={m.controls_snap_step_label()}
 				value={prefs.canvasSnapStep}
 				disabled={!prefs.canvasSnapToGrid}
 				onchange={(event) => {
@@ -91,20 +92,13 @@
 					savePrefs();
 				}}
 			>
-				<option value={2}>2 cells</option>
-				<option value={1}>1 cell</option>
-				<option value={0.5}>1/2 cell</option>
-				<option value={0.25}>1/4 cell</option>
-				<option value={0.125}>1/8 cell</option>
+				<option value={2}>{m.snap_step_2()}</option>
+				<option value={1}>{m.snap_step_1()}</option>
+				<option value={0.5}>{m.snap_step_half()}</option>
+				<option value={0.25}>{m.snap_step_quarter()}</option>
+				<option value={0.125}>{m.snap_step_eighth()}</option>
 			</select>
 		</label>
-		<span class="hint">drag to pan · shift-drag to select · scroll to zoom · handle to connect</span
-=======
-		<button type="button" aria-label={m.zoom_in()} onclick={() => flow.zoomIn()}>+</button>
-		<button type="button" class="fit" onclick={() => flow.fitView({ duration: 300 })}
-			>{m.action_fit()}</button
->>>>>>> dev
-		>
 		<span class="hint">{m.controls_hint()}</span>
 	</div>
 </Panel>
