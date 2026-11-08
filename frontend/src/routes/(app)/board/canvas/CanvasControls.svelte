@@ -2,6 +2,12 @@
 	import { m } from '$lib/paraglide/messages';
 	import { Panel, useNodesInitialized, useSvelteFlow } from '@xyflow/svelte';
 	import { page } from '$app/state';
+	import {
+		EDGE_DEFAULT_COLOR,
+		arrowPath,
+		edgeStrokeProps,
+		type EdgeStyleKey
+	} from '$lib/graph/edgeStyle';
 	import { CANVAS_NODE_HEIGHT, CANVAS_NODE_WIDTH } from '$lib/graph/layout';
 	import { prefs, savePrefs, type Prefs } from '$lib/stores/prefs.svelte';
 
@@ -103,14 +109,38 @@
 	</div>
 </Panel>
 
+{#snippet edgeEntry(key: EdgeStyleKey, label: string)}
+	{@const style = prefs.edgeStyles[key]}
+	{@const stroke = edgeStrokeProps(style)}
+	{@const color = stroke.stroke ?? EDGE_DEFAULT_COLOR[key]}
+	<div class="entry">
+		<svg class="swatch" height="12" viewBox="0 0 26 12" aria-hidden="true">
+			<line
+				x1="1"
+				y1="6"
+				x2="25"
+				y2="6"
+				stroke={color}
+				stroke-width={stroke.width}
+				stroke-dasharray={stroke.dasharray}
+				stroke-linecap={stroke.linecap as 'butt' | 'round'}
+			/>
+			{#if style.arrow}
+				<path d={arrowPath(25, 6, 'left')} fill={color} />
+			{/if}
+		</svg>
+		{label}
+	</div>
+{/snippet}
+
 <Panel position="bottom-right">
 	<div class="legend">
 		<div class="label">{m.controls_edges()}</div>
-		<div class="entry"><span class="swatch requires-unmet"></span>{m.legend_requires_unmet()}</div>
-		<div class="entry"><span class="swatch requires-met"></span>{m.legend_requires_met()}</div>
+		{@render edgeEntry('requires_unmet', m.legend_requires_unmet())}
+		{@render edgeEntry('requires_met', m.legend_requires_met())}
 		<div class="entry"><span class="swatch path-box"></span>{m.legend_path_box()}</div>
-		<div class="entry"><span class="swatch precedes"></span>{m.legend_precedes()}</div>
-		<div class="entry"><span class="swatch related"></span>{m.legend_related()}</div>
+		{@render edgeEntry('precedes', m.legend_precedes())}
+		{@render edgeEntry('related', m.legend_related())}
 		<div class="entry"><span class="swatch annotation"></span>{m.legend_arrow()}</div>
 	</div>
 </Panel>
@@ -227,29 +257,10 @@
 		display: inline-block;
 	}
 
-	.requires-unmet {
-		height: 3px;
-		background: var(--warn);
-	}
-
-	.requires-met {
-		height: 2px;
-		background: var(--ink-2);
-	}
-
 	.path-box {
 		height: 12px;
 		background: var(--path-fill);
 		border: 1.5px dashed var(--node-path);
-	}
-
-	.precedes {
-		height: 2px;
-		background: var(--edge-precedes);
-	}
-
-	.related {
-		border-top: 2px dotted var(--ink-2);
 	}
 
 	.annotation {

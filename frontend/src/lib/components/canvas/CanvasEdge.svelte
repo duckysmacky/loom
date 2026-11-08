@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { m } from '$lib/paraglide/messages';
 	import { BaseEdge, getBezierPath, type EdgeProps } from '@xyflow/svelte';
+	import { arrowPath, edgeStrokeProps, edgeStyleKey, type HandleSide } from '$lib/graph/edgeStyle';
 	import { prefs } from '$lib/stores/prefs.svelte';
 	import type { LoomGraphEdge } from './types';
 
@@ -22,9 +23,11 @@
 	const geometry = $derived(
 		getBezierPath({ sourceX, sourceY, targetX, targetY, sourcePosition, targetPosition })
 	);
-	const arrowHead = $derived(
-		`M ${targetX} ${targetY} L ${targetX - 9} ${targetY - 5} L ${targetX - 9} ${targetY + 5} Z`
-	);
+	// Settings > Appearance > Connections; part_of (the path box) has no style.
+	const styleKey = $derived(edgeStyleKey(kind, unmet));
+	const edgeStyle = $derived(styleKey ? prefs.edgeStyles[styleKey] : null);
+	const stroke = $derived(edgeStyle ? edgeStrokeProps(edgeStyle) : null);
+	const arrowHead = $derived(arrowPath(targetX, targetY, targetPosition as HandleSide));
 	// Optional (Settings > Appearance): whether a requirement is met already
 	// shows in the line's colour, so the label only names the connection.
 	const label = $derived(
@@ -39,15 +42,25 @@
 	);
 </script>
 
-<!-- requires: strong directional line (warn while unmet); part_of: a heavy
-double rail into the container, reading as nesting; related: light dots;
-precedes: a plain arrowed line, an order that never blocks. -->
-<g class="edge {kind}" class:unmet class:dimmed={data?.dimmed} class:selected>
+<!-- requires: strong directional line (orange while unmet, green once met);
+part_of: a heavy double rail into the container, reading as nesting; related
+and precedes: lighter dashed lines (precedes arrowed, an order that never
+blocks). Colour, line, width and arrow come from the user's connection styles. -->
+<g
+	class="edge {kind} {styleKey ?? ''}"
+	class:unmet
+	class:dimmed={data?.dimmed}
+	class:selected
+	style:--edge-stroke={stroke?.stroke}
+	style:--edge-width="{stroke?.width ?? 2}px"
+	style:--edge-dash={stroke?.dasharray}
+	style:--edge-cap={stroke?.linecap}
+>
 	{#if kind === 'part_of'}
 		<path class="rail-outer" d={geometry[0]} />
 	{/if}
 	<BaseEdge {id} path={geometry[0]} interactionWidth={16} />
-	{#if kind === 'requires' || kind === 'precedes'}
+	{#if edgeStyle?.arrow}
 		<path class="arrow" d={arrowHead} />
 	{/if}
 	{#if kind === 'part_of'}
@@ -61,23 +74,33 @@ precedes: a plain arrowed line, an order that never blocks. -->
 {/if}
 
 <style>
-	.edge :global(.svelte-flow__edge-path) {
-		fill: none;
-		stroke: var(--ink-2);
-		stroke-width: 2;
+	/* Token defaults per style; an explicit colour (--edge-stroke) wins. */
+	.related {
+		--edge-default: var(--ink-2);
 	}
 
-	.requires.unmet :global(.svelte-flow__edge-path) {
-		stroke: var(--warn);
-		stroke-width: 2.5;
+	.precedes {
+		--edge-default: var(--edge-precedes);
+	}
+
+	.requires_unmet {
+		--edge-default: var(--warn);
+	}
+
+	.requires_met {
+		--edge-default: var(--ok);
+	}
+
+	.edge :global(.svelte-flow__edge-path) {
+		fill: none;
+		stroke: var(--edge-stroke, var(--edge-default, var(--ink-2)));
+		stroke-width: var(--edge-width);
+		stroke-dasharray: var(--edge-dash, none);
+		stroke-linecap: var(--edge-cap, butt);
 	}
 
 	.arrow {
-		fill: var(--ink-2);
-	}
-
-	.unmet .arrow {
-		fill: var(--warn);
+		fill: var(--edge-stroke, var(--edge-default, var(--ink-2)));
 	}
 
 	.rail-outer {
@@ -89,25 +112,11 @@ precedes: a plain arrowed line, an order that never blocks. -->
 	.part_of :global(.svelte-flow__edge-path) {
 		stroke: var(--bg);
 		stroke-width: 2.5;
+		stroke-dasharray: none;
 	}
 
 	.socket {
 		fill: var(--node-path);
-	}
-
-	.related :global(.svelte-flow__edge-path) {
-		stroke-width: 1.5;
-		stroke-dasharray: 2 5;
-		stroke-linecap: round;
-	}
-
-	.precedes :global(.svelte-flow__edge-path) {
-		stroke: var(--edge-precedes);
-		stroke-width: 1.5;
-	}
-
-	.precedes .arrow {
-		fill: var(--edge-precedes);
 	}
 
 	.selected:not(.part_of) :global(.svelte-flow__edge-path),

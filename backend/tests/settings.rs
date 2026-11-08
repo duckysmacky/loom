@@ -127,6 +127,26 @@ async fn patch_merges_only_the_sent_keys(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn edge_styles_default_and_round_trip(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "edges@example.com").await;
+    let body = settings(&app, &token).await;
+    assert_eq!(body["edge_styles"]["related"]["line"], "dashed");
+    assert_eq!(body["edge_styles"]["precedes"]["arrow"], true);
+    assert_eq!(body["edge_styles"]["requires_met"]["color"], Value::Null);
+
+    // A partial style fills the rest from the defaults.
+    let changes = json!({"edge_styles": {"requires_met": {"color": "#00ff88", "width": "thick"}}});
+    let (status, _) = send(&app, req("PATCH", "/api/settings", changes, Some(&token))).await;
+    assert_eq!(status, StatusCode::OK);
+    let styles = settings(&app, &token).await["edge_styles"].clone();
+    assert_eq!(styles["requires_met"]["color"], "#00ff88");
+    assert_eq!(styles["requires_met"]["width"], "thick");
+    assert_eq!(styles["requires_met"]["line"], "solid");
+    assert_eq!(styles["related"]["line"], "dashed");
+}
+
+#[sqlx::test]
 async fn patch_rejects_bad_input_without_storing_anything(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "invalid@example.com").await;
@@ -143,6 +163,9 @@ async fn patch_rejects_bad_input_without_storing_anything(pool: PgPool) {
         json!({"canvas_snap_step": 0}),
         json!({"canvas_snap_step": 0.3}),
         json!({"canvas_snap_step": "0.5"}),
+        json!({"edge_styles": {"related": {"color": "orange"}}}),
+        json!({"edge_styles": {"precedes": {"line": "wavy"}}}),
+        json!({"edge_styles": {"requires_met": {"arrow": "yes"}}}),
         // A valid key does not rescue an invalid sibling.
         json!({"theme": "dark", "density": "huge"}),
     ] {

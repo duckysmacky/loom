@@ -1,5 +1,7 @@
 import { settingsApi } from '$lib/api/endpoints';
+import { DEFAULT_EDGE_STYLES } from '$lib/graph/edgeStyle';
 import type { Grouping } from '$lib/graph/grouping';
+import type { EdgeStyles } from '$lib/types/EdgeStyles';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeKind } from '$lib/types/NodeKind';
 import type { PathStaleMode } from '$lib/types/PathStaleMode';
@@ -49,6 +51,8 @@ export type Prefs = {
 	pathAutoExpand: boolean;
 	/** Canvas connections carry a small text label (requires / next / related). */
 	showEdgeLabels: boolean;
+	/** How each kind of canvas connection is drawn (keys stay snake_case, like the API). */
+	edgeStyles: EdgeStyles;
 	/** Days without a poke (else since creation) before a node goes stale. */
 	staleDays: number;
 	/** The dashboard warns this many days ahead; 0 = off. */
@@ -103,6 +107,7 @@ const DEFAULTS: Prefs = {
 	unplacedPanelOpen: true,
 	pathAutoExpand: true,
 	showEdgeLabels: false,
+	edgeStyles: DEFAULT_EDGE_STYLES,
 	staleDays: 14,
 	staleWarnDays: 3,
 	staleKinds: ['project', 'study'],

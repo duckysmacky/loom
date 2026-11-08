@@ -104,6 +104,90 @@ pub enum PathStatusMode {
     Auto,
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum LineStyle {
+    Solid,
+    Dashed,
+    Dotted,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum LineWidth {
+    Thin,
+    Normal,
+    Thick,
+}
+
+/// How one kind of canvas connection is drawn.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(default)]
+pub struct EdgeStyle {
+    /// Hex color; `None` = the theme's default for this connection.
+    pub color: Option<String>,
+    pub line: LineStyle,
+    pub width: LineWidth,
+    pub arrow: bool,
+}
+
+impl EdgeStyle {
+    fn new(line: LineStyle, width: LineWidth, arrow: bool) -> Self {
+        Self {
+            color: None,
+            line,
+            width,
+            arrow,
+        }
+    }
+}
+
+impl Default for EdgeStyle {
+    fn default() -> Self {
+        Self::new(LineStyle::Solid, LineWidth::Normal, true)
+    }
+}
+
+/// Canvas connection looks. `part_of` is drawn as the path box, so it has none.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(default)]
+pub struct EdgeStyles {
+    pub related: EdgeStyle,
+    pub precedes: EdgeStyle,
+    /// A `requires` edge whose requirement is not done yet.
+    pub requires_unmet: EdgeStyle,
+    /// A `requires` edge whose requirement is done.
+    pub requires_met: EdgeStyle,
+}
+
+impl EdgeStyles {
+    pub fn colors(&self) -> impl Iterator<Item = &str> {
+        [
+            &self.related,
+            &self.precedes,
+            &self.requires_unmet,
+            &self.requires_met,
+        ]
+        .into_iter()
+        .filter_map(|style| style.color.as_deref())
+    }
+}
+
+impl Default for EdgeStyles {
+    fn default() -> Self {
+        Self {
+            related: EdgeStyle::new(LineStyle::Dashed, LineWidth::Thin, false),
+            precedes: EdgeStyle::new(LineStyle::Dashed, LineWidth::Thin, true),
+            requires_unmet: EdgeStyle::new(LineStyle::Solid, LineWidth::Normal, true),
+            requires_met: EdgeStyle::new(LineStyle::Solid, LineWidth::Normal, true),
+        }
+    }
+}
+
 pub const MAX_RECENT_COLORS: usize = 8;
 
 /// Per-account settings, stored as one jsonb column on `users`. Missing keys
@@ -142,6 +226,7 @@ pub struct Settings {
     pub path_auto_expand: bool,
     /// Canvas connections carry a small text label.
     pub show_edge_labels: bool,
+    pub edge_styles: EdgeStyles,
     /// Days without a poke (else since creation) before a node goes stale.
     #[ts(type = "number")]
     pub stale_days: i64,
@@ -182,6 +267,7 @@ impl Default for Settings {
             canvas_snap_step: 0.5,
             path_auto_expand: true,
             show_edge_labels: false,
+            edge_styles: EdgeStyles::default(),
             stale_days: 14,
             stale_warn_days: 3,
             stale_kinds: vec![NodeKind::Project, NodeKind::Study],

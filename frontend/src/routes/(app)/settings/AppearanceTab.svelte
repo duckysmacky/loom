@@ -2,6 +2,7 @@
 	import { m } from '$lib/paraglide/messages';
 	import './settings.css';
 	import SegmentedControl from '$lib/components/ui/SegmentedControl.svelte';
+	import EdgeStylesSection from './EdgeStylesSection.svelte';
 	import { getLocale, locales, localStorageKey, setLocale } from '$lib/paraglide/runtime';
 	import { prefs, savePrefs } from '$lib/stores/prefs.svelte';
 
@@ -107,3 +108,5 @@
 		</div>
 	{/if}
 </section>
+
+<EdgeStylesSection />
