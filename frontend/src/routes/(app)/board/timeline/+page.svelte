@@ -5,11 +5,13 @@
 	import {
 		DAY_MS,
 		DEFAULT_PX_PER_DAY,
+		barMarks,
 		clampZoom,
 		nodeBarSpans,
 		pokeOffsets,
 		rangeWidth,
 		scrollAfterZoom,
+		timelineEligible,
 		timelineRange,
 		weekStarts,
 		xOf
@@ -18,17 +20,27 @@
 	import { openNode } from '$lib/navigation';
 	import { matchesBoardFilters } from '$lib/stores/filters.svelte';
 	import { graph } from '$lib/stores/graph.svelte';
+	import { prefs } from '$lib/stores/prefs.svelte';
 	import { notifyError } from '$lib/stores/toasts.svelte';
 	import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 	import type { NodeFocus } from '$lib/types/NodeFocus';
 	import type { NodeResponse } from '$lib/types/NodeResponse';
+	import type { Span } from '$lib/graph/timeline';
 	import type { PokeResponse } from '$lib/types/PokeResponse';
 
 	/** Width of the node-name column, which stays fixed while the time axis scrolls. */
 	const NAME_COLUMN = 240;
 	const ZOOM_STEP = 1.25;
+	/** Narrower bars show no label. */
+	const MIN_LABEL_WIDTH = 44;
 
-	const visible = $derived(graph.nodes.filter(matchesBoardFilters));
+	// Settings > Appearance > Timeline: fill per tier, border colours, paused rows.
+	const styles = $derived(prefs.timelineStyles);
+	const visible = $derived(
+		graph.nodes.filter(
+			(node) => matchesBoardFilters(node) && timelineEligible(node, styles.show_paused)
+		)
+	);
 	const started = $derived(
 		visible
 			.filter((node) => node.started_at)
@@ -160,14 +172,24 @@
 		panning = false;
 	}
 
-	// Done / blocked describe where the node is now, so only its latest bar
-	// carries them; earlier bars keep the focus the node had back then.
-	function barTone(node: NodeResponse, focus: NodeFocus | null, isLatest: boolean): string {
-		if (isLatest && node.status === 'done') return 'done';
-		if (isLatest && node.blocked) return 'blocked';
-		// Styled by focus, not status: a paused node was active back then.
-		return focus ?? 'background';
-	}
+	// A bar is filled by the focus the node had back then (a paused node was
+	// active); done / blocked describe where it is now, so only its latest bar
+	// carries them, as borders.
+	const LEGEND_TIERS: [NodeFocus, () => string][] = [
+		['primary', m.legend_primary],
+		['secondary', m.legend_secondary],
+		['background', m.legend_background]
+	];
+	const tierOf = (focus: NodeFocus | null): NodeFocus => focus ?? 'background';
+	const timelineVars = $derived(
+		[
+			`--tl-primary:${styles.primary.color ?? 'var(--ink)'}`,
+			`--tl-secondary:${styles.secondary.color ?? 'var(--ink-2)'}`,
+			`--tl-background:${styles.background.color ?? 'var(--ink-2)'}`,
+			`--tl-done:${styles.done_color ?? 'var(--ok)'}`,
+			`--tl-blocked:${styles.blocked_color ?? 'var(--hazard)'}`
+		].join(';')
+	);
 
 	function barCaption(node: NodeResponse): string {
 		const from = shortDate(node.started_at!);
@@ -183,17 +205,24 @@
 			: m.timeline_since({ from });
 	}
 
-	/** A bar's text: done / blocked on the latest bar, else the focus it had (an idea's kind). */
-	function barLabel(node: NodeResponse, tone: string, focus: NodeFocus | null): string {
-		if (tone === 'done') return statusLabel('done');
-		if (tone === 'blocked') return m.status_blocked();
-		return focus ? focusLabel(focus) : kindLabel(node.kind);
+	/** A bar's text: the focus it had; a ghost (idle since pausing) has none. */
+	function barLabel(node: NodeResponse, span: Span): string {
+		if (span.kind === 'ghost') return '';
+		return span.focus ? focusLabel(span.focus) : kindLabel(node.kind);
+	}
+
+	function barTitle(node: NodeResponse, span: Span, caption: string): string {
+		const status = node.status ? statusLabel(node.status) : kindLabel(node.kind);
+		const focus = span.focus ? focusLabel(span.focus) : kindLabel(node.kind);
+		return span.kind === 'ghost'
+			? `${node.title} · ${status}`
+			: `${node.title} · ${status} · ${focus} · ${caption}`;
 	}
 
 	const dayLabel = (time: number) => new Date(time).getDate();
 </script>
 
-<div class="page">
+<div class="page" style={timelineVars}>
 	<div class="toolbar">
 		<button type="button" aria-label={m.zoom_out()} onclick={() => zoomTo(pxPerDay / ZOOM_STEP)}
 			>−</button
@@ -249,7 +278,7 @@
 
 			{#each started as node (node.id)}
 				{@const periods = periodsByNode.get(node.id) ?? []}
-				{@const spans = nodeBarSpans(node, periods, range, pxPerDay, now)}
+				{@const spans = nodeBarSpans(node, periods, range, pxPerDay, now, styles.show_paused)}
 				{@const pokeXs = pokeOffsets(
 					(pokesByNode.get(node.id) ?? []).map((poke) => poke.poked_at),
 					range,
@@ -266,20 +295,21 @@
 					<div class="track" class:days={showDays} style:width="{axisWidth}px">
 						{#each spans as span, index (index)}
 							{@const caption = periods[index] ? periodCaption(periods[index]) : barCaption(node)}
-							{@const tone = barTone(node, span.focus, index === spans.length - 1)}
+							{@const marks = barMarks(node, span, index === spans.length - 1)}
+							{@const tier = tierOf(span.focus)}
 							<button
 								type="button"
-								class="bar {tone}"
+								class="bar look tier-{tier} fill-{styles[tier].fill}"
+								class:mark-done={marks.done}
+								class:mark-blocked={marks.blocked}
+								class:ghost={marks.ghost}
 								style:left="{span.left}px"
 								style:width="{span.width}px"
-								title="{node.title} · {node.status
-									? statusLabel(node.status)
-									: kindLabel(node.kind)} · {span.focus
-									? focusLabel(span.focus)
-									: kindLabel(node.kind)} · {caption}"
+								title={barTitle(node, span, caption)}
 								onclick={() => openNode(node.id)}
 							>
-								<span>{barLabel(node, tone, span.focus)}</span>
+								<!-- A one-day bar is too narrow for text. -->
+								{#if span.width >= MIN_LABEL_WIDTH}<span>{barLabel(node, span)}</span>{/if}
 							</button>
 						{/each}
 						{#each pokeXs as x, index (index)}
@@ -298,11 +328,14 @@
 	</div>
 
 	<div class="legend">
-		<span><span class="swatch primary"></span>{m.legend_primary()}</span>
-		<span><span class="swatch secondary"></span>{m.legend_secondary()}</span>
-		<span><span class="swatch background"></span>{m.legend_background()}</span>
-		<span><span class="swatch blocked"></span>{m.legend_blocked()}</span>
-		<span><span class="swatch done"></span>{m.legend_done()}</span>
+		{#each LEGEND_TIERS as [tier, label] (tier)}
+			<span><span class="swatch look tier-{tier} fill-{styles[tier].fill}"></span>{label()}</span>
+		{/each}
+		<span><span class="swatch look tier-primary mark-done"></span>{m.legend_done()}</span>
+		<span><span class="swatch look tier-primary mark-blocked"></span>{m.legend_blocked()}</span>
+		{#if styles.show_paused}
+			<span><span class="swatch look ghost"></span>{m.legend_paused()}</span>
+		{/if}
 		<span><span class="tick"></span>{m.legend_poke()}</span>
 		<span><span class="today-mark"></span>{m.legend_today()}</span>
 		<span class="note">{m.legend_history()}</span>
@@ -522,31 +555,50 @@
 		text-align: left;
 		font: 700 9.5px/14px var(--font-mono);
 		white-space: nowrap;
-		background: var(--ink);
-		color: var(--on-ink);
 		cursor: pointer;
 	}
 
-	.bar.done {
-		background: var(--ok);
-		color: var(--on-ok);
-	}
-
-	.bar.blocked {
-		background: repeating-linear-gradient(135deg, var(--hazard) 0 6px, var(--warn-tint) 6px 12px);
-		color: var(--ink);
-	}
-
-	.bar.secondary {
-		background: var(--ink-2);
+	/* Shared by bars and legend swatches. The fill comes from the focus tier
+	   (--bar, via .tier-*) and its fill style; done / blocked are borders on top. */
+	.look {
+		--bar: var(--tl-primary, var(--ink));
+		background: var(--bar);
 		color: var(--on-ink);
 	}
 
-	.bar.background {
+	.tier-secondary {
+		--bar: var(--tl-secondary, var(--ink-2));
+	}
+
+	.tier-background {
+		--bar: var(--tl-background, var(--ink-2));
+	}
+
+	.fill-striped {
+		background: repeating-linear-gradient(135deg, var(--bar) 0 6px, #fff 6px 12px);
+		color: var(--ink);
+	}
+
+	.fill-outline {
+		background: var(--surface);
+		border: 1.5px dashed var(--bar);
+		color: var(--bar);
+		line-height: 11px;
+	}
+
+	.mark-done {
+		outline: 2px solid var(--tl-done, var(--ok));
+	}
+
+	.mark-blocked {
+		outline: 2px dashed var(--tl-blocked, var(--hazard));
+	}
+
+	/* Idle since pausing: the old "background" look. */
+	.ghost {
 		background: var(--surface);
 		border: 1.5px dashed var(--ink-2);
 		color: var(--ink-2);
-		line-height: 11px;
 	}
 
 	.poke {
@@ -596,24 +648,6 @@
 		width: 18px;
 		height: 9px;
 		display: inline-block;
-		background: var(--ink);
-	}
-
-	.swatch.blocked {
-		background: var(--hazard);
-	}
-
-	.swatch.secondary {
-		background: var(--ink-2);
-	}
-
-	.swatch.background {
-		background: none;
-		border: 1.5px dashed var(--ink-2);
-	}
-
-	.swatch.done {
-		background: var(--ok);
 	}
 
 	.tick,

@@ -1,5 +1,6 @@
 import { settingsApi } from '$lib/api/endpoints';
 import { DEFAULT_EDGE_STYLES } from '$lib/graph/edgeStyle';
+import { DEFAULT_TIMELINE_STYLES } from '$lib/graph/timeline';
 import type { Grouping } from '$lib/graph/grouping';
 import type { EdgeStyles } from '$lib/types/EdgeStyles';
 import type { NodeFocus } from '$lib/types/NodeFocus';
@@ -8,6 +9,7 @@ import type { PathStaleMode } from '$lib/types/PathStaleMode';
 import type { PathStatusMode } from '$lib/types/PathStatusMode';
 import type { StaleMode } from '$lib/types/StaleMode';
 import type { StalePeriodEnd } from '$lib/types/StalePeriodEnd';
+import type { TimelineStyles } from '$lib/types/TimelineStyles';
 
 /**
  * Preferences (Settings page). Everything except `LOCAL_ONLY` is saved to the
@@ -53,6 +55,8 @@ export type Prefs = {
 	showEdgeLabels: boolean;
 	/** How each kind of canvas connection is drawn (keys stay snake_case, like the API). */
 	edgeStyles: EdgeStyles;
+	/** How timeline bars are filled and bordered, and whether paused nodes show. */
+	timelineStyles: TimelineStyles;
 	/** Days without a poke (else since creation) before a node goes stale. */
 	staleDays: number;
 	/** The dashboard warns this many days ahead; 0 = off. */
@@ -108,6 +112,7 @@ const DEFAULTS: Prefs = {
 	pathAutoExpand: true,
 	showEdgeLabels: false,
 	edgeStyles: DEFAULT_EDGE_STYLES,
+	timelineStyles: DEFAULT_TIMELINE_STYLES,
 	staleDays: 14,
 	staleWarnDays: 3,
 	staleKinds: ['project', 'study'],

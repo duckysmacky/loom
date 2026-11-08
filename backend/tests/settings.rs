@@ -147,6 +147,25 @@ async fn edge_styles_default_and_round_trip(pool: PgPool) {
 }
 
 #[sqlx::test]
+async fn timeline_styles_default_and_round_trip(pool: PgPool) {
+    let app = app(pool);
+    let token = signup(&app, "timeline@example.com").await;
+    let styles = settings(&app, &token).await["timeline_styles"].clone();
+    assert_eq!(styles["background"]["fill"], "striped");
+    assert_eq!(styles["primary"]["fill"], "solid");
+    assert_eq!(styles["show_paused"], false);
+    assert_eq!(styles["done_color"], Value::Null);
+
+    let changes = json!({"timeline_styles": {"done_color": "#00ff88", "show_paused": true}});
+    let (status, _) = send(&app, req("PATCH", "/api/settings", changes, Some(&token))).await;
+    assert_eq!(status, StatusCode::OK);
+    let styles = settings(&app, &token).await["timeline_styles"].clone();
+    assert_eq!(styles["done_color"], "#00ff88");
+    assert_eq!(styles["show_paused"], true);
+    assert_eq!(styles["background"]["fill"], "striped");
+}
+
+#[sqlx::test]
 async fn patch_rejects_bad_input_without_storing_anything(pool: PgPool) {
     let app = app(pool);
     let token = signup(&app, "invalid@example.com").await;
@@ -166,6 +185,10 @@ async fn patch_rejects_bad_input_without_storing_anything(pool: PgPool) {
         json!({"edge_styles": {"related": {"color": "orange"}}}),
         json!({"edge_styles": {"precedes": {"line": "wavy"}}}),
         json!({"edge_styles": {"requires_met": {"arrow": "yes"}}}),
+        json!({"timeline_styles": {"done_color": "green"}}),
+        json!({"timeline_styles": {"background": {"color": "#12"}}}),
+        json!({"timeline_styles": {"primary": {"fill": "glitter"}}}),
+        json!({"timeline_styles": {"show_paused": "sure"}}),
         // A valid key does not rescue an invalid sibling.
         json!({"theme": "dark", "density": "huge"}),
     ] {

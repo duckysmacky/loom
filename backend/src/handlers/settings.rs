@@ -79,5 +79,9 @@ fn validate_changes(changes: &Map<String, Value>) -> Result<Settings, ApiError> 
         .iter()
         .try_for_each(|color| validate_color(color))?;
     parsed.edge_styles.colors().try_for_each(validate_color)?;
+    parsed
+        .timeline_styles
+        .colors()
+        .try_for_each(validate_color)?;
     Ok(parsed)
 }

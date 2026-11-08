@@ -188,6 +188,82 @@ impl Default for EdgeStyles {
     }
 }
 
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(rename_all = "snake_case")]
+pub enum FocusFill {
+    Solid,
+    /// Diagonal stripes of the colour and white.
+    Striped,
+    /// Transparent with a dashed border in the colour.
+    Outline,
+}
+
+/// How a focus tier's bars are filled on the timeline.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(default)]
+pub struct FocusStyle {
+    /// Hex color; `None` = the theme's default for this tier.
+    pub color: Option<String>,
+    pub fill: FocusFill,
+}
+
+impl Default for FocusStyle {
+    fn default() -> Self {
+        Self {
+            color: None,
+            fill: FocusFill::Solid,
+        }
+    }
+}
+
+/// Timeline bar looks: fill per focus tier, border per status.
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, TS)]
+#[ts(export)]
+#[serde(default)]
+pub struct TimelineStyles {
+    pub primary: FocusStyle,
+    pub secondary: FocusStyle,
+    pub background: FocusStyle,
+    /// Border of a done node's last bar; `None` = theme green.
+    pub done_color: Option<String>,
+    /// Dashed border of a blocked node's last bar; `None` = theme orange.
+    pub blocked_color: Option<String>,
+    /// Show paused nodes, with a dashed ghost bar over the time they have been paused.
+    pub show_paused: bool,
+}
+
+impl TimelineStyles {
+    pub fn colors(&self) -> impl Iterator<Item = &str> {
+        [
+            self.primary.color.as_deref(),
+            self.secondary.color.as_deref(),
+            self.background.color.as_deref(),
+            self.done_color.as_deref(),
+            self.blocked_color.as_deref(),
+        ]
+        .into_iter()
+        .flatten()
+    }
+}
+
+impl Default for TimelineStyles {
+    fn default() -> Self {
+        Self {
+            primary: FocusStyle::default(),
+            secondary: FocusStyle::default(),
+            background: FocusStyle {
+                color: None,
+                fill: FocusFill::Striped,
+            },
+            done_color: None,
+            blocked_color: None,
+            show_paused: false,
+        }
+    }
+}
+
 pub const MAX_RECENT_COLORS: usize = 8;
 
 /// Per-account settings, stored as one jsonb column on `users`. Missing keys
@@ -227,6 +303,7 @@ pub struct Settings {
     /// Canvas connections carry a small text label.
     pub show_edge_labels: bool,
     pub edge_styles: EdgeStyles,
+    pub timeline_styles: TimelineStyles,
     /// Days without a poke (else since creation) before a node goes stale.
     #[ts(type = "number")]
     pub stale_days: i64,
@@ -268,6 +345,7 @@ impl Default for Settings {
             path_auto_expand: true,
             show_edge_labels: false,
             edge_styles: EdgeStyles::default(),
+            timeline_styles: TimelineStyles::default(),
             stale_days: 14,
             stale_warn_days: 3,
             stale_kinds: vec![NodeKind::Project, NodeKind::Study],

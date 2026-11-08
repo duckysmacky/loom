@@ -1,6 +1,17 @@
 import type { ActivePeriodResponse } from '$lib/types/ActivePeriodResponse';
 import type { NodeFocus } from '$lib/types/NodeFocus';
 import type { NodeResponse } from '$lib/types/NodeResponse';
+import type { TimelineStyles } from '$lib/types/TimelineStyles';
+
+/** Mirrors `TimelineStyles::default()` in the backend; a null colour = the theme token. */
+export const DEFAULT_TIMELINE_STYLES: TimelineStyles = {
+	primary: { color: null, fill: 'solid' },
+	secondary: { color: null, fill: 'solid' },
+	background: { color: null, fill: 'striped' },
+	done_color: null,
+	blocked_color: null,
+	show_paused: false
+};
 
 export const DAY_MS = 86_400_000;
 const WEEK_MS = 7 * DAY_MS;
@@ -47,9 +58,48 @@ export function weekStarts(range: TimelineRange): number[] {
 	return weeks;
 }
 
+/** Local midnight of the day containing `time`. */
+export function startOfDay(time: number): number {
+	const date = new Date(time);
+	date.setHours(0, 0, 0, 0);
+	return date.getTime();
+}
+
+/** Local midnight of the day after the one containing `time` (DST-safe, unlike `+ DAY_MS`). */
+function startOfNextDay(time: number): number {
+	const date = new Date(time);
+	date.setHours(0, 0, 0, 0);
+	date.setDate(date.getDate() + 1);
+	return date.getTime();
+}
+
+/** `period` is real activity; `ghost` is the stretch a paused node has sat idle since. */
+export type SpanKind = 'period' | 'ghost';
+
+/** `focus` is the tier the node had during the span - what the timeline styles it by. */
+export type Span = { left: number; width: number; focus: NodeFocus | null; kind: SpanKind };
+
+/** A span in whole days, as local midnights: `start` inclusive, `end` the midnight after the last day. */
+type DayRun = { start: number; end: number; focus: NodeFocus | null; kind: SpanKind };
+
+/** Only days matter: any time within a day fills the whole day, so a same-day period is one day wide. */
+function dayRun(
+	start: number,
+	end: number,
+	focus: NodeFocus | null,
+	kind: SpanKind = 'period'
+): DayRun {
+	return { start: startOfDay(start), end: startOfNextDay(Math.max(start, end)), focus, kind };
+}
+
+function toSpan(run: DayRun, range: TimelineRange, pxPerDay: number): Span {
+	const left = xOf(run.start, range, pxPerDay);
+	return { left, width: xOf(run.end, range, pxPerDay) - left, focus: run.focus, kind: run.kind };
+}
+
 /**
- * A node's bar in pixels: started_at to completed_at, or to now while still
- * open. `null` for never-started nodes. At least a sliver wide.
+ * A node's bar: started_at to completed_at, or to today while still open.
+ * `null` for never-started nodes.
  */
 export function barSpan(
 	node: NodeResponse,
@@ -58,53 +108,103 @@ export function barSpan(
 	now = Date.now()
 ): Span | null {
 	if (!node.started_at) return null;
-	const start = Date.parse(node.started_at);
 	const finish = node.completed_at ? Date.parse(node.completed_at) : now;
-	const left = xOf(start, range, pxPerDay);
-	return {
-		left,
-		width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4),
-		focus: node.focus ?? null
-	};
+	return toSpan(dayRun(Date.parse(node.started_at), finish, node.focus ?? null), range, pxPerDay);
 }
 
-/** `focus` is the tier the node had during the span - what the timeline styles it by. */
-export type Span = { left: number; width: number; focus: NodeFocus | null };
-
-/** One span per active period - an open one (`ended_at` null) runs to `now`. */
+/**
+ * One span per active period - an open one (`ended_at` null) runs to today.
+ * Periods sharing a day (paused and resumed within it) don't stack: the later
+ * one only takes the days the earlier one left, or just its focus if it
+ * leaves none.
+ */
 export function periodSpans(
 	periods: ActivePeriodResponse[],
 	range: TimelineRange,
 	pxPerDay: number,
 	now = Date.now()
 ): Span[] {
-	return periods.map((period) => {
-		const start = Date.parse(period.started_at);
-		const finish = period.ended_at ? Date.parse(period.ended_at) : now;
-		const left = xOf(start, range, pxPerDay);
-		return {
-			left,
-			width: Math.max(xOf(Math.max(finish, start), range, pxPerDay) - left, 4),
-			focus: period.focus
-		};
-	});
+	const runs: DayRun[] = [];
+	for (const period of periods) {
+		const run = dayRun(
+			Date.parse(period.started_at),
+			period.ended_at ? Date.parse(period.ended_at) : now,
+			period.focus
+		);
+		const previous = runs.at(-1);
+		if (previous && run.start < previous.end) {
+			if (run.end <= previous.end) {
+				previous.focus = run.focus;
+				continue;
+			}
+			run.start = previous.end;
+		}
+		runs.push(run);
+	}
+	return runs.map((run) => toSpan(run, range, pxPerDay));
+}
+
+/**
+ * Where a paused node's last period ended up to today, as one ghost span.
+ * `null` when it isn't paused, has no closed last period (never started, or
+ * tracking left it open) or was paused today.
+ */
+export function ghostSpan(
+	node: NodeResponse,
+	periods: ActivePeriodResponse[],
+	range: TimelineRange,
+	pxPerDay: number,
+	now = Date.now()
+): Span | null {
+	const last = periods.at(-1);
+	if (node.status !== 'paused' || !last?.ended_at) return null;
+	const start = startOfNextDay(Date.parse(last.ended_at));
+	const end = startOfNextDay(now);
+	if (start >= end) return null;
+	return toSpan({ start, end, focus: null, kind: 'ghost' }, range, pxPerDay);
 }
 
 /**
  * The spans to draw for one node: its active periods when it has any (the
  * fine-grained truth), else the classic single started_at->completed_at
- * bar - which itself is `[]` for a never-started node.
+ * bar - which itself is `[]` for a never-started node. With `showPaused`, a
+ * paused node also gets its ghost span.
  */
 export function nodeBarSpans(
 	node: NodeResponse,
 	periods: ActivePeriodResponse[],
 	range: TimelineRange,
 	pxPerDay: number,
-	now = Date.now()
+	now = Date.now(),
+	showPaused = false
 ): Span[] {
-	if (periods.length) return periodSpans(periods, range, pxPerDay, now);
-	const classic = barSpan(node, range, pxPerDay, now);
-	return classic ? [classic] : [];
+	if (!periods.length) {
+		const classic = barSpan(node, range, pxPerDay, now);
+		return classic ? [classic] : [];
+	}
+	const spans = periodSpans(periods, range, pxPerDay, now);
+	const ghost = showPaused ? ghostSpan(node, periods, range, pxPerDay, now) : null;
+	return ghost ? [...spans, ghost] : spans;
+}
+
+/** Only projects and studies get rows, and only the statuses worth plotting (paused is opt-in). */
+export function timelineEligible(node: NodeResponse, showPaused: boolean): boolean {
+	if (node.kind !== 'project' && node.kind !== 'study') return false;
+	return (
+		node.status === 'active' || node.status === 'done' || (showPaused && node.status === 'paused')
+	);
+}
+
+export type BarMarks = { done: boolean; blocked: boolean; ghost: boolean };
+
+/**
+ * Status marks drawn as borders over the focus fill. They describe where the
+ * node is now, so only its latest bar carries them; done wins over blocked.
+ */
+export function barMarks(node: NodeResponse, span: Span, isLatest: boolean): BarMarks {
+	const current = isLatest && span.kind === 'period';
+	const done = current && node.status === 'done';
+	return { done, blocked: current && !done && node.blocked, ghost: span.kind === 'ghost' };
 }
 
 /** Pixel offset of every in-range poke, not just the latest. */
