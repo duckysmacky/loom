@@ -16,7 +16,7 @@ the main README's **MCP server** section.
 ### Claude Web and Desktop
 
 1. Customize -> Plugins -> Add -> Add marketplace -> Add from a repository
--> Paste `github.com/duckysmacky/skills` - this will add my personal skills
+-> Paste `github.com/duckysmacky/duckysmacky-plugin-marketplace` - this will add my personal skills
 marketplace
 2. Customize -> Plugins -> Search for `loom` in the search bar and then
 3. Connectors -> Yours -> Find `loom` in the list and press "connect"
@@ -28,7 +28,7 @@ name and click "approve"
 Run install commands:
 
 ```sh
-/plugin marketplace add duckysmacky/skills
+/plugin marketplace add duckysmacky/duckysmacky-plugin-marketplace
 /plugin install loom@duckysmacky
 ```
 
