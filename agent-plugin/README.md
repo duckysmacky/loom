@@ -1,6 +1,6 @@
-# Loom plugin for Claude
+# Loom plugin for Claude and Codex
 
-This plugin connects Claude to a self-hosted [Loom](https://github.com/duckysmacky/loom)
+This plugin connects your agent to a self-hosted [Loom](https://github.com/duckysmacky/loom)
 instance. It includes:
 
 - **the `loom` MCP server config**: `<your Loom URL>/mcp`, signed in through Loom's own OAuth
@@ -36,11 +36,31 @@ Run install commands:
 2. Run `/mcp`, select `loom` and authenticate.
 3. Approve the connection in the browser window that opens.
 
+### Codex and ChatGPT Desktop
+
+The same directory also contains a Codex manifest. Set your instance URL in
+`codex.mcp.json` in the installed plugin directory after installing from the
+shared `duckysmacky/duckysmacky-plugin-marketplace` marketplace.
+See the main README's [Connecting agents](../README.md#connecting-agents)
+section for Codex CLI and ChatGPT Desktop installation steps.
+
+### Other agents
+
+```sh
+npx skills add duckysmacky/loom --skill loom
+```
+
+This installs only the skill. Configure a Streamable HTTP MCP connection to
+`https://loom.example.com/mcp` separately, then authenticate through OAuth or
+a personal access token. Add `--global` to install the skill for all projects.
+
 ## Contents
 
 ```
-claude-plugin/
+agent-plugin/
 ├── .claude-plugin/plugin.json      # manifest: MCP server + Loom URL prompt
+├── .codex-plugin/plugin.json       # Codex manifest: shared skill + MCP config
+├── codex.mcp.json                  # set your instance URL after installing
 └── skills/loom/
     ├── SKILL.md                    # how to work with Loom
     └── references/setup.md         # connecting & troubleshooting

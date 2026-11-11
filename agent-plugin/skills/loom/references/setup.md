@@ -42,6 +42,17 @@ Pick one of these.
      (read-only tokens can only use the read tools).
   2. Run
      `claude mcp add --transport http loom https://loom.example.com/mcp --header "Authorization: Bearer loom_..."`.
+- **Codex or ChatGPT Desktop: bundled plugin.**
+  1. Run `codex plugin marketplace add duckysmacky/duckysmacky-plugin-marketplace`.
+  2. Run `codex plugin add loom@duckysmacky --json`, or install `loom` from the
+     Duckysmacky marketplace in ChatGPT Desktop's Plugins Directory.
+  3. Set your instance URL in the installed plugin's `codex.mcp.json` (the CLI install
+     result reports `installedPath`). Plugin updates can replace this URL.
+  4. Restart your client, connect the bundled MCP server and approve OAuth access.
+- **Other agents: install this skill separately.**
+  1. Run `npx skills add duckysmacky/loom --skill loom` and select your agent.
+     Add `--global` for all projects.
+  2. Configure MCP separately; the skills installer does not connect or authenticate MCP.
 - **Any other MCP client** that supports Streamable HTTP: use the same URL, with either OAuth or
   `Authorization: Bearer <token>`.
 

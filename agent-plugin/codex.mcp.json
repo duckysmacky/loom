@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "loom": {
+      "type": "http",
+      "url": "https://loom.example.com/mcp"
+    }
+  }
+}

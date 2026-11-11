@@ -1,0 +1,21 @@
+{
+  "name": "loom",
+  "version": "1.4.1",
+  "description": "Connect your agent to your self-hosted Loom graph of projects, studies and ideas: read it, plan learning paths, create and update nodes, and log progress.",
+  "author": {
+    "name": "duckysmacky",
+    "url": "https://github.com/duckysmacky"
+  },
+  "homepage": "https://github.com/duckysmacky/loom",
+  "repository": "https://github.com/duckysmacky/loom",
+  "license": "AGPL-3.0",
+  "keywords": [
+    "loom",
+    "mcp",
+    "projects",
+    "learning",
+    "knowledge-graph"
+  ],
+  "skills": "./skills/",
+  "mcpServers": "./codex.mcp.json"
+}

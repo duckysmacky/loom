@@ -27,9 +27,9 @@ A flexible manager for everything you're building, studying, and dreaming up.
   - [Using an external Postgres](#using-an-external-postgres)
   - [Backups](#backups)
 - [REST API access](#rest-api-access)
-- [MCP server setup (optional)](#mcp-server-setup-optional)
+- [MCP server setup (optional)](#mcp-server-setup)
   - [Setting up](#setting-up)
-  - [Connecting Claude](#connecting-claude)
+  - [Connecting agents](#connecting-agents)
   - [Connecting other agents](#connecting-other-agents)
   - [What agents can do](#what-agents-can-do)
 - [Development](#development)
@@ -186,8 +186,8 @@ and edit your graph. Ask an agent to "build me a learning path for
 async Rust" and it creates the path, its study and project nodes with
 notes, checklists and progress units, and the `part_of`/`requires` edges
 between them, in one go. Connectors sign in through Loom's own consent
-page. A Claude plugin with a Loom skill is included. Off by default - see
-[MCP server (optional)](#mcp-server-optional).
+page. Claude and Codex plugins with a Loom skill are included. Off by default - see
+[MCP server (optional)](#mcp-server-setup).
 
 ## Installation
 
@@ -233,7 +233,7 @@ All variables live in `.env` (see `.env.example`):
 | `RUST_LOG` | `info` | Backend log level |
 | `JWT_SECRET` | - | Signs/verifies JWT access tokens. Generate with `openssl rand -hex 32`. Must be at least 32 bytes - the app refuses to start otherwise |
 | `ALLOW_SIGNUP` | `true` | Whether `POST /api/auth/signup` accepts new accounts. |
-| `MCP_ENABLED` | `false` | Turns on the [MCP server](#mcp-server-optional) for AI agents |
+| `MCP_ENABLED` | `false` | Turns on the [MCP server](#mcp-server-setup) for AI agents |
 | `PUBLIC_URL` | - | Public origin Loom is served at, e.g. `https://loom.example.com` (no path, no trailing slash). Required when `MCP_ENABLED=true` |
 | `CORS_ORIGINS` | - | Comma-separated origins (e.g. `https://dashboard.example.com`) whose browser JavaScript may call `/api` with an [access token](#rest-api-access). Exact origins only - no paths, no `*`. Empty = off |
 
@@ -356,9 +356,15 @@ additions are recommended:
 - `proxy_set_header Host $host;` - so the backend sees your real domain
 - `proxy_read_timeout 1h;` and `proxy_buffering off;`, since MCP responses can stream.
 
-### Connecting Claude
+### Connecting agents
 
-## Claude Chat and Cowork (as a plugin, recommended)
+Enable the server above first. Replace `https://loom.example.com` with your
+instance URL. Plugins include both MCP configuration and the `loom` skill.
+
+<details>
+<summary>Claude app (Web, Desktop and Mobile)</summary>
+
+**Plugin (recommended)**
 
 Install the bundled plugin, which adds the server and the `loom` skill 
 (domain model, tool guide, learning-path recipe).
@@ -366,12 +372,12 @@ Install the bundled plugin, which adds the server and the `loom` skill
 1. Customize -> Plugins -> Add -> Add marketplace -> Add from a repository
 -> Paste `github.com/duckysmacky/duckysmacky-plugin-marketplace` - this will add my personal skills
 marketplace
-2. Customize -> Plugins -> Search for `loom` in the search bar and then
+2. Customize -> Plugins -> Search for `loom` in the search bar and install it
 3. Connectors -> Yours -> Find `loom` in the list and press "connect"
 4. Claude opens Loom's consent page (sign in first if asked) - check the app
 name and click "approve"
 
-## Claude Chat and Cowork (as a custom connector)
+**Custom connector**
 
 1. Settings -> Connectors -> Add custom connector -> Enter
 `https://loom.example.com/mcp`. Leave the OAuth fields empty - Claude
@@ -380,24 +386,90 @@ registers itself
 3. Claude opens Loom's consent page (sign in first if asked) - check the app
 name and click "approve"
 
-## Claude Code
+</details>
 
-Same as with Claude Chat and Cowork plugin, but using the CLI:
+<details>
+<summary>Claude Code</summary>
+
+Install the plugin from your terminal:
 
 ```sh
-/plugin marketplace add duckysmacky/duckysmacky-plugin-marketplace
-/plugin install loom@duckysmacky     # asks for your Loom URL
+claude plugin marketplace add duckysmacky/duckysmacky-plugin-marketplace
+claude plugin install loom@duckysmacky     # asks for your Loom URL
 ```
 
-then run `/mcp`, pick `loom`, and authenticate in the browser.
+Then start a new session, run `/mcp`, pick `loom`, and authenticate in the browser.
 
-### Connecting other agents
+</details>
 
-Any MCP client that speaks Streamable HTTP works. Point it at
-`https://loom.example.com/mcp` and either let it do the OAuth flow
-(discovery via `/.well-known/oauth-protected-resource/mcp`, dynamic
-client registration, PKCE) or send a personal access token as
-`Authorization: Bearer loom_...`.
+<details>
+<summary>Codex</summary>
+
+Install the plugin from your terminal:
+
+```sh
+codex plugin marketplace add duckysmacky/duckysmacky-plugin-marketplace
+codex plugin add loom@duckysmacky --json
+```
+
+Then start a new session, run `/mcp`, pick `loom`, and authenticate in the browser.
+
+</details>
+
+<details>
+<summary>ChatGPT Desktop</summary>
+
+For ChatGPT Desktop with marketplace plugin support (Work or Codex):
+
+1. Add the shared marketplace with
+   `codex plugin marketplace add duckysmacky/duckysmacky-plugin-marketplace`.
+2. Restart ChatGPT Desktop. Open the **Plugins Directory**, select the
+   **Duckysmacky** marketplace source, and install `loom`.
+3. In the installed plugin's `codex.mcp.json`, set your instance's MCP URL
+   as described under **Codex**. Restart the app to load the changed URL.
+4. Connect the bundled MCP server, sign in to Loom and approve access.
+
+Marketplace availability varies by client surface; see
+[OpenAI's plugin instructions](https://developers.openai.com/plugins/build/plugins).
+Plugin updates can replace your configured URL.
+
+</details>
+
+<details>
+<summary>Other agents</summary>
+
+**Install the skill** (requires Node.js/npm):
+
+```sh
+npx skills add duckysmacky/loom --skill loom
+```
+
+See the [skills CLI reference](https://github.com/vercel-labs/skills/blob/main/docs/commands.md)
+for installation options.
+
+**Connect MCP separately.** `npx skills add` installs instructions only; it
+does not configure MCP or authenticate. Add a Streamable HTTP server in your
+agent's MCP settings with URL `https://loom.example.com/mcp`. Either:
+
+- Complete OAuth login (discovery, dynamic client registration and PKCE), or
+- Create a personal access token in **Loom → Settings → Connections** and set
+  the header `Authorization: Bearer loom_...`. Choose **Read & write** if the
+  agent should edit; read-only tokens only allow reads.
+
+For clients using JSON `mcpServers` configuration:
+
+```json
+{
+  "mcpServers": {
+    "loom": {
+      "type": "http",
+      "url": "https://loom.example.com/mcp"
+    }
+  }
+}
+```
+
+</details>
 
 ### What agents can do
 

@@ -19039,7 +19039,7 @@
     {
       "label": "README.md",
       "file_type": "document",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_plugin_readme",
@@ -19050,7 +19050,7 @@
     {
       "label": "Loom plugin for Claude",
       "file_type": "document",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_plugin_readme_loom_plugin_for_claude",
@@ -19061,7 +19061,7 @@
     {
       "label": "Install",
       "file_type": "document",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L14",
       "_origin": "ast",
       "id": "claude_plugin_readme_install",
@@ -19072,7 +19072,7 @@
     {
       "label": "Claude Web and Desktop",
       "file_type": "document",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L16",
       "_origin": "ast",
       "id": "claude_plugin_readme_claude_web_and_desktop",
@@ -19083,7 +19083,7 @@
     {
       "label": "Claude Code",
       "file_type": "document",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L26",
       "_origin": "ast",
       "id": "claude_plugin_readme_claude_code",
@@ -19094,7 +19094,7 @@
     {
       "label": "Contents",
       "file_type": "document",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L39",
       "_origin": "ast",
       "id": "claude_plugin_readme_contents",
@@ -19105,7 +19105,7 @@
     {
       "label": "SKILL.md",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill",
@@ -19116,7 +19116,7 @@
     {
       "label": "Loom",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L12",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_loom",
@@ -19127,7 +19127,7 @@
     {
       "label": "Domain model",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L19",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_domain_model",
@@ -19138,7 +19138,7 @@
     {
       "label": "Tools",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L90",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_tools",
@@ -19149,7 +19149,7 @@
     {
       "label": "Working rules",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L114",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_working_rules",
@@ -19160,7 +19160,7 @@
     {
       "label": "Recipe: build a learning path",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L136",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_recipe_build_a_learning_path",
@@ -19171,7 +19171,7 @@
     {
       "label": "Placing nodes on the canvas",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L193",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_placing_nodes_on_the_canvas",
@@ -19182,7 +19182,7 @@
     {
       "label": "Notes and arrows on the canvas",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L233",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_notes_and_arrows_on_the_canvas",
@@ -19193,7 +19193,7 @@
     {
       "label": "Other common requests",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L250",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_skill_other_common_requests",
@@ -19204,7 +19204,7 @@
     {
       "label": "setup.md",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_references_setup",
@@ -19215,7 +19215,7 @@
     {
       "label": "Connecting to Loom",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L1",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_references_setup_connecting_to_loom",
@@ -19226,7 +19226,7 @@
     {
       "label": "Server side (instance owner)",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L7",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_references_setup_server_side_instance_owner",
@@ -19237,7 +19237,7 @@
     {
       "label": "Client side",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L25",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_references_setup_client_side",
@@ -19248,7 +19248,7 @@
     {
       "label": "Troubleshooting",
       "file_type": "document",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L48",
       "_origin": "ast",
       "id": "claude_plugin_skills_loom_references_setup_troubleshooting",
@@ -19778,6 +19778,22 @@
       "community_name": "Loom Design System",
       "norm_label": "loom design system",
       "id": "frontend_claude_loom_design_system"
+    },
+    {
+      "id": "loom_codex_plugin",
+      "label": "Loom Codex plugin",
+      "file_type": "document",
+      "source_file": "agent-plugin/.codex-plugin/plugin.json",
+      "source_location": "L1",
+      "_origin": "semantic"
+    },
+    {
+      "id": "loom_codex_mcp",
+      "label": "Loom Codex MCP configuration",
+      "file_type": "document",
+      "source_file": "agent-plugin/codex.mcp.json",
+      "source_location": "L1",
+      "_origin": "semantic"
     }
   ],
   "links": [
@@ -74914,7 +74930,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L1",
       "weight": 1.0,
       "source": "claude_plugin_readme",
@@ -74924,7 +74940,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L39",
       "weight": 1.0,
       "source": "claude_plugin_readme_loom_plugin_for_claude",
@@ -74934,7 +74950,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L14",
       "weight": 1.0,
       "source": "claude_plugin_readme_loom_plugin_for_claude",
@@ -74944,7 +74960,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L26",
       "weight": 1.0,
       "source": "claude_plugin_readme_install",
@@ -74954,7 +74970,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/README.md",
+      "source_file": "agent-plugin/README.md",
       "source_location": "L16",
       "weight": 1.0,
       "source": "claude_plugin_readme_install",
@@ -74964,7 +74980,7 @@
     {
       "relation": "references",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L17",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill",
@@ -74974,7 +74990,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L12",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill",
@@ -74984,7 +75000,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L19",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -74994,7 +75010,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L233",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -75004,7 +75020,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L250",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -75014,7 +75030,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L193",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -75024,7 +75040,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L136",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -75034,7 +75050,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L90",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -75044,7 +75060,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/SKILL.md",
+      "source_file": "agent-plugin/skills/loom/SKILL.md",
       "source_location": "L114",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_skill_loom",
@@ -75054,7 +75070,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L1",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_references_setup",
@@ -75064,7 +75080,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L25",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_references_setup_connecting_to_loom",
@@ -75074,7 +75090,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L7",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_references_setup_connecting_to_loom",
@@ -75084,7 +75100,7 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "claude-plugin/skills/loom/references/setup.md",
+      "source_file": "agent-plugin/skills/loom/references/setup.md",
       "source_location": "L48",
       "weight": 1.0,
       "source": "claude_plugin_skills_loom_references_setup_connecting_to_loom",
@@ -75230,6 +75246,16 @@
       "weight": 1.0,
       "source": "docker_compose",
       "target": "claude_deployment"
+    },
+    {
+      "source": "loom_codex_plugin",
+      "target": "loom_codex_mcp",
+      "relation": "configures",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "weight": 1.0,
+      "source_file": "agent-plugin/.codex-plugin/plugin.json",
+      "source_location": "L1"
     }
   ],
   "hyperedges": [
