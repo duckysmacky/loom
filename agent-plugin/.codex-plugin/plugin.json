@@ -1,6 +1,6 @@
 {
   "name": "loom",
-  "version": "1.4.1",
+  "version": "1.4.2",
   "description": "Connect your agent to your self-hosted Loom graph of projects, studies and ideas: read it, plan learning paths, create and update nodes, and log progress.",
   "author": {
     "name": "duckysmacky",
